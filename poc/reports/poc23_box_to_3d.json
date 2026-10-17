@@ -1,0 +1,115 @@
+{
+  "A_stale_pose": {
+    "server latency 0.3 s": {
+      "correct (saved pose + depth)": {
+        "n": 16,
+        "median_cm": 7.7,
+        "p90_cm": 12.7
+      },
+      "stale pose + stale depth": {
+        "n": 16,
+        "median_cm": 50.3,
+        "p90_cm": 168.1
+      },
+      "stale pose, saved depth": {
+        "n": 16,
+        "median_cm": 37.5,
+        "p90_cm": 136.8
+      }
+    },
+    "server latency 0.6 s": {
+      "correct (saved pose + depth)": {
+        "n": 18,
+        "median_cm": 7.1,
+        "p90_cm": 12.4
+      },
+      "stale pose + stale depth": {
+        "n": 18,
+        "median_cm": 143.1,
+        "p90_cm": 243.4
+      },
+      "stale pose, saved depth": {
+        "n": 18,
+        "median_cm": 104.7,
+        "p90_cm": 171.6
+      }
+    },
+    "server latency 1.0 s": {
+      "correct (saved pose + depth)": {
+        "n": 19,
+        "median_cm": 7.5,
+        "p90_cm": 12.0
+      },
+      "stale pose + stale depth": {
+        "n": 19,
+        "median_cm": 202.0,
+        "p90_cm": 317.2
+      },
+      "stale pose, saved depth": {
+        "n": 19,
+        "median_cm": 156.8,
+        "p90_cm": 265.4
+      }
+    },
+    "server latency 1.5 s": {
+      "correct (saved pose + depth)": {
+        "n": 19,
+        "median_cm": 7.8,
+        "p90_cm": 14.1
+      },
+      "stale pose + stale depth": {
+        "n": 19,
+        "median_cm": 253.8,
+        "p90_cm": 359.4
+      },
+      "stale pose, saved depth": {
+        "n": 19,
+        "median_cm": 233.4,
+        "p90_cm": 325.3
+      }
+    }
+  },
+  "B_orientation": {
+    "round_trip_max_px_error": 0.0,
+    "correct": {
+      "n": 10,
+      "median_cm": 4.6,
+      "placed_within_30cm_pct": 100.0
+    },
+    "wrong direction": {
+      "n": 10,
+      "median_cm": 160.1,
+      "placed_within_30cm_pct": 0.0
+    },
+    "no rotation": {
+      "n": 10,
+      "median_cm": 122.9,
+      "placed_within_30cm_pct": 0.0
+    },
+    "no rescale": {
+      "n": 10,
+      "median_cm": 250.4,
+      "placed_within_30cm_pct": 0.0
+    }
+  },
+  "C_exif": {
+    "jpeg_pixels_wxh": [
+      400,
+      300
+    ],
+    "exif_orientation": 6,
+    "PIL Image.open size": [
+      400,
+      300
+    ],
+    "OpenCV imdecode (bytes) size": [
+      300,
+      400
+    ],
+    "OpenCV imread (file path, what Ultralytics uses for paths) size": [
+      300,
+      400
+    ],
+    "loaders_agree": false
+  }
+}

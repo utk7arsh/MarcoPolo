@@ -1,0 +1,59 @@
+{
+  "anchor error 1 cm, row ends visible": {
+    "position_only_pct": 99.2,
+    "row_matching_pct": 99.9
+  },
+  "anchor error 2 cm, row ends visible": {
+    "position_only_pct": 84.9,
+    "row_matching_pct": 97.2
+  },
+  "anchor error 3 cm, row ends visible": {
+    "position_only_pct": 68.3,
+    "row_matching_pct": 97.1
+  },
+  "anchor error 5 cm, row ends visible": {
+    "position_only_pct": 49.0,
+    "row_matching_pct": 99.0
+  },
+  "anchor error 8 cm, row ends visible": {
+    "position_only_pct": 37.0,
+    "row_matching_pct": 99.9
+  },
+  "anchor error 16 cm, row ends visible": {
+    "position_only_pct": 24.2,
+    "row_matching_pct": 100.0
+  },
+  "anchor error 1 cm, row ends NOT visible": {
+    "position_only_pct": 99.1,
+    "row_matching_pct": 99.6
+  },
+  "anchor error 2 cm, row ends NOT visible": {
+    "position_only_pct": 84.3,
+    "row_matching_pct": 85.0
+  },
+  "anchor error 3 cm, row ends NOT visible": {
+    "position_only_pct": 67.9,
+    "row_matching_pct": 68.4
+  },
+  "anchor error 5 cm, row ends NOT visible": {
+    "position_only_pct": 48.8,
+    "row_matching_pct": 49.4
+  },
+  "anchor error 8 cm, row ends NOT visible": {
+    "position_only_pct": 36.1,
+    "row_matching_pct": 36.4
+  },
+  "anchor error 16 cm, row ends NOT visible": {
+    "position_only_pct": 24.0,
+    "row_matching_pct": 24.0
+  },
+  "jar at 0.92 m high, 0.35 m ahead: in view at 30 deg tilt": true,
+  "jar at 0.92 m high, 0.45 m ahead: in view at 30 deg tilt": true,
+  "jar at 0.92 m high, 0.55 m ahead: in view at 30 deg tilt": true,
+  "jar at 1.2 m high, 0.35 m ahead: in view at 30 deg tilt": true,
+  "jar at 1.2 m high, 0.45 m ahead: in view at 30 deg tilt": true,
+  "jar at 1.2 m high, 0.55 m ahead: in view at 30 deg tilt": true,
+  "jar at 1.5 m high, 0.35 m ahead: in view at 30 deg tilt": false,
+  "jar at 1.5 m high, 0.45 m ahead: in view at 30 deg tilt": false,
+  "jar at 1.5 m high, 0.55 m ahead: in view at 30 deg tilt": false
+}

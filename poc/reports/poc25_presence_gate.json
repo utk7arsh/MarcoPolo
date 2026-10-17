@@ -1,0 +1,1482 @@
+{
+  "presence": {
+    "n_present": 156,
+    "n_absent_lookalike": 278,
+    "n_absent_other": 1834,
+    "present_score_median": 0.998,
+    "absent_lookalike_score_median": 0.98,
+    "absent_other_score_median": 0.894,
+    "vs_other_category": {
+      "auc": 0.931,
+      "tpr_at_1pct_fp": 25.0,
+      "threshold_at_1pct_fp": 1.0,
+      "tpr_at_5pct_fp": 67.9,
+      "threshold_at_5pct_fp": 0.997,
+      "tpr_at_10pct_fp": 82.7,
+      "threshold_at_10pct_fp": 0.99
+    },
+    "vs_lookalikes": {
+      "auc": 0.762,
+      "tpr_at_1pct_fp": 2.6,
+      "threshold_at_1pct_fp": 1.0,
+      "tpr_at_5pct_fp": 16.0,
+      "threshold_at_5pct_fp": 1.0,
+      "tpr_at_10pct_fp": 28.2,
+      "threshold_at_10pct_fp": 1.0
+    },
+    "vs_all_absent": {
+      "auc": 0.909,
+      "tpr_at_1pct_fp": 14.7,
+      "threshold_at_1pct_fp": 1.0,
+      "tpr_at_5pct_fp": 46.8,
+      "threshold_at_5pct_fp": 0.999,
+      "tpr_at_10pct_fp": 73.1,
+      "threshold_at_10pct_fp": 0.995
+    },
+    "present_frames_passing_5pct_threshold_with_correct_box_pct": 38.5
+  },
+  "registration_gate": {
+    "n_photos": 108,
+    "good_photos_pct": 56.5,
+    "auc_name_score_predicts_good_photo": 0.795,
+    "auc_sharpness_predicts_good_photo": 0.667,
+    "auc_fill_predicts_good_photo": 0.302,
+    "name_score_sweep": {
+      "name_score >= 0.05": {
+        "retake_pct": 24.1,
+        "kept_acc_own": 75.5,
+        "rejected_acc_own": 20.2,
+        "kept_acc_lookalike": 46.2
+      },
+      "name_score >= 0.1": {
+        "retake_pct": 26.9,
+        "kept_acc_own": 75.1,
+        "rejected_acc_own": 27.1,
+        "kept_acc_lookalike": 45.0
+      },
+      "name_score >= 0.2": {
+        "retake_pct": 32.4,
+        "kept_acc_own": 76.9,
+        "rejected_acc_own": 31.5,
+        "kept_acc_lookalike": 46.0
+      },
+      "name_score >= 0.3": {
+        "retake_pct": 45.4,
+        "kept_acc_own": 79.8,
+        "rejected_acc_own": 41.0,
+        "kept_acc_lookalike": 48.9
+      },
+      "name_score >= 0.4": {
+        "retake_pct": 55.6,
+        "kept_acc_own": 81.9,
+        "rejected_acc_own": 46.5,
+        "kept_acc_lookalike": 51.6
+      },
+      "name_score >= 0.5": {
+        "retake_pct": 63.0,
+        "kept_acc_own": 84.5,
+        "rejected_acc_own": 49.1,
+        "kept_acc_lookalike": 52.9
+      }
+    },
+    "all_photos_acc_own": 62.2
+  },
+  "photos": [
+    {
+      "item": "P189--keys",
+      "photo": 1,
+      "name_score": 0.44774478673934937,
+      "sharpness": 4049.052001953125,
+      "fill": 0.19088632176011305,
+      "acc_own": 0.9,
+      "acc_look": 0.8
+    },
+    {
+      "item": "P189--keys",
+      "photo": 2,
+      "name_score": 0.3966890871524811,
+      "sharpness": 3137.84814453125,
+      "fill": 0.23240350130402254,
+      "acc_own": 0.0,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P189--keys",
+      "photo": 3,
+      "name_score": 0.2440858781337738,
+      "sharpness": 4132.21630859375,
+      "fill": 0.05505119134366451,
+      "acc_own": 0.9,
+      "acc_look": 0.2
+    },
+    {
+      "item": "P189--keys",
+      "photo": 4,
+      "name_score": 0.2554439902305603,
+      "sharpness": 3264.292236328125,
+      "fill": 0.04563920239332925,
+      "acc_own": 0.9,
+      "acc_look": 1.0
+    },
+    {
+      "item": "P189--keys",
+      "photo": 5,
+      "name_score": 0.20388257503509521,
+      "sharpness": 5659.5546875,
+      "fill": 0.15587133290816327,
+      "acc_own": 1.0,
+      "acc_look": 0.9
+    },
+    {
+      "item": "P189--keys",
+      "photo": 6,
+      "name_score": 0.3616078495979309,
+      "sharpness": 2614.48779296875,
+      "fill": 0.37904575892857145,
+      "acc_own": 1.0,
+      "acc_look": 0.5
+    },
+    {
+      "item": "P194--apple-mobile-phone",
+      "photo": 1,
+      "name_score": 0.6444419622421265,
+      "sharpness": 1783.956787109375,
+      "fill": 0.48150831702242314,
+      "acc_own": 1.0,
+      "acc_look": 0.8
+    },
+    {
+      "item": "P194--apple-mobile-phone",
+      "photo": 2,
+      "name_score": 0.7494416832923889,
+      "sharpness": 3559.86181640625,
+      "fill": 0.12871205058660082,
+      "acc_own": 1.0,
+      "acc_look": 0.8
+    },
+    {
+      "item": "P194--apple-mobile-phone",
+      "photo": 3,
+      "name_score": 0.8615689873695374,
+      "sharpness": 2477.443359375,
+      "fill": 0.6131555468362719,
+      "acc_own": 1.0,
+      "acc_look": 0.8
+    },
+    {
+      "item": "P194--apple-mobile-phone",
+      "photo": 4,
+      "name_score": 0.34909141063690186,
+      "sharpness": 1072.6802978515625,
+      "fill": 0.42849040484265916,
+      "acc_own": 1.0,
+      "acc_look": 0.3
+    },
+    {
+      "item": "P194--apple-mobile-phone",
+      "photo": 5,
+      "name_score": 0.7857496738433838,
+      "sharpness": 2830.286376953125,
+      "fill": 0.10765109063553045,
+      "acc_own": 1.0,
+      "acc_look": 0.7
+    },
+    {
+      "item": "P194--apple-mobile-phone",
+      "photo": 6,
+      "name_score": 0.5448582172393799,
+      "sharpness": 959.9999389648438,
+      "fill": 0.9199816645408163,
+      "acc_own": 1.0,
+      "acc_look": 0.9
+    },
+    {
+      "item": "P194--door-keys",
+      "photo": 1,
+      "name_score": 0.3096144199371338,
+      "sharpness": 3427.73828125,
+      "fill": 0.08144380666443263,
+      "acc_own": 0.8,
+      "acc_look": 0.4
+    },
+    {
+      "item": "P194--door-keys",
+      "photo": 2,
+      "name_score": 0.5103409886360168,
+      "sharpness": 4607.708984375,
+      "fill": 0.09009371300467728,
+      "acc_own": 0.3,
+      "acc_look": 0.1
+    },
+    {
+      "item": "P194--door-keys",
+      "photo": 3,
+      "name_score": 0.11049795895814896,
+      "sharpness": 1800.727783203125,
+      "fill": 0.8088727678571429,
+      "acc_own": 0.0,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P194--door-keys",
+      "photo": 4,
+      "name_score": 0.4451778829097748,
+      "sharpness": 3808.489013671875,
+      "fill": 0.9910913584183674,
+      "acc_own": 0.3,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P194--door-keys",
+      "photo": 5,
+      "name_score": 0.5992329716682434,
+      "sharpness": 3541.807373046875,
+      "fill": 0.7555404974489796,
+      "acc_own": 0.3,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P194--door-keys",
+      "photo": 6,
+      "name_score": 0.25733742117881775,
+      "sharpness": 5882.68408203125,
+      "fill": 0.85546875,
+      "acc_own": 0.0,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P194--ladies-purse",
+      "photo": 1,
+      "name_score": 0.42963501811027527,
+      "sharpness": 699.3128051757812,
+      "fill": 0.9185059253349489,
+      "acc_own": 1.0,
+      "acc_look": 0.5
+    },
+    {
+      "item": "P194--ladies-purse",
+      "photo": 2,
+      "name_score": 0.031102987006306648,
+      "sharpness": 1287.798095703125,
+      "fill": 0.40059196070475117,
+      "acc_own": 0.17,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P194--ladies-purse",
+      "photo": 3,
+      "name_score": 0.2320760041475296,
+      "sharpness": 1560.017578125,
+      "fill": 0.39319595025510207,
+      "acc_own": 1.0,
+      "acc_look": 0.17
+    },
+    {
+      "item": "P194--ladies-purse",
+      "photo": 4,
+      "name_score": 0.1583314687013626,
+      "sharpness": 1827.2210693359375,
+      "fill": 0.48734454719387754,
+      "acc_own": 0.17,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P194--ladies-purse",
+      "photo": 5,
+      "name_score": 0.00018911455117631704,
+      "sharpness": 778.503173828125,
+      "fill": 0.4900000000000001,
+      "acc_own": 0.0,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P194--ladies-purse",
+      "photo": 6,
+      "name_score": 0.0035324702039361,
+      "sharpness": 1437.0787353515625,
+      "fill": 0.6666533801020408,
+      "acc_own": 0.17,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P194--sunglasses",
+      "photo": 1,
+      "name_score": 0.699359655380249,
+      "sharpness": 4779.228515625,
+      "fill": 0.14643933859946054,
+      "acc_own": 1.0,
+      "acc_look": 0.9
+    },
+    {
+      "item": "P194--sunglasses",
+      "photo": 2,
+      "name_score": 0.016187243163585663,
+      "sharpness": 5741.015625,
+      "fill": 0.022255947548496715,
+      "acc_own": 0.1,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P194--sunglasses",
+      "photo": 3,
+      "name_score": 0.5598097443580627,
+      "sharpness": 750.5482788085938,
+      "fill": 0.07314508271577971,
+      "acc_own": 0.1,
+      "acc_look": 0.1
+    },
+    {
+      "item": "P194--sunglasses",
+      "photo": 4,
+      "name_score": 0.5683477520942688,
+      "sharpness": 2277.932861328125,
+      "fill": 0.4900000000000001,
+      "acc_own": 0.5,
+      "acc_look": 0.4
+    },
+    {
+      "item": "P194--sunglasses",
+      "photo": 5,
+      "name_score": 0.02874458208680153,
+      "sharpness": 3222.060546875,
+      "fill": 0.04603794642857143,
+      "acc_own": 0.5,
+      "acc_look": 0.5
+    },
+    {
+      "item": "P194--sunglasses",
+      "photo": 6,
+      "name_score": 0.7542088031768799,
+      "sharpness": 1330.708251953125,
+      "fill": 0.4100366709183674,
+      "acc_own": 1.0,
+      "acc_look": 0.4
+    },
+    {
+      "item": "P194--wrist-watch",
+      "photo": 1,
+      "name_score": 0.5904800891876221,
+      "sharpness": 1156.7445068359375,
+      "fill": 0.0963347838679007,
+      "acc_own": 0.9,
+      "acc_look": 0.8
+    },
+    {
+      "item": "P194--wrist-watch",
+      "photo": 2,
+      "name_score": 0.005245393607765436,
+      "sharpness": 1530.7147216796875,
+      "fill": 0.9910913584183674,
+      "acc_own": 0.0,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P194--wrist-watch",
+      "photo": 3,
+      "name_score": 0.04933249205350876,
+      "sharpness": 1235.2772216796875,
+      "fill": 0.4900000000000001,
+      "acc_own": 0.1,
+      "acc_look": 0.1
+    },
+    {
+      "item": "P194--wrist-watch",
+      "photo": 4,
+      "name_score": 0.48077085614204407,
+      "sharpness": 1538.5484619140625,
+      "fill": 0.20888472576530612,
+      "acc_own": 0.0,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P194--wrist-watch",
+      "photo": 5,
+      "name_score": 0.03442760556936264,
+      "sharpness": 949.6870727539062,
+      "fill": 0.5022122130102041,
+      "acc_own": 0.0,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P194--wrist-watch",
+      "photo": 6,
+      "name_score": 0.01371641457080841,
+      "sharpness": 440.6671447753906,
+      "fill": 0.36830357142857145,
+      "acc_own": 0.4,
+      "acc_look": 0.2
+    },
+    {
+      "item": "P235--apple-tv-remote",
+      "photo": 1,
+      "name_score": 0.8602086901664734,
+      "sharpness": 4236.6572265625,
+      "fill": 0.07185835324954885,
+      "acc_own": 1.0,
+      "acc_look": 0.11
+    },
+    {
+      "item": "P235--apple-tv-remote",
+      "photo": 2,
+      "name_score": 0.900059163570404,
+      "sharpness": 3928.517333984375,
+      "fill": 0.049546676738664676,
+      "acc_own": 1.0,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P235--apple-tv-remote",
+      "photo": 3,
+      "name_score": 0.24081766605377197,
+      "sharpness": 2639.41650390625,
+      "fill": 0.061878890818066266,
+      "acc_own": 0.89,
+      "acc_look": 0.11
+    },
+    {
+      "item": "P235--apple-tv-remote",
+      "photo": 4,
+      "name_score": 0.9033393859863281,
+      "sharpness": 4332.07080078125,
+      "fill": 0.061184916360767436,
+      "acc_own": 1.0,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P235--apple-tv-remote",
+      "photo": 5,
+      "name_score": 0.001111774006858468,
+      "sharpness": 314.2291259765625,
+      "fill": 0.4900000000000001,
+      "acc_own": 0.0,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P235--apple-tv-remote",
+      "photo": 6,
+      "name_score": 0.0005760994972661138,
+      "sharpness": 548.1514282226562,
+      "fill": 0.4900000000000001,
+      "acc_own": 0.0,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P235--bose-wireless-headphones",
+      "photo": 1,
+      "name_score": 0.965188205242157,
+      "sharpness": 1731.5919189453125,
+      "fill": 0.28435637295529387,
+      "acc_own": 1.0,
+      "acc_look": 1.0
+    },
+    {
+      "item": "P235--bose-wireless-headphones",
+      "photo": 2,
+      "name_score": 0.9697550535202026,
+      "sharpness": 3069.788818359375,
+      "fill": 0.24453348036086525,
+      "acc_own": 1.0,
+      "acc_look": 1.0
+    },
+    {
+      "item": "P235--bose-wireless-headphones",
+      "photo": 3,
+      "name_score": 0.00027981825405731797,
+      "sharpness": 518.6616821289062,
+      "fill": 0.4900000000000001,
+      "acc_own": 0.0,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P235--bose-wireless-headphones",
+      "photo": 4,
+      "name_score": 0.009503021836280823,
+      "sharpness": 298.3123779296875,
+      "fill": 0.4900000000000001,
+      "acc_own": 0.12,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P235--bose-wireless-headphones",
+      "photo": 5,
+      "name_score": 0.9580532312393188,
+      "sharpness": 4161.05224609375,
+      "fill": 0.3204719387755102,
+      "acc_own": 1.0,
+      "acc_look": 1.0
+    },
+    {
+      "item": "P235--bose-wireless-headphones",
+      "photo": 6,
+      "name_score": 0.019728675484657288,
+      "sharpness": 511.40911865234375,
+      "fill": 0.7910953443877551,
+      "acc_own": 0.0,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P235--wallet",
+      "photo": 1,
+      "name_score": 0.29074394702911377,
+      "sharpness": 2318.1259765625,
+      "fill": 0.08371453265149736,
+      "acc_own": 1.0,
+      "acc_look": 0.17
+    },
+    {
+      "item": "P235--wallet",
+      "photo": 2,
+      "name_score": 0.5870538949966431,
+      "sharpness": 3004.701904296875,
+      "fill": 0.16035121051640072,
+      "acc_own": 1.0,
+      "acc_look": 0.5
+    },
+    {
+      "item": "P235--wallet",
+      "photo": 3,
+      "name_score": 0.8751987218856812,
+      "sharpness": 3526.78857421875,
+      "fill": 0.166015625,
+      "acc_own": 1.0,
+      "acc_look": 0.67
+    },
+    {
+      "item": "P235--wallet",
+      "photo": 4,
+      "name_score": 2.8347069473966258e-06,
+      "sharpness": 212.2477569580078,
+      "fill": 0.4900000000000001,
+      "acc_own": 0.0,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P235--wallet",
+      "photo": 5,
+      "name_score": 1.787080691428855e-06,
+      "sharpness": 167.91859436035156,
+      "fill": 0.4900000000000001,
+      "acc_own": 0.0,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P235--wallet",
+      "photo": 6,
+      "name_score": 1.346029989690578e-06,
+      "sharpness": 137.79112243652344,
+      "fill": 0.4900000000000001,
+      "acc_own": 0.0,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P778--apple-watch",
+      "photo": 1,
+      "name_score": 0.1089739128947258,
+      "sharpness": 1182.0169677734375,
+      "fill": 0.4900000000000001,
+      "acc_own": 1.0,
+      "acc_look": 0.88
+    },
+    {
+      "item": "P778--apple-watch",
+      "photo": 2,
+      "name_score": 0.27582764625549316,
+      "sharpness": 1798.5106201171875,
+      "fill": 0.26478794642857145,
+      "acc_own": 1.0,
+      "acc_look": 1.0
+    },
+    {
+      "item": "P778--apple-watch",
+      "photo": 3,
+      "name_score": 0.006711544934660196,
+      "sharpness": 2251.02587890625,
+      "fill": 0.23447464923469388,
+      "acc_own": 1.0,
+      "acc_look": 0.88
+    },
+    {
+      "item": "P778--apple-watch",
+      "photo": 4,
+      "name_score": 0.009823767468333244,
+      "sharpness": 993.1787109375,
+      "fill": 0.4248046875,
+      "acc_own": 0.0,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P778--apple-watch",
+      "photo": 5,
+      "name_score": 0.14540846645832062,
+      "sharpness": 2476.79443359375,
+      "fill": 0.8746811224489796,
+      "acc_own": 1.0,
+      "acc_look": 0.88
+    },
+    {
+      "item": "P778--apple-watch",
+      "photo": 6,
+      "name_score": 0.3297136723995209,
+      "sharpness": 870.7816162109375,
+      "fill": 0.4799904336734694,
+      "acc_own": 0.0,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P778--cane",
+      "photo": 1,
+      "name_score": 0.2560971677303314,
+      "sharpness": 2212.72314453125,
+      "fill": 0.11511614801266354,
+      "acc_own": 1.0,
+      "acc_look": 0.9
+    },
+    {
+      "item": "P778--cane",
+      "photo": 2,
+      "name_score": 0.062322601675987244,
+      "sharpness": 4458.42431640625,
+      "fill": 0.06060049314976368,
+      "acc_own": 0.6,
+      "acc_look": 0.4
+    },
+    {
+      "item": "P778--cane",
+      "photo": 3,
+      "name_score": 0.013012727722525597,
+      "sharpness": 871.9820556640625,
+      "fill": 0.33579799107142855,
+      "acc_own": 1.0,
+      "acc_look": 0.9
+    },
+    {
+      "item": "P778--cane",
+      "photo": 4,
+      "name_score": 0.04781320318579674,
+      "sharpness": 1212.6915283203125,
+      "fill": 0.4900000000000001,
+      "acc_own": 1.0,
+      "acc_look": 0.9
+    },
+    {
+      "item": "P778--cane",
+      "photo": 5,
+      "name_score": 0.0962354764342308,
+      "sharpness": 2685.52734375,
+      "fill": 0.24342315051020408,
+      "acc_own": 1.0,
+      "acc_look": 1.0
+    },
+    {
+      "item": "P778--cane",
+      "photo": 6,
+      "name_score": 0.04836412891745567,
+      "sharpness": 1374.60791015625,
+      "fill": 0.2853954081632653,
+      "acc_own": 0.6,
+      "acc_look": 0.7
+    },
+    {
+      "item": "P778--iphone-6",
+      "photo": 1,
+      "name_score": 0.8348997235298157,
+      "sharpness": 3564.0673828125,
+      "fill": 0.06855155128032411,
+      "acc_own": 1.0,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P778--iphone-6",
+      "photo": 2,
+      "name_score": 0.8643860220909119,
+      "sharpness": 1971.2103271484375,
+      "fill": 0.08097392296200936,
+      "acc_own": 1.0,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P778--iphone-6",
+      "photo": 3,
+      "name_score": 1.3030220543441828e-05,
+      "sharpness": 585.923828125,
+      "fill": 0.4900000000000001,
+      "acc_own": 0.0,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P778--iphone-6",
+      "photo": 4,
+      "name_score": 0.013289284892380238,
+      "sharpness": 832.4736938476562,
+      "fill": 0.4900000000000001,
+      "acc_own": 0.1,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P778--iphone-6",
+      "photo": 5,
+      "name_score": 0.31818175315856934,
+      "sharpness": 736.4737548828125,
+      "fill": 0.36933992346938777,
+      "acc_own": 1.0,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P778--iphone-6",
+      "photo": 6,
+      "name_score": 0.22683218121528625,
+      "sharpness": 125.48526763916016,
+      "fill": 0.35511001275510207,
+      "acc_own": 0.1,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P778--keys",
+      "photo": 1,
+      "name_score": 0.4115235507488251,
+      "sharpness": 4405.56689453125,
+      "fill": 0.0886976397482984,
+      "acc_own": 1.0,
+      "acc_look": 0.57
+    },
+    {
+      "item": "P778--keys",
+      "photo": 2,
+      "name_score": 0.45448845624923706,
+      "sharpness": 3523.65234375,
+      "fill": 0.13284054979931983,
+      "acc_own": 1.0,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P778--keys",
+      "photo": 3,
+      "name_score": 0.3712969124317169,
+      "sharpness": 5647.9326171875,
+      "fill": 0.08943825562512905,
+      "acc_own": 1.0,
+      "acc_look": 0.71
+    },
+    {
+      "item": "P778--keys",
+      "photo": 4,
+      "name_score": 0.3780539035797119,
+      "sharpness": 5894.12158203125,
+      "fill": 0.06059206816099059,
+      "acc_own": 0.0,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P778--keys",
+      "photo": 5,
+      "name_score": 0.4121825098991394,
+      "sharpness": 3351.725341796875,
+      "fill": 0.16140854203940205,
+      "acc_own": 1.0,
+      "acc_look": 0.86
+    },
+    {
+      "item": "P778--keys",
+      "photo": 6,
+      "name_score": 0.49715656042099,
+      "sharpness": 3376.452880859375,
+      "fill": 0.27511160714285715,
+      "acc_own": 0.29,
+      "acc_look": 0.86
+    },
+    {
+      "item": "P778--sunglasses",
+      "photo": 1,
+      "name_score": 0.60721755027771,
+      "sharpness": 4360.888671875,
+      "fill": 0.07827671024998678,
+      "acc_own": 1.0,
+      "acc_look": 0.5
+    },
+    {
+      "item": "P778--sunglasses",
+      "photo": 2,
+      "name_score": 0.028139369562268257,
+      "sharpness": 1438.5390625,
+      "fill": 0.02711264080304151,
+      "acc_own": 0.0,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P778--sunglasses",
+      "photo": 3,
+      "name_score": 0.8471959233283997,
+      "sharpness": 919.3755493164062,
+      "fill": 0.4900000000000001,
+      "acc_own": 1.0,
+      "acc_look": 1.0
+    },
+    {
+      "item": "P778--sunglasses",
+      "photo": 4,
+      "name_score": 0.7791807055473328,
+      "sharpness": 1028.7974853515625,
+      "fill": 0.10363520408163265,
+      "acc_own": 1.0,
+      "acc_look": 0.5
+    },
+    {
+      "item": "P778--sunglasses",
+      "photo": 5,
+      "name_score": 0.0791236087679863,
+      "sharpness": 4027.5869140625,
+      "fill": 0.4900000000000001,
+      "acc_own": 1.0,
+      "acc_look": 1.0
+    },
+    {
+      "item": "P778--sunglasses",
+      "photo": 6,
+      "name_score": 0.27211782336235046,
+      "sharpness": 1390.5726318359375,
+      "fill": 0.4900000000000001,
+      "acc_own": 1.0,
+      "acc_look": 0.12
+    },
+    {
+      "item": "P778--wallet",
+      "photo": 1,
+      "name_score": 0.5178689956665039,
+      "sharpness": 3127.25439453125,
+      "fill": 0.05534294604393724,
+      "acc_own": 1.0,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P778--wallet",
+      "photo": 2,
+      "name_score": 0.5877070426940918,
+      "sharpness": 1339.2147216796875,
+      "fill": 0.19271289120869212,
+      "acc_own": 1.0,
+      "acc_look": 0.67
+    },
+    {
+      "item": "P778--wallet",
+      "photo": 3,
+      "name_score": 0.3366904854774475,
+      "sharpness": 419.2001953125,
+      "fill": 0.2829279770976584,
+      "acc_own": 1.0,
+      "acc_look": 0.89
+    },
+    {
+      "item": "P778--wallet",
+      "photo": 4,
+      "name_score": 0.7836888432502747,
+      "sharpness": 1172.1839599609375,
+      "fill": 0.05523635600916211,
+      "acc_own": 0.11,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P778--wallet",
+      "photo": 5,
+      "name_score": 0.6445581912994385,
+      "sharpness": 701.496337890625,
+      "fill": 0.2656702780224784,
+      "acc_own": 1.0,
+      "acc_look": 0.44
+    },
+    {
+      "item": "P778--wallet",
+      "photo": 6,
+      "name_score": 0.808872640132904,
+      "sharpness": 386.8189392089844,
+      "fill": 0.2411511479591837,
+      "acc_own": 1.0,
+      "acc_look": 0.56
+    },
+    {
+      "item": "P867--front-door-keys",
+      "photo": 1,
+      "name_score": 0.15668682754039764,
+      "sharpness": 2244.725341796875,
+      "fill": 0.07967520725188311,
+      "acc_own": 1.0,
+      "acc_look": 0.2
+    },
+    {
+      "item": "P867--front-door-keys",
+      "photo": 2,
+      "name_score": 0.3213130831718445,
+      "sharpness": 6527.943359375,
+      "fill": 0.03307711222173427,
+      "acc_own": 1.0,
+      "acc_look": 0.3
+    },
+    {
+      "item": "P867--front-door-keys",
+      "photo": 3,
+      "name_score": 0.2826061248779297,
+      "sharpness": 6037.01318359375,
+      "fill": 0.039807607378146974,
+      "acc_own": 0.0,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P867--front-door-keys",
+      "photo": 4,
+      "name_score": 3.292129986220971e-05,
+      "sharpness": 571.6450805664062,
+      "fill": 0.4900000000000001,
+      "acc_own": 0.0,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P867--front-door-keys",
+      "photo": 5,
+      "name_score": 0.24463270604610443,
+      "sharpness": 7555.15185546875,
+      "fill": 0.4900000000000001,
+      "acc_own": 0.0,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P867--front-door-keys",
+      "photo": 6,
+      "name_score": 0.514944314956665,
+      "sharpness": 6481.759765625,
+      "fill": 0.4900000000000001,
+      "acc_own": 0.7,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P867--headphones",
+      "photo": 1,
+      "name_score": 0.8188921213150024,
+      "sharpness": 3192.1435546875,
+      "fill": 0.05157874284668651,
+      "acc_own": 1.0,
+      "acc_look": 1.0
+    },
+    {
+      "item": "P867--headphones",
+      "photo": 2,
+      "name_score": 0.7751878499984741,
+      "sharpness": 3301.6337890625,
+      "fill": 0.03386274948814259,
+      "acc_own": 1.0,
+      "acc_look": 1.0
+    },
+    {
+      "item": "P867--headphones",
+      "photo": 3,
+      "name_score": 0.2982029318809509,
+      "sharpness": 667.0147705078125,
+      "fill": 0.09181674292146769,
+      "acc_own": 0.29,
+      "acc_look": 0.14
+    },
+    {
+      "item": "P867--headphones",
+      "photo": 4,
+      "name_score": 0.3913009464740753,
+      "sharpness": 6539.447265625,
+      "fill": 0.4900000000000001,
+      "acc_own": 1.0,
+      "acc_look": 1.0
+    },
+    {
+      "item": "P867--headphones",
+      "photo": 5,
+      "name_score": 0.7278827428817749,
+      "sharpness": 7903.044921875,
+      "fill": 0.4900000000000001,
+      "acc_own": 0.14,
+      "acc_look": 0.14
+    },
+    {
+      "item": "P867--headphones",
+      "photo": 6,
+      "name_score": 0.14278650283813477,
+      "sharpness": 504.4073181152344,
+      "fill": 0.9910913584183674,
+      "acc_own": 0.0,
+      "acc_look": 0.0
+    },
+    {
+      "item": "P867--remote-control",
+      "photo": 1,
+      "name_score": 0.9716569781303406,
+      "sharpness": 5829.1748046875,
+      "fill": 0.04275630741682219,
+      "acc_own": 1.0,
+      "acc_look": 1.0
+    },
+    {
+      "item": "P867--remote-control",
+      "photo": 2,
+      "name_score": 0.9190515279769897,
+      "sharpness": 7190.9765625,
+      "fill": 0.03527043182105315,
+      "acc_own": 1.0,
+      "acc_look": 1.0
+    },
+    {
+      "item": "P867--remote-control",
+      "photo": 3,
+      "name_score": 0.9360199570655823,
+      "sharpness": 6783.79150390625,
+      "fill": 0.04737283934329001,
+      "acc_own": 1.0,
+      "acc_look": 1.0
+    },
+    {
+      "item": "P867--remote-control",
+      "photo": 4,
+      "name_score": 0.9195590019226074,
+      "sharpness": 6705.22509765625,
+      "fill": 0.047862896109866514,
+      "acc_own": 1.0,
+      "acc_look": 1.0
+    },
+    {
+      "item": "P867--remote-control",
+      "photo": 5,
+      "name_score": 0.6696223020553589,
+      "sharpness": 986.2418823242188,
+      "fill": 0.4900000000000001,
+      "acc_own": 0.25,
+      "acc_look": 0.25
+    },
+    {
+      "item": "P867--remote-control",
+      "photo": 6,
+      "name_score": 0.6286832690238953,
+      "sharpness": 2052.437255859375,
+      "fill": 0.061842315051020405,
+      "acc_own": 0.5,
+      "acc_look": 0.12
+    }
+  ],
+  "presence_fixes": {
+    "raw": {
+      "one frame": {
+        "vs other category": {
+          "auc": 0.931,
+          "tpr_at_1pct_fp": 25.0,
+          "threshold_at_1pct_fp": 8.171,
+          "tpr_at_5pct_fp": 67.9,
+          "threshold_at_5pct_fp": 5.69,
+          "tpr_at_10pct_fp": 82.7,
+          "threshold_at_10pct_fp": 4.6
+        },
+        "vs look-alikes": {
+          "auc": 0.762,
+          "tpr_at_1pct_fp": 2.6,
+          "threshold_at_1pct_fp": 15.508,
+          "tpr_at_5pct_fp": 16.0,
+          "threshold_at_5pct_fp": 9.16,
+          "tpr_at_10pct_fp": 28.2,
+          "threshold_at_10pct_fp": 7.779
+        }
+      },
+      "two frames agree": {
+        "vs other category": {
+          "auc": 0.941,
+          "tpr_at_1pct_fp": 26.7,
+          "threshold_at_1pct_fp": 6.954,
+          "tpr_at_5pct_fp": 71.7,
+          "threshold_at_5pct_fp": 4.635,
+          "tpr_at_10pct_fp": 82.2,
+          "threshold_at_10pct_fp": 3.898
+        },
+        "vs look-alikes": {
+          "auc": 0.755,
+          "tpr_at_1pct_fp": 12.2,
+          "threshold_at_1pct_fp": 8.382,
+          "tpr_at_5pct_fp": 17.8,
+          "threshold_at_5pct_fp": 7.37,
+          "tpr_at_10pct_fp": 23.9,
+          "threshold_at_10pct_fp": 7.028
+        }
+      }
+    },
+    "frame-relative": {
+      "one frame": {
+        "vs other category": {
+          "auc": 0.826,
+          "tpr_at_1pct_fp": 7.7,
+          "threshold_at_1pct_fp": 24.6,
+          "tpr_at_5pct_fp": 28.8,
+          "threshold_at_5pct_fp": 21.8,
+          "tpr_at_10pct_fp": 48.1,
+          "threshold_at_10pct_fp": 20.39
+        },
+        "vs look-alikes": {
+          "auc": 0.691,
+          "tpr_at_1pct_fp": 0.6,
+          "threshold_at_1pct_fp": 29.127,
+          "tpr_at_5pct_fp": 10.3,
+          "threshold_at_5pct_fp": 24.397,
+          "tpr_at_10pct_fp": 18.6,
+          "threshold_at_10pct_fp": 22.778
+        }
+      },
+      "two frames agree": {
+        "vs other category": {
+          "auc": 0.834,
+          "tpr_at_1pct_fp": 5.0,
+          "threshold_at_1pct_fp": 22.911,
+          "tpr_at_5pct_fp": 37.8,
+          "threshold_at_5pct_fp": 20.418,
+          "tpr_at_10pct_fp": 52.8,
+          "threshold_at_10pct_fp": 19.297
+        },
+        "vs look-alikes": {
+          "auc": 0.682,
+          "tpr_at_1pct_fp": 2.8,
+          "threshold_at_1pct_fp": 23.99,
+          "tpr_at_5pct_fp": 5.0,
+          "threshold_at_5pct_fp": 22.988,
+          "tpr_at_10pct_fp": 28.3,
+          "threshold_at_10pct_fp": 20.997
+        }
+      }
+    },
+    "vs my others": {
+      "one frame": {
+        "vs other category": {
+          "auc": 0.864,
+          "tpr_at_1pct_fp": 24.4,
+          "threshold_at_1pct_fp": 1.876,
+          "tpr_at_5pct_fp": 49.4,
+          "threshold_at_5pct_fp": 1.007,
+          "tpr_at_10pct_fp": 55.1,
+          "threshold_at_10pct_fp": 0.5
+        },
+        "vs look-alikes": {
+          "auc": 0.829,
+          "tpr_at_1pct_fp": 24.4,
+          "threshold_at_1pct_fp": 1.911,
+          "tpr_at_5pct_fp": 50.0,
+          "threshold_at_5pct_fp": 0.844,
+          "tpr_at_10pct_fp": 55.8,
+          "threshold_at_10pct_fp": 0.484
+        }
+      },
+      "two frames agree": {
+        "vs other category": {
+          "auc": 0.866,
+          "tpr_at_1pct_fp": 27.8,
+          "threshold_at_1pct_fp": 1.157,
+          "tpr_at_5pct_fp": 40.6,
+          "threshold_at_5pct_fp": 0.433,
+          "tpr_at_10pct_fp": 58.3,
+          "threshold_at_10pct_fp": -0.058
+        },
+        "vs look-alikes": {
+          "auc": 0.807,
+          "tpr_at_1pct_fp": 40.0,
+          "threshold_at_1pct_fp": 0.529,
+          "tpr_at_5pct_fp": 42.2,
+          "threshold_at_5pct_fp": 0.406,
+          "tpr_at_10pct_fp": 51.1,
+          "threshold_at_10pct_fp": 0.133
+        }
+      }
+    },
+    "photo + name": {
+      "one frame": {
+        "vs other category": {
+          "auc": 0.959,
+          "tpr_at_1pct_fp": 43.6,
+          "threshold_at_1pct_fp": 6.395,
+          "tpr_at_5pct_fp": 78.2,
+          "threshold_at_5pct_fp": 3.577,
+          "tpr_at_10pct_fp": 93.6,
+          "threshold_at_10pct_fp": 2.285
+        },
+        "vs look-alikes": {
+          "auc": 0.738,
+          "tpr_at_1pct_fp": 3.2,
+          "threshold_at_1pct_fp": 16.112,
+          "tpr_at_5pct_fp": 15.4,
+          "threshold_at_5pct_fp": 9.739,
+          "tpr_at_10pct_fp": 29.5,
+          "threshold_at_10pct_fp": 8.033
+        }
+      },
+      "two frames agree": {
+        "vs other category": {
+          "auc": 0.958,
+          "tpr_at_1pct_fp": 65.6,
+          "threshold_at_1pct_fp": 4.447,
+          "tpr_at_5pct_fp": 83.9,
+          "threshold_at_5pct_fp": 2.592,
+          "tpr_at_10pct_fp": 89.4,
+          "threshold_at_10pct_fp": 1.545
+        },
+        "vs look-alikes": {
+          "auc": 0.702,
+          "tpr_at_1pct_fp": 7.2,
+          "threshold_at_1pct_fp": 9.709,
+          "tpr_at_5pct_fp": 16.7,
+          "threshold_at_5pct_fp": 8.228,
+          "tpr_at_10pct_fp": 17.2,
+          "threshold_at_10pct_fp": 7.912
+        }
+      }
+    },
+    "all three": {
+      "one frame": {
+        "vs other category": {
+          "auc": 0.962,
+          "tpr_at_1pct_fp": 39.7,
+          "threshold_at_1pct_fp": 3.896,
+          "tpr_at_5pct_fp": 78.8,
+          "threshold_at_5pct_fp": 2.321,
+          "tpr_at_10pct_fp": 91.0,
+          "threshold_at_10pct_fp": 1.579
+        },
+        "vs look-alikes": {
+          "auc": 0.791,
+          "tpr_at_1pct_fp": 5.1,
+          "threshold_at_1pct_fp": 8.427,
+          "tpr_at_5pct_fp": 23.1,
+          "threshold_at_5pct_fp": 4.84,
+          "tpr_at_10pct_fp": 33.3,
+          "threshold_at_10pct_fp": 4.001
+        }
+      },
+      "two frames agree": {
+        "vs other category": {
+          "auc": 0.961,
+          "tpr_at_1pct_fp": 41.7,
+          "threshold_at_1pct_fp": 3.055,
+          "tpr_at_5pct_fp": 74.4,
+          "threshold_at_5pct_fp": 1.792,
+          "tpr_at_10pct_fp": 88.9,
+          "threshold_at_10pct_fp": 1.062
+        },
+        "vs look-alikes": {
+          "auc": 0.75,
+          "tpr_at_1pct_fp": 10.6,
+          "threshold_at_1pct_fp": 4.266,
+          "tpr_at_5pct_fp": 19.4,
+          "threshold_at_5pct_fp": 3.86,
+          "tpr_at_10pct_fp": 29.4,
+          "threshold_at_10pct_fp": 3.672
+        }
+      }
+    }
+  },
+  "presence_verifier": {
+    "photo + name": {
+      "one frame": {
+        "vs other category": {
+          "auc": 0.959,
+          "tpr_at_1pct_fp": 43.6,
+          "threshold_at_1pct_fp": 6.395,
+          "tpr_at_5pct_fp": 78.2,
+          "threshold_at_5pct_fp": 3.577,
+          "tpr_at_10pct_fp": 93.6,
+          "threshold_at_10pct_fp": 2.285
+        },
+        "vs look-alikes": {
+          "auc": 0.738,
+          "tpr_at_1pct_fp": 3.2,
+          "threshold_at_1pct_fp": 16.112,
+          "tpr_at_5pct_fp": 15.4,
+          "threshold_at_5pct_fp": 9.739,
+          "tpr_at_10pct_fp": 29.5,
+          "threshold_at_10pct_fp": 8.033
+        }
+      },
+      "two frames agree": {
+        "vs other category": {
+          "auc": 0.962,
+          "tpr_at_1pct_fp": 62.8,
+          "threshold_at_1pct_fp": 4.487,
+          "tpr_at_5pct_fp": 91.1,
+          "threshold_at_5pct_fp": 2.431,
+          "tpr_at_10pct_fp": 93.9,
+          "threshold_at_10pct_fp": 1.378
+        },
+        "vs look-alikes": {
+          "auc": 0.723,
+          "tpr_at_1pct_fp": 7.8,
+          "threshold_at_1pct_fp": 9.303,
+          "tpr_at_5pct_fp": 17.8,
+          "threshold_at_5pct_fp": 8.029,
+          "tpr_at_10pct_fp": 26.1,
+          "threshold_at_10pct_fp": 7.18
+        }
+      }
+    },
+    "vs my others": {
+      "one frame": {
+        "vs other category": {
+          "auc": 0.864,
+          "tpr_at_1pct_fp": 24.4,
+          "threshold_at_1pct_fp": 1.876,
+          "tpr_at_5pct_fp": 49.4,
+          "threshold_at_5pct_fp": 1.007,
+          "tpr_at_10pct_fp": 55.1,
+          "threshold_at_10pct_fp": 0.5
+        },
+        "vs look-alikes": {
+          "auc": 0.829,
+          "tpr_at_1pct_fp": 24.4,
+          "threshold_at_1pct_fp": 1.911,
+          "tpr_at_5pct_fp": 50.0,
+          "threshold_at_5pct_fp": 0.844,
+          "tpr_at_10pct_fp": 55.8,
+          "threshold_at_10pct_fp": 0.484
+        }
+      },
+      "two frames agree": {
+        "vs other category": {
+          "auc": 0.886,
+          "tpr_at_1pct_fp": 32.2,
+          "threshold_at_1pct_fp": 1.237,
+          "tpr_at_5pct_fp": 46.1,
+          "threshold_at_5pct_fp": 0.499,
+          "tpr_at_10pct_fp": 58.3,
+          "threshold_at_10pct_fp": 0.032
+        },
+        "vs look-alikes": {
+          "auc": 0.846,
+          "tpr_at_1pct_fp": 42.8,
+          "threshold_at_1pct_fp": 0.843,
+          "tpr_at_5pct_fp": 52.8,
+          "threshold_at_5pct_fp": 0.322,
+          "tpr_at_10pct_fp": 60.0,
+          "threshold_at_10pct_fp": 0.014
+        }
+      }
+    },
+    "DINOv2 check": {
+      "one frame": {
+        "vs other category": {
+          "auc": 0.908,
+          "tpr_at_1pct_fp": 41.7,
+          "threshold_at_1pct_fp": 0.516,
+          "tpr_at_5pct_fp": 59.0,
+          "threshold_at_5pct_fp": 0.411,
+          "tpr_at_10pct_fp": 73.1,
+          "threshold_at_10pct_fp": 0.353
+        },
+        "vs look-alikes": {
+          "auc": 0.801,
+          "tpr_at_1pct_fp": 7.1,
+          "threshold_at_1pct_fp": 0.642,
+          "tpr_at_5pct_fp": 34.6,
+          "threshold_at_5pct_fp": 0.551,
+          "tpr_at_10pct_fp": 50.0,
+          "threshold_at_10pct_fp": 0.471
+        }
+      },
+      "two frames agree": {
+        "vs other category": {
+          "auc": 0.916,
+          "tpr_at_1pct_fp": 42.2,
+          "threshold_at_1pct_fp": 0.456,
+          "tpr_at_5pct_fp": 63.3,
+          "threshold_at_5pct_fp": 0.343,
+          "tpr_at_10pct_fp": 85.0,
+          "threshold_at_10pct_fp": 0.282
+        },
+        "vs look-alikes": {
+          "auc": 0.796,
+          "tpr_at_1pct_fp": 2.2,
+          "threshold_at_1pct_fp": 0.639,
+          "tpr_at_5pct_fp": 38.3,
+          "threshold_at_5pct_fp": 0.513,
+          "tpr_at_10pct_fp": 43.9,
+          "threshold_at_10pct_fp": 0.442
+        }
+      }
+    },
+    "photo + name + DINOv2": {
+      "one frame": {
+        "vs other category": {
+          "auc": 0.964,
+          "tpr_at_1pct_fp": 53.2,
+          "threshold_at_1pct_fp": 3.193,
+          "tpr_at_5pct_fp": 86.5,
+          "threshold_at_5pct_fp": 2.134,
+          "tpr_at_10pct_fp": 94.2,
+          "threshold_at_10pct_fp": 1.446
+        },
+        "vs look-alikes": {
+          "auc": 0.809,
+          "tpr_at_1pct_fp": 19.9,
+          "threshold_at_1pct_fp": 5.358,
+          "tpr_at_5pct_fp": 24.4,
+          "threshold_at_5pct_fp": 5.007,
+          "tpr_at_10pct_fp": 35.9,
+          "threshold_at_10pct_fp": 3.893
+        }
+      },
+      "two frames agree": {
+        "vs other category": {
+          "auc": 0.966,
+          "tpr_at_1pct_fp": 63.9,
+          "threshold_at_1pct_fp": 2.343,
+          "tpr_at_5pct_fp": 89.4,
+          "threshold_at_5pct_fp": 1.478,
+          "tpr_at_10pct_fp": 91.1,
+          "threshold_at_10pct_fp": 1.01
+        },
+        "vs look-alikes": {
+          "auc": 0.776,
+          "tpr_at_1pct_fp": 18.3,
+          "threshold_at_1pct_fp": 5.111,
+          "tpr_at_5pct_fp": 21.1,
+          "threshold_at_5pct_fp": 4.058,
+          "tpr_at_10pct_fp": 35.0,
+          "threshold_at_10pct_fp": 3.391
+        }
+      }
+    },
+    "all four": {
+      "one frame": {
+        "vs other category": {
+          "auc": 0.969,
+          "tpr_at_1pct_fp": 67.9,
+          "threshold_at_1pct_fp": 3.714,
+          "tpr_at_5pct_fp": 89.1,
+          "threshold_at_5pct_fp": 2.748,
+          "tpr_at_10pct_fp": 93.6,
+          "threshold_at_10pct_fp": 2.081
+        },
+        "vs look-alikes": {
+          "auc": 0.852,
+          "tpr_at_1pct_fp": 24.4,
+          "threshold_at_1pct_fp": 5.855,
+          "tpr_at_5pct_fp": 33.3,
+          "threshold_at_5pct_fp": 5.33,
+          "tpr_at_10pct_fp": 48.1,
+          "threshold_at_10pct_fp": 4.46
+        }
+      },
+      "two frames agree": {
+        "vs other category": {
+          "auc": 0.954,
+          "tpr_at_1pct_fp": 74.4,
+          "threshold_at_1pct_fp": 2.91,
+          "tpr_at_5pct_fp": 84.4,
+          "threshold_at_5pct_fp": 2.044,
+          "tpr_at_10pct_fp": 90.0,
+          "threshold_at_10pct_fp": 1.272
+        },
+        "vs look-alikes": {
+          "auc": 0.804,
+          "tpr_at_1pct_fp": 22.2,
+          "threshold_at_1pct_fp": 5.414,
+          "tpr_at_5pct_fp": 27.8,
+          "threshold_at_5pct_fp": 4.533,
+          "tpr_at_10pct_fp": 48.9,
+          "threshold_at_10pct_fp": 3.747
+        }
+      }
+    }
+  }
+}

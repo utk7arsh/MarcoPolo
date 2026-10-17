@@ -1,0 +1,84 @@
+{
+  "own_clutter": {
+    "objectness in crop": {
+      "first named photo": 97.4,
+      "average single photo": 62.4,
+      "worst photo slot": 46.2,
+      "per photo slot": [
+        97.4,
+        66.0,
+        59.6,
+        46.8,
+        58.3,
+        46.2
+      ]
+    },
+    "whole crop": {
+      "first named photo": 82.7,
+      "average single photo": 52.9,
+      "worst photo slot": 32.7,
+      "per photo slot": [
+        82.7,
+        72.4,
+        50.6,
+        42.3,
+        32.7,
+        36.5
+      ]
+    },
+    "box in photo": {
+      "first named photo": 75.0,
+      "average single photo": 50.6,
+      "worst photo slot": 23.1,
+      "per photo slot": [
+        75.0,
+        71.2,
+        60.3,
+        39.1,
+        35.3,
+        23.1
+      ]
+    }
+  },
+  "lookalikes": {
+    "objectness in crop": {
+      "first named photo": 58.3,
+      "average single photo": 38.8,
+      "worst photo slot": 25.6,
+      "per photo slot": [
+        58.3,
+        35.9,
+        41.0,
+        28.8,
+        42.9,
+        25.6
+      ]
+    },
+    "whole crop": {
+      "first named photo": 51.3,
+      "average single photo": 34.7,
+      "worst photo slot": 24.4,
+      "per photo slot": [
+        51.3,
+        44.9,
+        34.0,
+        28.2,
+        25.6,
+        24.4
+      ]
+    },
+    "box in photo": {
+      "first named photo": 45.5,
+      "average single photo": 29.1,
+      "worst photo slot": 14.7,
+      "per photo slot": [
+        45.5,
+        32.1,
+        35.9,
+        24.4,
+        21.8,
+        14.7
+      ]
+    }
+  }
+}

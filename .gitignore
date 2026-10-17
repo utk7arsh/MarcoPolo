@@ -1,0 +1,45 @@
+# macOS Finder metadata (it stores file names)
+.DS_Store
+
+# Python
+poc/.venv/
+__pycache__/
+*.pyc
+
+# Downloads, model weights, datasets and temp files: large (2.6 GB, files over GitHub's 100 MB limit) and
+# third-party licensed. Re-fetch with the scripts in poc/pocs/*/fetch*.py and the run commands in poc/README.md.
+poc/data/
+
+# Compiled Swift tools (rebuild from the .swift sources next to them; see poc/README.md)
+poc/tools/bin/
+poc/emulators/apple_audio/dynamic_render
+poc/emulators/apple_audio/extract_hrir
+poc/pocs/poc6_recognition/featureprint
+poc/pocs/poc8_query/nl_query
+poc/pocs/poc8_query/fm_query
+poc/pocs/poc10_drop/labels
+poc/pocs/poc14_drop_audio/classify
+poc/pocs/poc17_vision_real/vision
+poc/pocs/poc18_voice_label_audio/render_label
+poc/pocs/poc19_touch_capture/touch_to_jev
+poc/pocs/poc22_registered_find/reg_boxes
+
+# Third-party material saved while researching (papers, saved web pages and forum threads, SDK headers,
+# vendor docs, cloned repos, dataset samples). Our own notes (*_facts.md, landscape/*.md, notes/) stay in.
+poc/research/papers/
+poc/research/papers_txt/
+poc/research/pain_points_src/
+poc/research/forums/
+poc/research/apple_docs/
+poc/research/sdk_headers/
+poc/research/meta_dat/
+poc/research/jev/
+poc/research/photon/
+poc/research/lahacks/
+poc/research/falls/
+poc/research/freesound_probe/
+poc/research/datasets_probe/
+poc/research/repos_psychoacoustics/
+poc/research/orbit_readme.md
+poc/research/landscape/research_raw/
+poc/research/.scratch/

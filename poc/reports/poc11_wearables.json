@@ -1,0 +1,71 @@
+{
+  "looks at hands (p=0.9)": {
+    "chest phone 0 deg": 7.5,
+    "chest phone 30 deg": 49.2,
+    "glasses (2 fps stream)": 87.3,
+    "glasses (look-down bursts)": 86.5,
+    "cap (look-down bursts)": 86.9
+  },
+  "blind-typical (p=0.3)": {
+    "chest phone 0 deg": 7.5,
+    "chest phone 30 deg": 49.2,
+    "glasses (2 fps stream)": 52.3,
+    "glasses (look-down bursts)": 39.2,
+    "cap (look-down bursts)": 40.2
+  },
+  "never looks down (p=0)": {
+    "chest phone 0 deg": 7.5,
+    "chest phone 30 deg": 49.2,
+    "glasses (2 fps stream)": 33.4,
+    "glasses (look-down bursts)": 9.1,
+    "cap (look-down bursts)": 8.6
+  },
+  "re-seen within 60 s of walking, looks at hands (p=0.9)": {
+    "chest phone 0 deg": 100.0,
+    "chest phone 30 deg": 100.0,
+    "glasses (2 fps stream)": 98.3,
+    "glasses (look-down bursts)": 83.6,
+    "cap (look-down bursts)": 82.4
+  },
+  "re-seen within 60 s of walking, blind-typical (p=0.3)": {
+    "chest phone 0 deg": 100.0,
+    "chest phone 30 deg": 100.0,
+    "glasses (2 fps stream)": 98.4,
+    "glasses (look-down bursts)": 57.6,
+    "cap (look-down bursts)": 72.8
+  },
+  "frame_rate_sweep_chest_30deg": {
+    "0.5 fps": {
+      "frames_in_release_window": 0.75,
+      "putdown_captured_pct": 31.7,
+      "reseen_within_60s_walking_pct": 99.9,
+      "seen_by_60s_pct": 99.9,
+      "max_gapless_sweep_deg_per_s": 24.0,
+      "uploads_MB_per_hour_at_150KB": 270
+    },
+    "1 fps": {
+      "frames_in_release_window": 1.5,
+      "putdown_captured_pct": 44.5,
+      "reseen_within_60s_walking_pct": 100.0,
+      "seen_by_60s_pct": 100.0,
+      "max_gapless_sweep_deg_per_s": 48.0,
+      "uploads_MB_per_hour_at_150KB": 540
+    },
+    "2 fps": {
+      "frames_in_release_window": 3.0,
+      "putdown_captured_pct": 45.5,
+      "reseen_within_60s_walking_pct": 100.0,
+      "seen_by_60s_pct": 100.0,
+      "max_gapless_sweep_deg_per_s": 96.0,
+      "uploads_MB_per_hour_at_150KB": 1080
+    },
+    "3 fps": {
+      "frames_in_release_window": 4.5,
+      "putdown_captured_pct": 46.7,
+      "reseen_within_60s_walking_pct": 100.0,
+      "seen_by_60s_pct": 100.0,
+      "max_gapless_sweep_deg_per_s": 144.0,
+      "uploads_MB_per_hour_at_150KB": 1620
+    }
+  }
+}

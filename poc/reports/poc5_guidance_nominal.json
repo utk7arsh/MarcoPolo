@@ -1,0 +1,112 @@
+{
+  "call_1hz_lock_behind": {
+    "n": 288,
+    "success_within_15s_pct": 93.05555555555556,
+    "arrived_within_30s_pct": 100.0,
+    "median_time_to_reach_s": 7.39999999999993,
+    "p90_time_to_reach_s": 10.153999999999874,
+    "median_time_to_face_s": 1.3800000000000008,
+    "first_percept_front_back_reversal_pct": 11.538461538461538,
+    "path_efficiency_pct": 96.05795971612326,
+    "median_reorients": 0.0
+  },
+  "pulse_4hz": {
+    "n": 288,
+    "success_within_15s_pct": 86.80555555555556,
+    "arrived_within_30s_pct": 100.0,
+    "median_time_to_reach_s": 6.359999999999952,
+    "p90_time_to_reach_s": 9.091999999999896,
+    "median_time_to_face_s": 1.3600000000000008,
+    "first_percept_front_back_reversal_pct": 48.35164835164835,
+    "path_efficiency_pct": 93.832113327556,
+    "median_reorients": 0.0
+  },
+  "single_call": {
+    "n": 288,
+    "success_within_15s_pct": 25.34722222222222,
+    "arrived_within_30s_pct": 46.52777777777778,
+    "median_time_to_reach_s": 5.7899999999999645,
+    "p90_time_to_reach_s": 8.561999999999907,
+    "median_time_to_face_s": 1.1400000000000006,
+    "first_percept_front_back_reversal_pct": 46.15384615384615,
+    "path_efficiency_pct": 95.73943437706052,
+    "median_reorients": 0.0
+  },
+  "continuous": {
+    "n": 288,
+    "success_within_15s_pct": 83.33333333333333,
+    "arrived_within_30s_pct": 99.65277777777777,
+    "median_time_to_reach_s": 6.659999999999946,
+    "p90_time_to_reach_s": 9.43599999999989,
+    "median_time_to_face_s": 1.4800000000000009,
+    "first_percept_front_back_reversal_pct": 46.15384615384615,
+    "path_efficiency_pct": 92.78440212013142,
+    "median_reorients": 0.0
+  },
+  "beacon_supernormal": {
+    "n": 288,
+    "success_within_15s_pct": 97.91666666666667,
+    "arrived_within_30s_pct": 100.0,
+    "median_time_to_reach_s": 6.839999999999942,
+    "p90_time_to_reach_s": 9.32599999999989,
+    "median_time_to_face_s": 1.3200000000000007,
+    "first_percept_front_back_reversal_pct": 12.087912087912088,
+    "path_efficiency_pct": 98.44963357889381,
+    "median_reorients": 0.0
+  },
+  "beacon_2_5hz_lock_behind": {
+    "n": 288,
+    "success_within_15s_pct": 99.30555555555556,
+    "arrived_within_30s_pct": 100.0,
+    "median_time_to_reach_s": 6.769999999999944,
+    "p90_time_to_reach_s": 9.33199999999989,
+    "median_time_to_face_s": 1.4000000000000008,
+    "first_percept_front_back_reversal_pct": 11.538461538461538,
+    "path_efficiency_pct": 98.70445763760628,
+    "median_reorients": 0.0
+  },
+  "call_1hz_tempo": {
+    "n": 288,
+    "success_within_15s_pct": 80.90277777777777,
+    "arrived_within_30s_pct": 99.65277777777777,
+    "median_time_to_reach_s": 6.799999999999943,
+    "p90_time_to_reach_s": 9.507999999999887,
+    "median_time_to_face_s": 1.3000000000000007,
+    "first_percept_front_back_reversal_pct": 46.15384615384615,
+    "path_efficiency_pct": 87.59241815422183,
+    "median_reorients": 0.0
+  },
+  "clock_then_beacon": {
+    "n": 288,
+    "success_within_15s_pct": 98.95833333333333,
+    "arrived_within_30s_pct": 100.0,
+    "median_time_to_reach_s": 8.499999999999908,
+    "p90_time_to_reach_s": 10.985999999999855,
+    "median_time_to_face_s": 3.3600000000000025,
+    "first_percept_front_back_reversal_pct": 1.098901098901099,
+    "path_efficiency_pct": 98.85987300629215,
+    "median_reorients": 0.0
+  },
+  "speech_only": {
+    "n": 288,
+    "success_within_15s_pct": 53.125,
+    "arrived_within_30s_pct": 100.0,
+    "median_time_to_reach_s": 12.389999999999825,
+    "p90_time_to_reach_s": 17.647999999999715,
+    "median_time_to_face_s": 2.3200000000000016,
+    "first_percept_front_back_reversal_pct": 0.0,
+    "path_efficiency_pct": 96.58334781407801,
+    "median_reorients": 3.0
+  },
+  "call_1hz": {
+    "n": 288,
+    "success_within_15s_pct": 70.48611111111111,
+    "arrived_within_30s_pct": 97.56944444444444,
+    "median_time_to_reach_s": 6.6799999999999455,
+    "p90_time_to_reach_s": 9.679999999999882,
+    "median_time_to_face_s": 1.3000000000000007,
+    "first_percept_front_back_reversal_pct": 46.15384615384615,
+    "path_efficiency_pct": 89.19518423407168,
+    "median_reorients": 0.0
+  }
+}

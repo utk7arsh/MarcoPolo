@@ -1,0 +1,35 @@
+# Q4 (beacon / sound design) and Q5 (supernormal cues, training, spectral enhancement) -- research notes
+
+Fork notes for the Marco Polo psychoacoustics study. Verification tags:
+[PRIMARY] read in paper text/table; [ABSTRACT] abstract only; [SECONDARY: <source>] reported by a citing source;
+[MEMORY-UNVERIFIED] not confirmed (avoid). "approx, read from Fig. N" = digitized by eye from a figure.
+
+PDFs were under poc/research/papers/psychoacoustics/<slug>/paper.pdf (not in the repository)
+
+---
+
+## Q4.1 Walker & Lindsay -- SWAN beacon studies (Georgia Tech Sonification Lab)
+
+### Walker, B. N., & Lindsay, J. (2006). Navigation performance with a virtual auditory display: Effects of beacon sound, capture radius, and practice. Human Factors, 48(2), 265-278. doi:10.1518/001872006777724507
+URL (author-hosted PDF): http://sonify.psych.gatech.edu/publications/pdfs/2006HF-WalkerLindsay.pdf  (local: papers/psychoacoustics/walker_2006hf_walkerlindsay/paper.pdf)
+Condition: N = 108 sighted undergraduates (blindfold-free, no vision of VE); virtual environment, translation by joystick trigger at constant 1.2 m/s ("approximates a walking rate of about 4.3 km/hr"), heading by physically rotating body/head (InterSense InertiaCube2 head tracker; position+orientation logged every 2 ms); NON-individualized HRTF (Creative SoundBlaster Extigy hardware HRTF via OpenAL/DirectSound3D), Sony MDR-7506 closed headphones. Maps: 5, 10, 10 waypoints; lengths 100.0, 283.5, 287.6 m. Between-subjects: beacon sound (3) x capture radius (3), 12 per cell.
+- Beacon sounds [PRIMARY, p.268]: "The beacon sounds were all approximately 250 ms long and equated for loudness, but they differed greatly in timbre." Sonar pulse ("ping"), "a pure sine wave with a frequency of 1000 Hz", and "a burst of pink noise, intended to have a broad spectrum but not to sound as harsh as white noise."
+- Repetition / tempo-as-distance [PRIMARY, p.268]: "At the start of a map the beacon sound played in a cyclical on-off pattern in which the sound was played, followed by 1 s of silence, then repeated. As the listener moved closer to the next waypoint the silence was shortened to effectively make the beacon tempo faster. Hence, increasing proximity to the waypoint was mapped to increasing tempo" (i.e., far-field period ~1.25 s, ~0.8 Hz; exact tempo-vs-distance function NOT reported).
+- Capture radii [PRIMARY, p.269]: small 0.5 m, medium 1.5 m ("approximately equal to a human stride"), large 15 m.
+- Practice (Maps 1,2,3) [PRIMARY, pp.272-273]: time efficiency means 63, 103, 108 %; path efficiency 75, 93, 99 %. (Efficiency = scheduled length / actual path; minimum possible time / actual time; can exceed 100% because the capture radius lets users cut corners.)
+- Beacon sound [PRIMARY, p.273]: path efficiency noise 94%, pure tone 90%, sonar 83% (marginal, F(2,99)=2.54, p=.08); time efficiency noise 98%, tone 91%, sonar 83% (n.s., p=.15). Significant beacon x map interaction for time efficiency: noise improved most with practice.
+- Capture radius [PRIMARY, p.273]: time efficiency large 120%, medium 63%, small 90%; path efficiency large 88%, medium 106%, small 73%. Small radius -> "Overshooting and subsequent hunting for waypoints" ("star-shaped movement trace around a waypoint indicates overshooting and hunting").
+- Beacon x radius [PRIMARY, p.272/276]: beacon differences in path efficiency only at the large (15 m) radius; "With that choice of medium radius, the sonar ping and pure tone led to slightly faster and more efficient paths than did the noise beacon".
+- Conclusion [PRIMARY, abstract]: "A human-scale capture radius (1.5 m) and sonar-like beacon yielded the optimal combination for safety and efficiency." Note: listeners "were free to rotate or tilt their head, which for some helped localize the sound" and were warned about front-back confusions with non-individualized HRTFs.
+- Relevance: closest published analogue to "repeat a ~250 ms call about once per second and walk toward it": with non-individualized HRTF + head tracking, sighted novices reached ~99% path efficiency by the 3rd map; spectrum mattered less than interaction design (capture radius). The tonal (1 kHz) beacon was NOT clearly worse here despite psychoacoustic predictions -- head-tracked turning appears to compensate for poor static cues. CAUTION: no blind participants, joystick locomotion, 1.2 m/s fixed speed, outdoor-scale distances (tens of m) -- not 0.5-6 m indoor.
+
+### Walker, B. N., & Lindsay, J. (2003). Effect of beacon sounds on navigation performance in a virtual reality environment. Proc. ICAD 2003, Boston, pp. 204-207.
+URL: http://sonify.psych.gatech.edu/publications/pdfs/2003ICAD-WalkerLindsay-Beacons.pdf (local: papers/psychoacoustics/walker_2003icad_walkerlindsay_beacons/)
+- Pilot version of the above [PRIMARY]: N=21 (Study 1, capture radius 5 m) and N=18 (Study 2, 30 cm). Beacons here were 1-s long: "a 1 s burst of broadband noise centered on 1 kHz", "a 1 s pure sine wave with a frequency of 1 kHz", "a 1 s sonar pulse". Ordering both studies: noise best, then pure tone, then sonar (p<.08, n.s. at .05). Subjective ease: 71% (5 m radius) vs 44% (30 cm radius) found navigation easy or became easier.
+- Secondary report of Tran et al. 2000 [SECONDARY: Walker & Lindsay 2003]: "The system used in their study allowed for accuracy of between 7-15 degrees azimuth in the frontal direction." "The 10 beacons used in their studies ranged from pure tones to complex sounds, including both speech and non-speech." "any acoustic beacon intended for use in navigation tasks should be a wide-band non-speech sound, with a proper balance between low-and high-frequency energy" "The sonar sound was found to be the most appropriate beacon overall when presented at a rate of 1.1 repetitions per second." "a user's rating of the quality of a beacon was highly correlated with the localization performance level".
+
+### Walker & Lindsay 2005 HFES (Development and evaluation of a System for Wearable Audio Navigation), HFES 49th Annual Meeting pp.1607-1609
+URL: http://sonify.psych.gatech.edu/publications/pdfs/2005HFES-WalkerLindsay.pdf
+- [PRIMARY] Summarizes Tran et al.: "They found that a broad spectrum sound was most easy to localize ... Their results also indicate that speech is most likely not an optimal beacon sound to use." Small capture radius: "users would often walk right past it ... frequently having to retrace their steps, sometimes more than once". Preliminary tests with visually impaired participants: "no matter how good the system was, they would not give up access to other auditory stimuli by wearing headphones" (-> motivates open/transparent audio; AirPods transparency mode analogue).
+- Walker & Lindsay 2005 ICAD (bonephones): bone-conduction headphones allowed all participants to complete tasks "with good efficiencies, though not immediately as effective as regular headphones" [ABSTRACT-level, PRIMARY abstract].
+- Walker & Lindsay 2006 HFES: a difficult secondary speech task "reduced efficiency in navigation" with pink-noise and sonar beacons (N=30) [PRIMARY abstract].

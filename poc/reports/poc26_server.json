@@ -1,0 +1,66 @@
+{
+  "1_auth_fail_closed": {
+    "GET /items": 403,
+    "POST /frames": 403
+  },
+  "2_registration_retake_loop": {
+    "items": 18,
+    "registered": 18,
+    "first_photo_ok": 17,
+    "median_tries": 1.0,
+    "max_tries": 3,
+    "accepted_photo_accuracy_pct": 88.3
+  },
+  "3_presence": {
+    "thresholds": {
+      "photo_name": -2.426,
+      "dino": 0.38,
+      "vs_others": 0.078
+    },
+    "caught_pct": 50.6,
+    "caught_with_correct_box_pct": 46.8,
+    "false_positive_pct": {
+      "look-alike": 1.4,
+      "other category": 0.9,
+      "same user": 4.1
+    },
+    "note": "fitted and scored on the same frames (optimistic); same-user frames may genuinely contain the item"
+  },
+  "4_exif": {
+    "upright_box": [
+      93.4,
+      20.7,
+      131.1,
+      29.1
+    ],
+    "tagged_sideways_box": [
+      93.5,
+      20.8,
+      131.6,
+      29.1
+    ],
+    "max_px_diff": 0.5
+  },
+  "5_latency_m3pro_mps": {
+    "18 items registered": {
+      "request_ms_median": 457.8,
+      "server_ms_last": 450.5
+    },
+    "1 items registered": {
+      "request_ms_median": 376.0,
+      "server_ms_last": 372.8
+    }
+  },
+  "6_latest_frame_wins": {
+    "processed": [
+      1,
+      4,
+      6
+    ],
+    "skipped": [
+      2,
+      3,
+      5
+    ]
+  }
+}

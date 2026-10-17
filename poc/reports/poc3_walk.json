@@ -1,0 +1,42 @@
+{
+  "listener at ears (offset model)": {
+    "walks": 30,
+    "azimuth_err_median_deg": 2.636624189047211,
+    "azimuth_err_p90_deg": 4.755784905658373,
+    "azimuth_err_p90_within_1_2m_deg": 4.787512595001772,
+    "distance_err_median_cm": 7.251329969113596,
+    "distance_err_p90_cm": 9.325666653321107,
+    "elevation_err_median_deg": 0.9834821293673315,
+    "elevation_err_p90_within_1_2m_deg": 2.3661395817288025,
+    "within_reach_announced_at_true_torso_dist_cm": [
+      76.2,
+      77.3,
+      79.3
+    ],
+    "item_pos_err_cm_start_vs_end": [
+      7.9,
+      6.4
+    ],
+    "distance_monotonic_violations_total": 0
+  },
+  "listener at phone (no offset)": {
+    "walks": 30,
+    "azimuth_err_median_deg": 2.636782297565645,
+    "azimuth_err_p90_deg": 4.761108029299152,
+    "azimuth_err_p90_within_1_2m_deg": 4.847334129578513,
+    "distance_err_median_cm": 17.251009279829322,
+    "distance_err_p90_cm": 19.322468171440967,
+    "elevation_err_median_deg": 4.7972301522239675,
+    "elevation_err_p90_within_1_2m_deg": 4.872021753811865,
+    "within_reach_announced_at_true_torso_dist_cm": [
+      76.2,
+      77.3,
+      79.3
+    ],
+    "item_pos_err_cm_start_vs_end": [
+      7.9,
+      6.4
+    ],
+    "distance_monotonic_violations_total": 0
+  }
+}

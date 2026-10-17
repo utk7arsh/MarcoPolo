@@ -1,0 +1,29 @@
+{
+  "pipeline latency 100 ms": {
+    "A_warned_before_contact_pct": 70.7,
+    "A_warned_>=200ms_before_contact_pct": 6.3,
+    "A_warned_>=300ms_before_contact_pct": 0.8,
+    "A_median_lead_ms": 46.0,
+    "A_false_warnings_on_correct_reaches_pct": 7.5,
+    "B_name_heard_after_touch_ms": 117.0,
+    "B_before_lift_if_touch_to_lift_300ms": true
+  },
+  "pipeline latency 150 ms": {
+    "A_warned_before_contact_pct": 47.3,
+    "A_warned_>=200ms_before_contact_pct": 2.2,
+    "A_warned_>=300ms_before_contact_pct": 0.2,
+    "A_median_lead_ms": -6.0,
+    "A_false_warnings_on_correct_reaches_pct": 7.2,
+    "B_name_heard_after_touch_ms": 167.0,
+    "B_before_lift_if_touch_to_lift_300ms": true
+  },
+  "pipeline latency 250 ms": {
+    "A_warned_before_contact_pct": 14.8,
+    "A_warned_>=200ms_before_contact_pct": 0.7,
+    "A_warned_>=300ms_before_contact_pct": 0.1,
+    "A_median_lead_ms": -107.0,
+    "A_false_warnings_on_correct_reaches_pct": 7.6,
+    "B_name_heard_after_touch_ms": 267.0,
+    "B_before_lift_if_touch_to_lift_300ms": true
+  }
+}

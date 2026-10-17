@@ -1,0 +1,260 @@
+spatial audio blind 1 6 284
+spatial audio blind 2 6 284
+spatial audio blind 3 6 284
+spatial audio blind 4 6 284
+spatial audio object 1 6 501
+spatial audio object 2 6 501
+spatial audio object 3 6 501
+spatial audio object 4 6 501
+spatial audio find 1 6 343
+spatial audio find 2 6 343
+spatial audio find 3 6 343
+spatial audio find 4 6 343
+spatial audio visually impaired 1 6 252
+spatial audio visually impaired 2 6 252
+spatial audio visually impaired 3 6 252
+spatial audio visually impaired 4 6 252
+spatial audio navigation 1 6 388
+spatial audio navigation 2 6 388
+spatial audio navigation 3 6 388
+spatial audio navigation 4 6 388
+3D audio blind 1 6 218
+3D audio blind 2 6 218
+3D audio blind 3 6 218
+3D audio blind 4 6 218
+binaural blind 1 6 10
+binaural blind 2 4 10
+airpods head tracking 1 6 19
+airpods head tracking 2 6 19
+airpods head tracking 3 6 19
+airpods head tracking 4 1 19
+airpods spatial audio 1 6 20
+airpods spatial audio 2 6 20
+airpods spatial audio 3 6 20
+airpods spatial audio 4 2 20
+airpods blind 1 6 19
+airpods blind 2 6 19
+airpods blind 3 6 19
+airpods blind 4 1 19
+head tracking audio 1 6 444
+head tracking audio 2 6 444
+head tracking audio 3 6 444
+head tracking audio 4 6 444
+lidar blind 1 6 116
+lidar blind 2 6 116
+lidar blind 3 6 116
+lidar blind 4 6 116
+lidar visually impaired 1 6 99
+lidar visually impaired 2 6 99
+lidar visually impaired 3 6 99
+lidar visually impaired 4 6 99
+arkit blind 1 6 62
+arkit blind 2 6 62
+arkit blind 3 6 62
+arkit blind 4 6 62
+arkit visually impaired 1 6 30
+arkit visually impaired 2 6 30
+arkit visually impaired 3 6 30
+arkit visually impaired 4 6 30
+arkit find objects 1 6 64
+arkit find objects 2 6 64
+arkit find objects 3 6 64
+arkit find objects 4 6 64
+find lost items 1 6 721
+find lost items 2 6 721
+find lost items 3 6 721
+find lost items 4 6 721
+lost items 1 6 1777
+lost items 2 6 1777
+lost items 3 6 1777
+lost items 4 6 1777
+where are my keys 1 6 2113
+where are my keys 2 6 2113
+where are my keys 3 6 2113
+where are my keys 4 6 2113
+find my keys 1 6 1129
+find my keys 2 6 1129
+find my keys 3 6 1129
+find my keys 4 6 1129
+misplaced objects 1 6 74
+misplaced objects 2 6 74
+misplaced objects 3 6 74
+misplaced objects 4 6 74
+misplaced items 1 6 111
+misplaced items 2 6 111
+misplaced items 3 6 111
+misplaced items 4 6 111
+object finder blind 1 6 15
+object finder blind 2 6 15
+object finder blind 3 3 15
+find objects blind 1 6 253
+find objects blind 2 6 253
+find objects blind 3 6 253
+find objects blind 4 6 253
+object locator 1 6 37
+object locator 2 6 37
+object locator 3 6 37
+object locator 4 6 37
+remember where 1 6 6153
+remember where 2 6 6153
+remember where 3 6 6153
+remember where 4 6 6153
+object memory 1 6 2422
+object memory 2 6 2422
+object memory 3 6 2422
+object memory 4 6 2422
+item memory 1 6 1406
+item memory 2 6 1406
+ERR item memory 3 HTTP Error 429: Too Many Requests
+item memory 3 6 1406
+item memory 4 6 1406
+where did I leave 1 6 1769
+where did I leave 2 6 1769
+where did I leave 3 6 1769
+where did I leave 4 6 1769
+remember where you put 1 6 684
+remember where you put 2 6 684
+remember where you put 3 6 684
+remember where you put 4 6 684
+lost and found AI 1 6 1912
+ERR lost and found AI 2 HTTP Error 429: Too Many Requests
+lost and found AI 2 6 1912
+lost and found AI 3 6 1912
+lost and found AI 4 6 1912
+wearable camera memory 1 6 263
+wearable camera memory 2 6 263
+wearable camera memory 3 6 263
+wearable camera memory 4 6 263
+smart glasses memory 1 6 238
+smart glasses memory 2 6 238
+smart glasses memory 3 6 238
+smart glasses memory 4 6 238
+meta glasses blind 1 6 82
+ERR meta glasses blind 2 HTTP Error 429: Too Many Requests
+meta glasses blind 2 6 82
+meta glasses blind 3 6 82
+meta glasses blind 4 6 82
+ray-ban meta blind 1 6 25
+ray-ban meta blind 2 6 25
+ray-ban meta blind 3 6 25
+ray-ban meta blind 4 6 25
+chest mounted phone 1 6 17
+chest mounted phone 2 6 17
+chest mounted phone 3 5 17
+chest-worn 1 6 1673
+ERR chest-worn 2 HTTP Error 429: Too Many Requests
+chest-worn 2 6 1673
+chest-worn 3 6 1673
+chest-worn 4 6 1673
+vest blind 1 6 17
+vest blind 2 6 17
+vest blind 3 5 17
+pendant camera 1 6 7
+pendant camera 2 1 7
+spice blind 1 3 3
+ERR medication blind 1 HTTP Error 429: Too Many Requests
+medication blind 1 6 143
+medication blind 2 6 143
+medication blind 3 6 143
+medication blind 4 6 143
+pill identification blind 1 6 8
+pill identification blind 2 2 8
+clothing blind 1 6 71
+clothing blind 2 6 71
+clothing blind 3 6 71
+clothing blind 4 6 71
+label items blind 1 6 43
+ERR label items blind 2 HTTP Error 429: Too Many Requests
+label items blind 2 6 43
+label items blind 3 6 43
+label items blind 4 6 43
+voice labels 1 6 1603
+voice labels 2 6 1603
+voice labels 3 6 1603
+voice labels 4 6 1603
+personalized object recognition 1 6 334
+personalized object recognition 2 6 334
+personalized object recognition 3 6 334
+personalized object recognition 4 6 334
+ERR teachable object recognizer 1 HTTP Error 429: Too Many Requests
+teachable object recognizer 1 0 0
+fall detection lidar 1 6 29
+fall detection lidar 2 6 29
+fall detection lidar 3 6 29
+fall detection lidar 4 6 29
+fall prevention elderly 1 6 39
+fall prevention elderly 2 6 39
+fall prevention elderly 3 6 39
+fall prevention elderly 4 6 39
+elderly hazard 1 6 78
+elderly hazard 2 6 78
+elderly hazard 3 6 78
+ERR elderly hazard 4 HTTP Error 429: Too Many Requests
+elderly hazard 4 6 78
+tripping hazard 1 6 9
+tripping hazard 2 3 9
+floor obstacle 1 6 174
+floor obstacle 2 6 174
+floor obstacle 3 6 174
+floor obstacle 4 6 174
+echolocation 1 6 67
+echolocation 2 6 67
+echolocation 3 6 67
+echolocation 4 6 67
+sonification 1 6 69
+sonification 2 6 69
+ERR sonification 3 HTTP Error 429: Too Many Requests
+sonification 3 6 69
+sonification 4 6 69
+object permanence 1 6 24
+object permanence 2 6 24
+object permanence 3 6 24
+object permanence 4 6 24
+dementia find 1 6 216
+dementia find 2 6 216
+dementia find 3 6 216
+dementia find 4 6 216
+alzheimer memory objects 1 6 25
+alzheimer memory objects 2 6 25
+alzheimer memory objects 3 6 25
+alzheimer memory objects 4 6 25
+forget keys 1 6 476
+ERR forget keys 2 HTTP Error 429: Too Many Requests
+forget keys 2 6 476
+forget keys 3 6 476
+forget keys 4 6 476
+leaving home reminder 1 6 66
+leaving home reminder 2 6 66
+leaving home reminder 3 6 66
+leaving home reminder 4 6 66
+hand tracking blind 1 6 198
+hand tracking blind 2 6 198
+hand tracking blind 3 6 198
+hand tracking blind 4 6 198
+grasp blind 1 6 34
+grasp blind 2 6 34
+grasp blind 3 6 34
+ERR grasp blind 4 HTTP Error 429: Too Many Requests
+grasp blind 4 6 34
+reach object visually impaired 1 6 85
+reach object visually impaired 2 6 85
+reach object visually impaired 3 6 85
+reach object visually impaired 4 6 85
+sound beacon 1 6 72
+sound beacon 2 6 72
+sound beacon 3 6 72
+sound beacon 4 6 72
+audio beacon 1 6 113
+audio beacon 2 6 113
+audio beacon 3 6 113
+audio beacon 4 6 113
+hot cold 1 6 634
+ERR hot cold 2 HTTP Error 429: Too Many Requests
+hot cold 2 6 634
+hot cold 3 6 634
+hot cold 4 6 634
+marco polo 1 6 29
+marco polo 2 6 29
+marco polo 3 6 29
+marco polo 4 6 29
+DONE 1075

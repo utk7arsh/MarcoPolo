@@ -1,0 +1,706 @@
+{
+  "nominal (iPhone noise 1.5x iPad)": {
+    "center_depth": {
+      "0-1.5 m": {
+        "n": 8,
+        "median_cm": 7.7637139233537,
+        "p90_cm": 13.229162129095565
+      },
+      "1.5-2.5 m": {
+        "n": 29,
+        "median_cm": 9.153737807330112,
+        "p90_cm": 13.74033166285103
+      },
+      "2.5-3.5 m": {
+        "n": 21,
+        "median_cm": 7.019991522148167,
+        "p90_cm": 17.537401787040558
+      },
+      "3.5-5.0 m": {
+        "n": 5,
+        "median_cm": 15.370142407083994,
+        "p90_cm": 24.547988058741453
+      },
+      "fused_per_item": {
+        "bottle": {
+          "n": 19,
+          "horiz_err_cm": 4.8,
+          "height_err_cm": 16.2
+        },
+        "mug": {
+          "n": 19,
+          "horiz_err_cm": 9.3,
+          "height_err_cm": 5.2
+        },
+        "wallet": {
+          "n": 12,
+          "horiz_err_cm": 4.6,
+          "height_err_cm": 2.3
+        },
+        "glasses_case": {
+          "n": 8,
+          "horiz_err_cm": 14.0,
+          "height_err_cm": 5.2
+        },
+        "keys": {
+          "n": 5,
+          "horiz_err_cm": 9.1,
+          "height_err_cm": 5.2
+        }
+      }
+    },
+    "median_depth": {
+      "0-1.5 m": {
+        "n": 8,
+        "median_cm": 6.080632351438954,
+        "p90_cm": 10.466559636124178
+      },
+      "1.5-2.5 m": {
+        "n": 29,
+        "median_cm": 7.358464905054577,
+        "p90_cm": 10.40648231775045
+      },
+      "2.5-3.5 m": {
+        "n": 21,
+        "median_cm": 7.59255875566285,
+        "p90_cm": 10.27594025240345
+      },
+      "3.5-5.0 m": {
+        "n": 5,
+        "median_cm": 2.577359835721859,
+        "p90_cm": 9.591245525573862
+      },
+      "fused_per_item": {
+        "bottle": {
+          "n": 19,
+          "horiz_err_cm": 5.9,
+          "height_err_cm": 14.7
+        },
+        "mug": {
+          "n": 19,
+          "horiz_err_cm": 7.2,
+          "height_err_cm": 5.1
+        },
+        "wallet": {
+          "n": 12,
+          "horiz_err_cm": 1.0,
+          "height_err_cm": 1.8
+        },
+        "glasses_case": {
+          "n": 8,
+          "horiz_err_cm": 8.1,
+          "height_err_cm": 4.1
+        },
+        "keys": {
+          "n": 5,
+          "horiz_err_cm": 7.5,
+          "height_err_cm": 3.5
+        }
+      }
+    },
+    "footprint": {
+      "0-1.5 m": {
+        "n": 8,
+        "median_cm": 3.972245126909636,
+        "p90_cm": 7.396253170856785
+      },
+      "1.5-2.5 m": {
+        "n": 29,
+        "median_cm": 9.53068165842352,
+        "p90_cm": 16.12026129071773
+      },
+      "2.5-3.5 m": {
+        "n": 21,
+        "median_cm": 8.785310649804808,
+        "p90_cm": 13.473861995357305
+      },
+      "3.5-5.0 m": {
+        "n": 5,
+        "median_cm": 6.912720953934383,
+        "p90_cm": 9.121383344709011
+      },
+      "fused_per_item": {
+        "bottle": {
+          "n": 19,
+          "horiz_err_cm": 5.7,
+          "height_err_cm": 2.0
+        },
+        "mug": {
+          "n": 19,
+          "horiz_err_cm": 5.7,
+          "height_err_cm": -1.0
+        },
+        "wallet": {
+          "n": 12,
+          "horiz_err_cm": 7.3,
+          "height_err_cm": 0.7
+        },
+        "glasses_case": {
+          "n": 8,
+          "horiz_err_cm": 9.5,
+          "height_err_cm": 1.1
+        },
+        "keys": {
+          "n": 5,
+          "horiz_err_cm": 7.4,
+          "height_err_cm": 1.5
+        }
+      }
+    },
+    "detections": {
+      "bottle": {
+        "detections": 19,
+        "min_dist": 1.42,
+        "max_dist": 2.63
+      },
+      "glasses_case": {
+        "detections": 8,
+        "min_dist": 2.62,
+        "max_dist": 4.06
+      },
+      "keys": {
+        "detections": 5,
+        "min_dist": 1.69,
+        "max_dist": 2.66
+      },
+      "mug": {
+        "detections": 19,
+        "min_dist": 1.16,
+        "max_dist": 2.78
+      },
+      "wallet": {
+        "detections": 12,
+        "min_dist": 1.58,
+        "max_dist": 3.53
+      }
+    }
+  },
+  "pessimistic depth (2x iPad)": {
+    "center_depth": {
+      "0-1.5 m": {
+        "n": 8,
+        "median_cm": 8.085007431426874,
+        "p90_cm": 15.56805041018679
+      },
+      "1.5-2.5 m": {
+        "n": 29,
+        "median_cm": 9.514215462654436,
+        "p90_cm": 15.171801625135709
+      },
+      "2.5-3.5 m": {
+        "n": 21,
+        "median_cm": 7.460441156411404,
+        "p90_cm": 21.204778366285947
+      },
+      "3.5-5.0 m": {
+        "n": 5,
+        "median_cm": 15.370142407083994,
+        "p90_cm": 26.049272567762067
+      },
+      "fused_per_item": {
+        "bottle": {
+          "n": 19,
+          "horiz_err_cm": 4.0,
+          "height_err_cm": 16.5
+        },
+        "mug": {
+          "n": 19,
+          "horiz_err_cm": 9.6,
+          "height_err_cm": 5.2
+        },
+        "wallet": {
+          "n": 12,
+          "horiz_err_cm": 4.8,
+          "height_err_cm": 2.4
+        },
+        "glasses_case": {
+          "n": 8,
+          "horiz_err_cm": 14.0,
+          "height_err_cm": 5.2
+        },
+        "keys": {
+          "n": 5,
+          "horiz_err_cm": 10.0,
+          "height_err_cm": 5.2
+        }
+      }
+    },
+    "median_depth": {
+      "0-1.5 m": {
+        "n": 8,
+        "median_cm": 6.162657829966604,
+        "p90_cm": 10.356778099165183
+      },
+      "1.5-2.5 m": {
+        "n": 29,
+        "median_cm": 7.495015284311828,
+        "p90_cm": 10.652943775701374
+      },
+      "2.5-3.5 m": {
+        "n": 21,
+        "median_cm": 7.489348572776769,
+        "p90_cm": 10.39531123322016
+      },
+      "3.5-5.0 m": {
+        "n": 5,
+        "median_cm": 2.6413299995173682,
+        "p90_cm": 10.163083677634825
+      },
+      "fused_per_item": {
+        "bottle": {
+          "n": 19,
+          "horiz_err_cm": 5.8,
+          "height_err_cm": 14.6
+        },
+        "mug": {
+          "n": 19,
+          "horiz_err_cm": 7.3,
+          "height_err_cm": 5.1
+        },
+        "wallet": {
+          "n": 12,
+          "horiz_err_cm": 0.7,
+          "height_err_cm": 1.7
+        },
+        "glasses_case": {
+          "n": 8,
+          "horiz_err_cm": 8.2,
+          "height_err_cm": 4.0
+        },
+        "keys": {
+          "n": 5,
+          "horiz_err_cm": 8.3,
+          "height_err_cm": 3.5
+        }
+      }
+    },
+    "footprint": {
+      "0-1.5 m": {
+        "n": 8,
+        "median_cm": 3.4032428192805666,
+        "p90_cm": 7.600725992925692
+      },
+      "1.5-2.5 m": {
+        "n": 29,
+        "median_cm": 9.429515312439111,
+        "p90_cm": 16.682786602816154
+      },
+      "2.5-3.5 m": {
+        "n": 21,
+        "median_cm": 8.595860064758883,
+        "p90_cm": 14.111320149415732
+      },
+      "3.5-5.0 m": {
+        "n": 5,
+        "median_cm": 8.07895729705239,
+        "p90_cm": 9.088888964248868
+      },
+      "fused_per_item": {
+        "bottle": {
+          "n": 19,
+          "horiz_err_cm": 5.0,
+          "height_err_cm": 2.2
+        },
+        "mug": {
+          "n": 19,
+          "horiz_err_cm": 5.6,
+          "height_err_cm": -0.9
+        },
+        "wallet": {
+          "n": 12,
+          "horiz_err_cm": 7.4,
+          "height_err_cm": 0.8
+        },
+        "glasses_case": {
+          "n": 8,
+          "horiz_err_cm": 8.9,
+          "height_err_cm": 1.2
+        },
+        "keys": {
+          "n": 5,
+          "horiz_err_cm": 7.1,
+          "height_err_cm": 1.3
+        }
+      }
+    },
+    "detections": {
+      "bottle": {
+        "detections": 19,
+        "min_dist": 1.42,
+        "max_dist": 2.63
+      },
+      "glasses_case": {
+        "detections": 8,
+        "min_dist": 2.62,
+        "max_dist": 4.06
+      },
+      "keys": {
+        "detections": 5,
+        "min_dist": 1.69,
+        "max_dist": 2.66
+      },
+      "mug": {
+        "detections": 19,
+        "min_dist": 1.16,
+        "max_dist": 2.78
+      },
+      "wallet": {
+        "detections": 12,
+        "min_dist": 1.58,
+        "max_dist": 3.53
+      }
+    }
+  },
+  "transparent bottle": {
+    "center_depth": {
+      "0-1.5 m": {
+        "n": 8,
+        "median_cm": 11.186795485664861,
+        "p90_cm": 36.95011485711666
+      },
+      "1.5-2.5 m": {
+        "n": 29,
+        "median_cm": 13.70959270313858,
+        "p90_cm": 55.867182994212826
+      },
+      "2.5-3.5 m": {
+        "n": 21,
+        "median_cm": 8.288974267241153,
+        "p90_cm": 77.97210179919657
+      },
+      "3.5-5.0 m": {
+        "n": 5,
+        "median_cm": 15.370142407083994,
+        "p90_cm": 24.547988058741453
+      },
+      "fused_per_item": {
+        "bottle": {
+          "n": 19,
+          "horiz_err_cm": 17.7,
+          "height_err_cm": 0.8
+        },
+        "mug": {
+          "n": 19,
+          "horiz_err_cm": 9.3,
+          "height_err_cm": 5.2
+        },
+        "wallet": {
+          "n": 12,
+          "horiz_err_cm": 4.6,
+          "height_err_cm": 2.3
+        },
+        "glasses_case": {
+          "n": 8,
+          "horiz_err_cm": 14.0,
+          "height_err_cm": 5.2
+        },
+        "keys": {
+          "n": 5,
+          "horiz_err_cm": 9.1,
+          "height_err_cm": 5.2
+        }
+      }
+    },
+    "median_depth": {
+      "0-1.5 m": {
+        "n": 8,
+        "median_cm": 8.714589324522343,
+        "p90_cm": 30.804723213165403
+      },
+      "1.5-2.5 m": {
+        "n": 29,
+        "median_cm": 13.32936566304147,
+        "p90_cm": 94.71523341371673
+      },
+      "2.5-3.5 m": {
+        "n": 21,
+        "median_cm": 8.651454420736831,
+        "p90_cm": 63.21902032748764
+      },
+      "3.5-5.0 m": {
+        "n": 5,
+        "median_cm": 2.577359835721859,
+        "p90_cm": 9.591245525573862
+      },
+      "fused_per_item": {
+        "bottle": {
+          "n": 19,
+          "horiz_err_cm": 21.8,
+          "height_err_cm": 1.1
+        },
+        "mug": {
+          "n": 19,
+          "horiz_err_cm": 7.2,
+          "height_err_cm": 5.1
+        },
+        "wallet": {
+          "n": 12,
+          "horiz_err_cm": 1.0,
+          "height_err_cm": 1.8
+        },
+        "glasses_case": {
+          "n": 8,
+          "horiz_err_cm": 8.1,
+          "height_err_cm": 4.1
+        },
+        "keys": {
+          "n": 5,
+          "horiz_err_cm": 7.5,
+          "height_err_cm": 3.5
+        }
+      }
+    },
+    "footprint": {
+      "0-1.5 m": {
+        "n": 8,
+        "median_cm": 4.235029726789559,
+        "p90_cm": 30.804723213165403
+      },
+      "1.5-2.5 m": {
+        "n": 29,
+        "median_cm": 10.55321538236451,
+        "p90_cm": 22.354155980069823
+      },
+      "2.5-3.5 m": {
+        "n": 21,
+        "median_cm": 8.785310649804808,
+        "p90_cm": 13.473861995357305
+      },
+      "3.5-5.0 m": {
+        "n": 5,
+        "median_cm": 6.912720953934383,
+        "p90_cm": 9.121383344709011
+      },
+      "fused_per_item": {
+        "bottle": {
+          "n": 19,
+          "horiz_err_cm": 10.7,
+          "height_err_cm": 1.4
+        },
+        "mug": {
+          "n": 19,
+          "horiz_err_cm": 5.7,
+          "height_err_cm": -1.0
+        },
+        "wallet": {
+          "n": 12,
+          "horiz_err_cm": 7.3,
+          "height_err_cm": 0.7
+        },
+        "glasses_case": {
+          "n": 8,
+          "horiz_err_cm": 9.5,
+          "height_err_cm": 1.1
+        },
+        "keys": {
+          "n": 5,
+          "horiz_err_cm": 7.4,
+          "height_err_cm": 1.5
+        }
+      }
+    },
+    "detections": {
+      "bottle": {
+        "detections": 19,
+        "min_dist": 1.42,
+        "max_dist": 2.63
+      },
+      "glasses_case": {
+        "detections": 8,
+        "min_dist": 2.62,
+        "max_dist": 4.06
+      },
+      "keys": {
+        "detections": 5,
+        "min_dist": 1.69,
+        "max_dist": 2.66
+      },
+      "mug": {
+        "detections": 19,
+        "min_dist": 1.16,
+        "max_dist": 2.78
+      },
+      "wallet": {
+        "detections": 12,
+        "min_dist": 1.58,
+        "max_dist": 3.53
+      }
+    }
+  },
+  "mount tilted 20 deg down": {
+    "center_depth": {
+      "0-1.5 m": {
+        "n": 31,
+        "median_cm": 5.739334692171023,
+        "p90_cm": 12.807344030055464
+      },
+      "1.5-2.5 m": {
+        "n": 40,
+        "median_cm": 7.879981647511094,
+        "p90_cm": 12.186171648400547
+      },
+      "2.5-3.5 m": {
+        "n": 22,
+        "median_cm": 8.626502054185847,
+        "p90_cm": 15.393768230205545
+      },
+      "3.5-5.0 m": {
+        "n": 6,
+        "median_cm": 10.497401760852616,
+        "p90_cm": 18.455882762948654
+      },
+      "fused_per_item": {
+        "bottle": {
+          "n": 31,
+          "horiz_err_cm": 4.0,
+          "height_err_cm": 15.5
+        },
+        "mug": {
+          "n": 20,
+          "horiz_err_cm": 8.1,
+          "height_err_cm": 5.1
+        },
+        "wallet": {
+          "n": 19,
+          "horiz_err_cm": 2.7,
+          "height_err_cm": 2.2
+        },
+        "glasses_case": {
+          "n": 13,
+          "horiz_err_cm": 5.5,
+          "height_err_cm": 3.8
+        },
+        "keys": {
+          "n": 16,
+          "horiz_err_cm": 1.0,
+          "height_err_cm": 2.1
+        }
+      }
+    },
+    "median_depth": {
+      "0-1.5 m": {
+        "n": 31,
+        "median_cm": 4.086109454184706,
+        "p90_cm": 6.350437220527056
+      },
+      "1.5-2.5 m": {
+        "n": 40,
+        "median_cm": 6.358493839732149,
+        "p90_cm": 8.828691396748095
+      },
+      "2.5-3.5 m": {
+        "n": 22,
+        "median_cm": 6.424528512745075,
+        "p90_cm": 9.807399900644175
+      },
+      "3.5-5.0 m": {
+        "n": 6,
+        "median_cm": 3.765464519715668,
+        "p90_cm": 11.825153193300542
+      },
+      "fused_per_item": {
+        "bottle": {
+          "n": 31,
+          "horiz_err_cm": 4.1,
+          "height_err_cm": 14.9
+        },
+        "mug": {
+          "n": 20,
+          "horiz_err_cm": 7.4,
+          "height_err_cm": 5.1
+        },
+        "wallet": {
+          "n": 19,
+          "horiz_err_cm": 1.4,
+          "height_err_cm": 1.8
+        },
+        "glasses_case": {
+          "n": 13,
+          "horiz_err_cm": 5.5,
+          "height_err_cm": 3.6
+        },
+        "keys": {
+          "n": 16,
+          "horiz_err_cm": 2.2,
+          "height_err_cm": 1.8
+        }
+      }
+    },
+    "footprint": {
+      "0-1.5 m": {
+        "n": 31,
+        "median_cm": 5.5008369543862194,
+        "p90_cm": 8.898120001816872
+      },
+      "1.5-2.5 m": {
+        "n": 40,
+        "median_cm": 7.720810973737982,
+        "p90_cm": 14.992421304869938
+      },
+      "2.5-3.5 m": {
+        "n": 22,
+        "median_cm": 9.887086636069848,
+        "p90_cm": 11.574720734807501
+      },
+      "3.5-5.0 m": {
+        "n": 6,
+        "median_cm": 7.906606272799984,
+        "p90_cm": 12.506419789583049
+      },
+      "fused_per_item": {
+        "bottle": {
+          "n": 31,
+          "horiz_err_cm": 4.4,
+          "height_err_cm": 1.3
+        },
+        "mug": {
+          "n": 20,
+          "horiz_err_cm": 6.4,
+          "height_err_cm": -0.9
+        },
+        "wallet": {
+          "n": 19,
+          "horiz_err_cm": 7.5,
+          "height_err_cm": 0.6
+        },
+        "glasses_case": {
+          "n": 13,
+          "horiz_err_cm": 8.6,
+          "height_err_cm": 0.9
+        },
+        "keys": {
+          "n": 16,
+          "horiz_err_cm": 2.6,
+          "height_err_cm": 1.3
+        }
+      }
+    },
+    "detections": {
+      "bottle": {
+        "detections": 31,
+        "min_dist": 1.23,
+        "max_dist": 2.63
+      },
+      "glasses_case": {
+        "detections": 13,
+        "min_dist": 1.5,
+        "max_dist": 4.06
+      },
+      "keys": {
+        "detections": 16,
+        "min_dist": 1.17,
+        "max_dist": 2.66
+      },
+      "mug": {
+        "detections": 20,
+        "min_dist": 1.16,
+        "max_dist": 2.78
+      },
+      "wallet": {
+        "detections": 19,
+        "min_dist": 1.17,
+        "max_dist": 3.53
+      }
+    }
+  }
+}

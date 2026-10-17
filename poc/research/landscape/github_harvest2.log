@@ -1,0 +1,66 @@
+spatial audio find object swift 0 0
+spatial audio find object 3 3
+spatial audio object locate 2 2
+airpods find object 0 0
+airpods blind 2 2
+airpods visually impaired 1 1
+head tracking blind 5 5
+head-tracked audio object 2 2
+where did I put 50 175
+where did i put my 50 61
+find my stuff camera 3 3
+lost objects camera 11 11
+object permanence app 0 0
+remember objects arkit 1 1
+ARWorldMap object 0 0
+persistent anchors objects find 1 1
+audio beacon arkit 2 2
+sound anchor arkit 0 0
+spatial audio ar find 0 0
+visually impaired spatial audio arkit 0 0
+blind spatial audio ios 5 5
+blind object finder ios 0 0
+find object blind swift 1 1
+object finder visually impaired 4 4
+ray-ban meta find 3 3
+meta glasses memory 15 15
+smart glasses remember objects 0 0
+glasses where did i leave 10 10
+spice visually impaired 0 0
+medicine visually impaired identify 11 11
+pill bottle blind 0 0
+pill bottle identify 0 0
+clothing color blind app 3 3
+label objects visually impaired 20 20
+voice label objects 14 14
+nfc labels blind 0 0
+teachable machine blind 5 5
+personal object recognizer 24 24
+fall prevention elderly lidar 0 0
+fall risk elderly camera 0 0
+tripping hazard detection 1 1
+floor hazard elderly 1 1
+hand tracking visually impaired 7 7
+grasp visually impaired 4 4
+hand guidance blind object 3 3
+gemini find object blind 0 0
+gemini live blind 13 13
+vlm find object blind 0 0
+yolo find my keys 0 0
+keys wallet phone detection 2 2
+leave home without keys 23 23
+forgot keys reminder camera 0 0
+dementia object finder 0 0
+alzheimer find objects camera 0 0
+episodic memory assistant glasses 2 2
+lifelog object search 0 0
+egocentric object memory 6 6
+marco polo audio 3 3
+hot cold audio finder 0 0
+topic:visually-impaired topic:arkit 1 1
+topic:blind topic:spatial-audio 3 3
+topic:accessibility topic:lidar 12 12
+topic:assistive-technology topic:arkit 6 6
+topic:hackathon topic:visually-impaired 2 2
+topic:devpost topic:accessibility 5 5
+DONE 310

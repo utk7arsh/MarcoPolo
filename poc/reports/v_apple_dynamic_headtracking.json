@@ -1,0 +1,13 @@
+{
+  "10ms_updates": {
+    "itd_rms_err_us_if_positive_yaw_turns_right": 36.27145984935233,
+    "itd_rms_err_us_if_positive_yaw_turns_left": 850.939506587679,
+    "max_step_over_p99_9_step": 1.444870366318911
+  },
+  "25Hz_updates": {
+    "itd_rms_err_us_if_positive_yaw_turns_right": 47.424147743386094,
+    "itd_rms_err_us_if_positive_yaw_turns_left": 850.4038121193188,
+    "max_step_over_p99_9_step": 1.385000173015818
+  },
+  "listener_vs_source_rotation_corr": 0.9999999999744781
+}

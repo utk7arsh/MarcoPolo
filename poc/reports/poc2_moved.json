@@ -1,0 +1,26 @@
+{
+  "A_in_view_move": {
+    "updated_pct": 100.0,
+    "median_update_s": 0.5
+  },
+  "B_out_of_view_move": {
+    "said_not_there_pct": 100.0,
+    "median_s_after_looking": 1.5,
+    "relocated_pct": 100.0,
+    "median_relocate_s": 1.5
+  },
+  "C_occluded_must_stay": {
+    "false_not_there_pct": 0.0
+  },
+  "D_far_marginal_must_stay": {
+    "false_not_there_pct": 0.0
+  },
+  "F_walkby_blur_must_stay": {
+    "false_not_there_pct": 0.0
+  },
+  "E_lookalike": {
+    "said_not_there_pct": 100.0,
+    "median_s": 1.0,
+    "ended_not_there_pct": 100.0
+  }
+}

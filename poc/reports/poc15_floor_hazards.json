@@ -1,0 +1,63 @@
+{
+  "bare floor, height threshold 5 cm: walks with a false alert": "0/10",
+  "bag (35x20x25 cm), 0.6 m/s, thr 5 cm": {
+    "detected": "5/5",
+    "median_alert_distance_m": 3.02,
+    "median_warning_s": 5.0
+  },
+  "bag (35x20x25 cm), 1.0 m/s, thr 5 cm": {
+    "detected": "5/5",
+    "median_alert_distance_m": 2.98,
+    "median_warning_s": 3.0
+  },
+  "shoe (10x10x28 cm), 0.6 m/s, thr 5 cm": {
+    "detected": "5/5",
+    "median_alert_distance_m": 2.96,
+    "median_warning_s": 4.9
+  },
+  "shoe (10x10x28 cm), 1.0 m/s, thr 5 cm": {
+    "detected": "5/5",
+    "median_alert_distance_m": 2.88,
+    "median_warning_s": 2.9
+  },
+  "box (40x25x30 cm), 0.6 m/s, thr 5 cm": {
+    "detected": "5/5",
+    "median_alert_distance_m": 3.08,
+    "median_warning_s": 5.1
+  },
+  "box (40x25x30 cm), 1.0 m/s, thr 5 cm": {
+    "detected": "5/5",
+    "median_alert_distance_m": 2.98,
+    "median_warning_s": 3.0
+  },
+  "bottle lying (7x7x25 cm), 0.6 m/s, thr 5 cm": {
+    "detected": "0/5",
+    "median_alert_distance_m": null,
+    "median_warning_s": null
+  },
+  "bottle lying (7x7x25 cm), 1.0 m/s, thr 5 cm": {
+    "detected": "0/5",
+    "median_alert_distance_m": null,
+    "median_warning_s": null
+  },
+  "book (17x3x24 cm), 0.6 m/s, thr 5 cm": {
+    "detected": "0/5",
+    "median_alert_distance_m": null,
+    "median_warning_s": null
+  },
+  "book (17x3x24 cm), 1.0 m/s, thr 5 cm": {
+    "detected": "0/5",
+    "median_alert_distance_m": null,
+    "median_warning_s": null
+  },
+  "cable / rug edge (1.5 cm), 0.6 m/s, thr 5 cm": {
+    "detected": "0/5",
+    "median_alert_distance_m": null,
+    "median_warning_s": null
+  },
+  "cable / rug edge (1.5 cm), 1.0 m/s, thr 5 cm": {
+    "detected": "0/5",
+    "median_alert_distance_m": null,
+    "median_warning_s": null
+  }
+}

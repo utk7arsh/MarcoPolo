@@ -1,0 +1,8 @@
+{
+  "straight line to item passes through furniture": "35% of 178 random start/target pairs",
+  "planned path length vs straight line (when blocked)": "+22% median",
+  "breadcrumb waypoints needed (when blocked)": "median 3, max 6",
+  "floor visible ahead, tilt 0 deg": "2.16-5.0 m -> 8.3 s warning at 0.6 m/s, 5.0 s at 1.0 m/s",
+  "floor visible ahead, tilt 25 deg": "0.88-5.0 m -> 8.3 s warning at 0.6 m/s, 5.0 s at 1.0 m/s",
+  "floor visible ahead, tilt 35 deg": "0.58-5.0 m -> 8.3 s warning at 0.6 m/s, 5.0 s at 1.0 m/s"
+}

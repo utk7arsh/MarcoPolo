@@ -1,0 +1,27 @@
+{
+  "noise": {
+    "itd_us": 60,
+    "ild_db": 5.0,
+    "spec_db": 12.0,
+    "motor_deg": 11.0,
+    "spec_weight": 1.0
+  },
+  "static_all_subjects": {
+    "individual": {
+      "front_back_pct": 10.307802433786685,
+      "quadrant_err_pct": 8.944444444444445,
+      "lateral_rms_deg": 11.82846761962655,
+      "local_polar_rms_deg": 25.839045424703155
+    },
+    "apple_generic": {
+      "front_back_pct": 32.85612025769506,
+      "quadrant_err_pct": 30.333333333333332,
+      "lateral_rms_deg": 13.53968232436842,
+      "local_polar_rms_deg": 39.343633272793
+    }
+  },
+  "front_back_pct_generic_static_2s": 33.72859025032938,
+  "front_back_pct_generic_headmove_2s": 5.220883534136546,
+  "front_back_pct_individual_static_2s": 8.959156785243742,
+  "front_back_pct_individual_headmove_2s": 1.4725568942436413
+}

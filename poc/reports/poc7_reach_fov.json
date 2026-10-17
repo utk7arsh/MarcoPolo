@@ -1,0 +1,87 @@
+{
+  "tilt 0 deg": {
+    "nearest visible dining-table point (0.75 m high)": 0.96,
+    "nearest visible coffee-table point (0.45 m)": 1.48,
+    "nearest visible floor point": 2.26,
+    "item on dining table at": {
+      "0.35 m": false,
+      "0.45 m": false,
+      "0.6 m": false
+    },
+    "item on table, offset": {
+      "0.35 m, 20 cm to the side": false,
+      "0.45 m, 20 cm to the side": false,
+      "0.6 m, 20 cm to the side": false
+    },
+    "hand above item at 0.45 m visible": false,
+    "highest visible point at 2 m (m)": 2.39
+  },
+  "tilt 15 deg": {
+    "nearest visible dining-table point (0.75 m high)": 0.56,
+    "nearest visible coffee-table point (0.45 m)": 0.86,
+    "nearest visible floor point": 1.31,
+    "item on dining table at": {
+      "0.35 m": false,
+      "0.45 m": false,
+      "0.6 m": true
+    },
+    "item on table, offset": {
+      "0.35 m, 20 cm to the side": false,
+      "0.45 m, 20 cm to the side": false,
+      "0.6 m, 20 cm to the side": true
+    },
+    "hand above item at 0.45 m visible": true,
+    "highest visible point at 2 m (m)": 1.78
+  },
+  "tilt 25 deg": {
+    "nearest visible dining-table point (0.75 m high)": 0.39,
+    "nearest visible coffee-table point (0.45 m)": 0.6,
+    "nearest visible floor point": 0.92,
+    "item on dining table at": {
+      "0.35 m": false,
+      "0.45 m": true,
+      "0.6 m": true
+    },
+    "item on table, offset": {
+      "0.35 m, 20 cm to the side": false,
+      "0.45 m, 20 cm to the side": true,
+      "0.6 m, 20 cm to the side": true
+    },
+    "hand above item at 0.45 m visible": true,
+    "highest visible point at 2 m (m)": 1.43
+  },
+  "tilt 35 deg": {
+    "nearest visible dining-table point (0.75 m high)": 0.26,
+    "nearest visible coffee-table point (0.45 m)": 0.4,
+    "nearest visible floor point": 0.61,
+    "item on dining table at": {
+      "0.35 m": true,
+      "0.45 m": true,
+      "0.6 m": true
+    },
+    "item on table, offset": {
+      "0.35 m, 20 cm to the side": true,
+      "0.45 m, 20 cm to the side": true,
+      "0.6 m, 20 cm to the side": true
+    },
+    "hand above item at 0.45 m visible": true,
+    "highest visible point at 2 m (m)": 1.08
+  },
+  "tilt 45 deg": {
+    "nearest visible dining-table point (0.75 m high)": 0.15,
+    "nearest visible coffee-table point (0.45 m)": 0.23,
+    "nearest visible floor point": 0.35,
+    "item on dining table at": {
+      "0.35 m": true,
+      "0.45 m": true,
+      "0.6 m": true
+    },
+    "item on table, offset": {
+      "0.35 m, 20 cm to the side": true,
+      "0.45 m, 20 cm to the side": true,
+      "0.6 m, 20 cm to the side": true
+    },
+    "hand above item at 0.45 m visible": true,
+    "highest visible point at 2 m (m)": 0.71
+  }
+}
