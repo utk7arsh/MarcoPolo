@@ -1,0 +1,19 @@
+#### Unsend
+
+Source: https://photon.codes/docs/spectrum-ts/content/unsend.md
+Documentation version: Stable
+
+Use `unsend()` to retract a previously sent outbound message. Unsends are fire-and-forget: `space.send(unsend(...))` resolves to `undefined`.
+
+```ts
+import { unsend } from "spectrum-ts";
+
+const sent = await space.send("Oops");
+await space.send(unsend(sent));
+```
+
+`message.unsend()` and `space.unsend(message)` are sugar for `space.send(unsend(message))`.
+
+Only outbound messages can be unsent. The builder throws at build time for inbound targets. Platform constraints, such as iMessage's roughly two-minute unsend window for regular messages, surface from the provider at send time.
+
+

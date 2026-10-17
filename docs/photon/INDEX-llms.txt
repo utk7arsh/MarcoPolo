@@ -1,0 +1,312 @@
+# Photon
+
+> Photon documentation has two versions, and each documents a different product. Stable, the default, documents Spectrum: the `spectrum-ts` SDK, the `@photon-ai/cli` CLI, Spectrum webhooks, and the Spectrum API. Beta (2.0) documents the Photon platform: the Photon API at `https://api.photon.codes/v1`, and its TypeScript, Python, and Rust clients. Choose one version, then read only that version's pages.
+
+## Choose a version
+
+Beta and 2.0 refer to the same Photon platform version.
+
+Use Stable unless one of these is true:
+
+- The user asks for Beta, 2.0, or Photon 2.0.
+- The user links a page under `https://photon.codes/docs/beta/`.
+- The project uses an identifier from the Beta (2.0) column below.
+
+Check the project before you write code. Look at dependency manifests (`package.json`, `pyproject.toml`, `requirements.txt`, `Cargo.toml`), imports, API hosts, project IDs, and credential formats. If the project uses identifiers from both columns, or its identifiers conflict with the user's request, ask the user which version to use.
+
+| Signal | Stable | Beta (2.0) |
+| --- | --- | --- |
+| Docs URL | `https://photon.codes/docs/<page>` | `https://photon.codes/docs/beta/<page>` |
+| Packages | `spectrum-ts`, `@spectrum-ts/*`, `@photon-ai/advanced-imessage`, `@photon-ai/advanced-imessage-kit`, `@photon-ai/imessage-kit`, `@photon-ai/whatsapp-business`, `chat-adapter-imessage` | `@photon-ai/api` (npm), `photonhq-api` (PyPI and crates.io) |
+| Imports | `spectrum-ts`, `spectrum-ts/providers/<platform>` | `@photon-ai/api`, `photon_api` (Python), `photon_ai_api` (Rust) |
+| API host | `https://spectrum.photon.codes` | `https://api.photon.codes/v1` |
+| Project ID | Does not start with `pho_prj_` | Starts with `pho_prj_` |
+| Credentials | Project ID and project secret, sent with HTTP Basic auth | Bearer token: an account service key (`pho_ask_...`), a project API key (`pho_sk_...`), or a JWT access token |
+
+After you choose a version:
+
+- Keep packages, commands, API hosts, and credentials within that version. An operation with a similar name in the other version has a different contract.
+- State the version in your answer and cite that version's page URLs.
+- If the selected version has no page for a task, say so. Do not use the other version's page instead.
+- Compare the versions only when the user asks. Label each version's examples separately.
+
+## Find pages
+
+The sections below list every page in navigation order. Each heading names the version first. A path under `/docs/beta/` is Beta (2.0), and every other path is Stable.
+
+- Each link points to the page's Markdown. Remove `.md` for the web page.
+- Generated reference sections are listed as one link each. To find a page in one, follow links from the guides or use the documentation MCP server.
+- The [documentation MCP server](https://photon.codes/docs/mcp) searches both versions. Pass `version: "Stable"` or `version: "Beta"` on every search, because a search without a version returns both.
+- The [Photon skill](https://photon.codes/docs/skill.md) has the full version-selection procedure.
+
+## Stable: Spectrum
+
+### Get started
+
+- [Introduction](https://photon.codes/docs/spectrum-ts/introduction.md): Spectrum brings your agents to the interfaces millions already use.
+- [Getting Started](https://photon.codes/docs/spectrum-ts/getting-started.md): Install spectrum-ts and send your first message across platforms
+
+### Core concepts
+
+- [Messages](https://photon.codes/docs/spectrum-ts/messages.md): Receive, narrow, and act on incoming messages
+- [Spaces and Users](https://photon.codes/docs/spectrum-ts/spaces-and-users.md): Send messages, manage typing indicators, and resolve participants
+- [Reactions and Replies](https://photon.codes/docs/spectrum-ts/reactions-and-replies.md): React to incoming messages and send threaded replies
+- [Platform Narrowing](https://photon.codes/docs/spectrum-ts/platform-narrowing.md): Recover platform-specific types and actions from unified Spectrum primitives
+- [Webhooks](https://photon.codes/docs/spectrum-ts/webhooks.md): Receive messages via HTTP instead of a long-lived process
+
+### Content
+
+- [Content](https://photon.codes/docs/spectrum-ts/content.md): Build every outbound message shape with Spectrum content builders.
+- [Text](https://photon.codes/docs/spectrum-ts/content/text.md): Send plain text and stream text through Spectrum.
+- [Markdown](https://photon.codes/docs/spectrum-ts/content/markdown.md): Send styled text that renders through each provider's native formatting model.
+- [Attachments](https://photon.codes/docs/spectrum-ts/content/attachments.md): Send files from paths, URLs, or buffers with stable attachment IDs.
+- [Voice](https://photon.codes/docs/spectrum-ts/content/voice.md): Send voice notes with audio metadata and provider fallbacks.
+- [Contacts](https://photon.codes/docs/spectrum-ts/content/contacts.md): Share contact cards from structured data, users, or vCards.
+- [Rich links](https://photon.codes/docs/spectrum-ts/content/rich-links.md): Let each platform render a URL with its native rich-link preview.
+- [App](https://photon.codes/docs/spectrum-ts/content/app.md): Send and update a tappable app card, with optional live rendering on supported platforms.
+- [Polls](https://photon.codes/docs/spectrum-ts/content/polls.md): Send poll prompts and receive selected options as content.
+- [Groups](https://photon.codes/docs/spectrum-ts/content/groups.md): Bundle multiple messages into one logical visual group.
+- [Custom content](https://photon.codes/docs/spectrum-ts/content/custom.md): Send provider-specific structured payloads.
+- [Replies](https://photon.codes/docs/spectrum-ts/content/replies.md): Thread content under an existing message.
+- [Edits](https://photon.codes/docs/spectrum-ts/content/edits.md): Rewrite previously sent outbound messages.
+- [Unsend](https://photon.codes/docs/spectrum-ts/content/unsend.md): Retract a previously sent outbound message.
+- [Read](https://photon.codes/docs/spectrum-ts/content/read.md): Mark a conversation as read, and observe when a recipient reads what you sent.
+- [Typing indicators](https://photon.codes/docs/spectrum-ts/content/typing-indicators.md): Send start and stop typing signals.
+- [Rename](https://photon.codes/docs/spectrum-ts/content/rename.md): Rename chats through the content pipeline.
+- [Avatar](https://photon.codes/docs/spectrum-ts/content/avatar.md): Set or clear group chat avatars.
+- [Membership](https://photon.codes/docs/spectrum-ts/content/membership.md): Add or remove group members and leave chats through the content pipeline.
+- [Composing content](https://photon.codes/docs/spectrum-ts/content/composing-content.md): Send multiple content items or reply with multiple parts.
+
+### Providers
+
+- [Providers](https://photon.codes/docs/spectrum-ts/providers.md): Choose, configure, and combine Spectrum platform providers.
+- [Voice](https://photon.codes/docs/spectrum-ts/providers/voice.md): Add inbound and outbound voice calls to a Spectrum iMessage line over SIP.
+- [Outbound calls](https://photon.codes/docs/spectrum-ts/providers/voice/outbound-calls.md): Configure a SIP application to place calls through a Spectrum iMessage line.
+- [Inbound calls](https://photon.codes/docs/spectrum-ts/providers/voice/inbound-calls.md): Register an inbound route and receive calls from a Spectrum iMessage line.
+- [Voice call troubleshooting](https://photon.codes/docs/spectrum-ts/providers/voice/troubleshooting.md): Common audio problems on Spectrum voice calls, what causes them, and how to fix them.
+- [iMessage](https://photon.codes/docs/spectrum-ts/providers/imessage.md): Choose and configure the cloud or local iMessage provider.
+- [iMessage connection and routing](https://photon.codes/docs/spectrum-ts/providers/imessage/connection-and-routing.md): Configure cloud or local iMessage packages, lines, spaces, and per-phone routing.
+- [iMessage messaging features](https://photon.codes/docs/spectrum-ts/providers/imessage/messaging-features.md): Explore each iMessage messaging feature in its own guide.
+- [iMessage message effects](https://photon.codes/docs/spectrum-ts/providers/imessage/messaging-features/message-effects.md): Send iMessage bubble and screen effects with text, markdown, or attachments.
+- [iMessage chat renaming](https://photon.codes/docs/spectrum-ts/providers/imessage/messaging-features/chat-renaming.md): Rename an iMessage group chat.
+- [iMessage group avatars](https://photon.codes/docs/spectrum-ts/providers/imessage/messaging-features/group-avatars.md): Set, clear, and retrieve iMessage group chat icons.
+- [iMessage group membership](https://photon.codes/docs/spectrum-ts/providers/imessage/messaging-features/group-membership.md): Add, remove, list, and leave members of an iMessage group chat.
+- [Inbound iMessage group events](https://photon.codes/docs/spectrum-ts/providers/imessage/messaging-features/inbound-group-events.md): Handle iMessage membership and group metadata changes from other participants.
+- [Inbound iMessage read receipts](https://photon.codes/docs/spectrum-ts/providers/imessage/messaging-features/inbound-read-receipts.md): Observe when iMessage recipients read messages sent by your agent.
+- [iMessage chat backgrounds](https://photon.codes/docs/spectrum-ts/providers/imessage/messaging-features/chat-backgrounds.md): Set or clear an iMessage conversation background image.
+- [iMessage Apps](https://photon.codes/docs/spectrum-ts/providers/imessage/messaging-features/apps.md): Send and update customized iMessage App cards.
+- [Native iMessage contact card sharing](https://photon.codes/docs/spectrum-ts/providers/imessage/messaging-features/contact-card-sharing.md): Share the bot account's own iMessage contact card in a chat.
+- [Native iMessage message metadata](https://photon.codes/docs/spectrum-ts/providers/imessage/messaging-features/message-metadata.md): Read curated Apple delivery, formatting, attachment, and reaction fields.
+- [Fetching iMessage attachments](https://photon.codes/docs/spectrum-ts/providers/imessage/messaging-features/fetching-attachments.md): Retrieve cloud iMessage attachments directly by GUID.
+- [iMessage tapback reactions](https://photon.codes/docs/spectrum-ts/providers/imessage/messaging-features/tapback-reactions.md): Map Spectrum emoji aliases to native iMessage tapbacks.
+- [Native iMessage polls](https://photon.codes/docs/spectrum-ts/providers/imessage/messaging-features/native-polls.md): Handle titleless iMessage polls with stable poll GUIDs and option identifiers.
+- [Terminal](https://photon.codes/docs/spectrum-ts/providers/terminal.md): A full chat TUI for developing and testing agents locally.
+- [Terminal setup and usage](https://photon.codes/docs/spectrum-ts/providers/terminal/setup-and-usage.md): Start the terminal provider, configure slash commands, and work with multiple spaces.
+- [Terminal interactions](https://photon.codes/docs/spectrum-ts/providers/terminal/interactions.md): Use reactions, replies, attachments, inline images, typing indicators, and console capture in the terminal provider.
+- [WhatsApp Business](https://photon.codes/docs/spectrum-ts/providers/whatsapp-business.md): Send and receive messages through the WhatsApp Business API.
+- [WhatsApp Business setup](https://photon.codes/docs/spectrum-ts/providers/whatsapp-business/setup.md): Configure the WhatsApp Business provider with Meta credentials.
+- [WhatsApp Business conversations](https://photon.codes/docs/spectrum-ts/providers/whatsapp-business/conversations.md): Resolve WhatsApp users and start supported 1:1 conversations.
+- [Telegram](https://photon.codes/docs/spectrum-ts/providers/telegram.md): Send and receive messages through the Telegram Bot API.
+- [Telegram setup](https://photon.codes/docs/spectrum-ts/providers/telegram/setup.md): Configure the Telegram provider and webhook registration.
+- [Telegram conversations and features](https://photon.codes/docs/spectrum-ts/providers/telegram/conversations-and-features.md): Start Telegram conversations and review supported provider features.
+
+### Advanced
+
+- [Custom Events and Lifecycle](https://photon.codes/docs/spectrum-ts/custom-events-and-lifecycle.md): Platform-specific event streams and graceful shutdown
+- [Building a Custom Platform](https://photon.codes/docs/spectrum-ts/custom-platforms.md): Use definePlatform to plug a new messaging platform into Spectrum
+
+### Integrations
+
+- [Chat SDK](https://photon.codes/docs/integrations/chat-sdk.md): Add iMessage to a Chat SDK bot with the iMessage adapter
+- [eve](https://photon.codes/docs/integrations/eve.md): Connect an eve agent to iMessage through Photon
+
+### Best Practices
+
+- [Architecture](https://photon.codes/docs/best-practices/architecture.md): Patterns for building human-feeling agents on Spectrum
+- [Inbound pipeline](https://photon.codes/docs/best-practices/inbound-pipeline.md): Debouncing message bursts, batching, and surviving cancellation without dropping messages.
+- [Recovery and state](https://photon.codes/docs/best-practices/recovery-and-state.md): Idempotent retries, per-resource memory scope, and a durable failure audit log.
+- [iMessage deliverability](https://photon.codes/docs/best-practices/imessage-deliverability.md): Designing messaging flows that don't get a line flagged by Apple's filtering.
+
+### Troubleshooting
+
+- [iMessage troubleshooting](https://photon.codes/docs/spectrum-ts/troubleshooting/imessage.md): Common iMessage problems on Spectrum, what they mean, and how to fix them.
+
+## Stable: CLI
+
+### Getting Started
+
+- [Photon CLI](https://photon.codes/docs/cli/overview.md): Bring your agents to any interface — manage projects, Spectrum, billing, and your profile from the terminal
+- [Installation](https://photon.codes/docs/cli/installation.md): Install the Photon CLI via npm, or as a standalone binary
+- [Authentication](https://photon.codes/docs/cli/authentication.md): Log in, manage tokens, work with multiple backends, and authenticate in CI
+
+### Commands
+
+- [Projects](https://photon.codes/docs/cli/projects.md): Create, manage, and configure Photon projects from the CLI
+- [Spectrum](https://photon.codes/docs/cli/spectrum.md): Manage Spectrum profiles, users, lines, platforms, and avatars from the CLI
+- [Billing](https://photon.codes/docs/cli/billing.md): View plans, manage subscriptions, and open Stripe portals from the CLI
+- [Profile & utilities](https://photon.codes/docs/cli/profile-and-utilities.md): Manage your developer profile and use diagnostic commands
+
+### Command reference
+
+- [Command reference](https://photon.codes/docs/cli/reference/index.md): Generated reference with 55 pages. This link opens the first page.
+
+## Stable: Webhooks
+
+### Getting Started
+
+- [Webhooks](https://photon.codes/docs/webhooks/overview.md): Receive messaging events at your own URL — Spectrum signs each delivery so you know it's real
+- [Quickstart](https://photon.codes/docs/webhooks/quickstart.md): Register a URL, verify the signature, receive your first event in five minutes
+- [Events](https://photon.codes/docs/webhooks/events.md): The exact wire format Spectrum sends — headers, body, and what each field contains
+
+### Implementation
+
+- [Verifying signatures](https://photon.codes/docs/webhooks/verifying-signatures.md): Confirm each delivery is genuine, unmodified, and recent — copy-paste verifier code for Node, Bun, Python, and Go
+- [Delivery and retries](https://photon.codes/docs/webhooks/delivery.md): How Spectrum decides when to retry, when to give up, and what your endpoint should return
+- [Managing webhooks](https://photon.codes/docs/webhooks/managing-webhooks.md): Register, list, delete, and rotate webhook signing secrets via the Spectrum API
+- [Troubleshooting](https://photon.codes/docs/webhooks/troubleshooting.md): Common webhook problems, what they mean, and how to fix them
+
+## Stable: Low-level SDKs
+
+### Advanced Kits
+
+- [Getting Started](https://photon.codes/docs/advanced-kits/imessage/getting-started.md): Install the Advanced iMessage SDK, connect to a server, and send your first iMessage
+- [Messages](https://photon.codes/docs/advanced-kits/imessage/messages.md): Send, reply, react, edit, list, and subscribe to iMessage events
+- [Chats](https://photon.codes/docs/advanced-kits/imessage/chats.md): Create chats, read chat state, mark read, set typing, share contact cards, and manage chat backgrounds
+- [Groups](https://photon.codes/docs/advanced-kits/imessage/groups.md): Rename groups, manage participants, set group icons, leave groups, and subscribe to group events
+- [Attachments](https://photon.codes/docs/advanced-kits/imessage/attachments.md): Upload files, inspect metadata, and stream attachment downloads
+- [Polls](https://photon.codes/docs/advanced-kits/imessage/polls.md): Create polls, read state, vote, unvote, add options, and subscribe to poll events
+- [Addresses](https://photon.codes/docs/advanced-kits/imessage/addresses.md): Check whether an email address or phone number can be used with iMessage
+- [Locations](https://photon.codes/docs/advanced-kits/imessage/locations.md): Request, list, fetch, and watch shared Find My friend locations
+- [Events](https://photon.codes/docs/advanced-kits/imessage/events.md): Recover missed events after disconnects and consume SDK streams
+- [Error Handling](https://photon.codes/docs/advanced-kits/imessage/error-handling.md): Handle SDK error classes, error codes, retries, and idempotent writes
+- [Getting Started](https://photon.codes/docs/advanced-kits/whatsapp/getting-started.md): Connect the WhatsApp Business SDK and send your first message
+- [Messages](https://photon.codes/docs/advanced-kits/whatsapp/messages.md): Send text, media, location, contacts, and reactions
+- [Interactive Messages](https://photon.codes/docs/advanced-kits/whatsapp/interactive-messages.md): Buttons, lists, product messages, and flows
+- [Templates](https://photon.codes/docs/advanced-kits/whatsapp/templates.md): Send pre-approved message templates with typed parameters
+- [Events](https://photon.codes/docs/advanced-kits/whatsapp/events.md): Subscribe to inbound messages and status updates with resumable cursors
+- [Media](https://photon.codes/docs/advanced-kits/whatsapp/media.md): Upload, fetch, and delete images, video, audio, and documents
+- [Error Handling](https://photon.codes/docs/advanced-kits/whatsapp/error-handling.md): Catch typed errors and classify with error.code
+- [iMessage (Legacy)](https://photon.codes/docs/legacy/imessage.md): Documentation for the legacy @photon-ai/advanced-imessage-kit SDK
+
+### Opensource Kits
+
+- [imessage-kit](https://photon.codes/docs/opensource/imessage-kit.md): Open-source, type-safe iMessage SDK for macOS — send, query, watch, and automate
+
+### Utilities
+
+- [heif2jpeg](https://photon.codes/docs/utilities/heif2jpeg.md): Fast and simple HEIC/HEIF to JPEG converter for Node.js
+
+### Type reference
+
+- [Type reference](https://photon.codes/docs/reference/stable/spectrum-ts/symbols/appoptions.md): Generated reference with 77 pages. This link opens the first page.
+
+## Stable: API reference
+
+### Getting Started
+
+- [Introduction](https://photon.codes/docs/api-reference/introduction.md): Manage Spectrum projects, webhooks, and platform configuration over HTTPS.
+- [OAuth](https://photon.codes/docs/api-reference/oauth.md): Build apps that act on behalf of a Photon user with OAuth 2.1 and OpenID Connect.
+- [Rate limit](https://photon.codes/docs/api-reference/rate-limit.md): Default request limits for the Spectrum API.
+
+### Dashboard API
+
+- [Dashboard API OpenAPI specification](https://photon.codes/docs/api-reference/dashboard-openapi.json)
+
+### Spectrum API
+
+- [Spectrum API OpenAPI specification](https://spectrum.photon.codes/openapi/json)
+
+## Beta: Overview
+
+- [Photon](https://photon.codes/docs/beta/photon.md): Messaging infrastructure for agents. Bring your agents to the interfaces millions of people already use.
+
+### Get started
+
+- [Get started](https://photon.codes/docs/beta/index.md): Build your first agent on iMessage, email, or voice, from channel setup to a real conversation.
+- [Set up your project](https://photon.codes/docs/beta/get-started/project.md): Choose a Photon project, create a server-side API key, and prepare your development environment.
+- [Build an iMessage agent](https://photon.codes/docs/beta/get-started/imessage.md): Assign a shared iMessage line, run a small agent in your language, and receive its first reply.
+- [Build an email agent](https://photon.codes/docs/beta/get-started/email.md): Connect your domain, configure sending and receiving DNS, and reply to your first email with code.
+- [Build a voice agent](https://photon.codes/docs/beta/get-started/voice.md): Connect a Photon number to an ElevenLabs voice agent over SIP and verify your first incoming call.
+
+### Plans and billing
+
+- [Plans](https://photon.codes/docs/beta/plans-and-billing.md): Start free, grow with Pro, or scale on Business with dedicated infrastructure support.
+- [Billing](https://photon.codes/docs/beta/billing.md): Understand billing periods, usage charges, resource pricing, and plan changes.
+- [Invoices and payments](https://photon.codes/docs/beta/invoices-and-payments.md): Understand payment methods, failed payments, credit, and the charges on your invoice.
+
+## Beta: Messaging
+
+### Get started
+
+- [Messaging](https://photon.codes/docs/beta/messaging/index.md): Photon messaging documentation.
+
+## Beta: Cookbooks
+
+### Get started
+
+- [Cookbooks](https://photon.codes/docs/beta/cookbooks/index.md): Step-by-step guides for building with Photon.
+
+### Voice
+
+- [Set up Photon with Retell](https://photon.codes/docs/beta/cookbooks/voice/retell.md): Connect your Retell agent to a Photon number with SIP trunking for incoming and outgoing calls.
+- [Set up Photon with ElevenLabs](https://photon.codes/docs/beta/cookbooks/voice/elevenlabs.md): Connect your ElevenLabs agent to a Photon number with SIP trunking for incoming and outgoing calls.
+- [Connect Photon to LiveKit with SIP](https://photon.codes/docs/beta/cookbooks/voice/livekit.md): Receive calls in LiveKit rooms and place outgoing calls through your Photon number, with optional LiveKit agent dispatch.
+- [Set up Photon with Twilio](https://photon.codes/docs/beta/cookbooks/voice/twilio.md): Connect a Photon number to Twilio with SIP for incoming and outgoing calls.
+
+## Beta: API Client
+
+### Get started
+
+- [Overview](https://photon.codes/docs/beta/api-client/index.md): Install the Photon API clients for TypeScript, Python, Rust, and Go.
+- [Credentials](https://photon.codes/docs/beta/api-client/credentials.md): Choose a Photon credential and pass it to the TypeScript, Python, Rust, or Go client.
+- [Making requests](https://photon.codes/docs/beta/api-client/making-requests.md): Call Photon API endpoints from TypeScript, Python, Rust, and Go, and read the responses.
+
+### Guides
+
+- [Errors](https://photon.codes/docs/beta/api-client/errors.md): Handle API errors, transport failures, and unreadable responses in the Photon API clients.
+- [Pagination](https://photon.codes/docs/beta/api-client/pagination.md): Page through list results with page sizes and next-page tokens in the Photon API clients.
+- [Raw responses](https://photon.codes/docs/beta/api-client/raw-responses.md): Read the status, headers, and request ID of a Photon API response.
+- [Retries, timeouts, and idempotency](https://photon.codes/docs/beta/api-client/retries-and-timeouts.md): What the Photon API clients retry, how long they wait, and how to make writes safe to retry.
+
+### Reference
+
+- [Versioning](https://photon.codes/docs/beta/api-client/versioning.md): How the Photon API clients are versioned and released, and where to find their changelog and references.
+
+### SDK reference
+
+- [SDK reference](https://photon.codes/docs/beta/api-client/sdk/account/index.md): Generated reference with 174 pages. This link opens the first page.
+
+## Beta: API Reference
+
+### Get started
+
+- [API reference](https://photon.codes/docs/beta/api-reference/index.md): Photon API reference.
+
+### Problems
+
+- [Handling errors](https://photon.codes/docs/beta/problems/handling-errors.md): How Photon reports errors, and what every field means.
+- [Catalog](https://photon.codes/docs/beta/problems/catalog.md): Problem types from the deployed API and the published shared error registry.
+
+### Endpoints
+
+- [Endpoints OpenAPI specification](https://api.photon.codes/openapi.json)
+
+### Event Delivery WebSocket
+
+- [Event delivery over Socket.IO](https://photon.codes/docs/beta/websocket/index.md): Receive your project events with cursor-based replay.
+- [Connect](https://photon.codes/docs/beta/websocket/connect.md): Authenticate and open your project’s Socket.IO connection.
+- [Start a session](https://photon.codes/docs/beta/websocket/session.md): Subscribe once on each connection and read the accepted limits.
+- [Receive events](https://photon.codes/docs/beta/websocket/events.md): Handle the public event and its delivery metadata.
+- [Cursors, replay, and checkpointing](https://photon.codes/docs/beta/websocket/cursors.md): Resume from the last event your application successfully handled.
+- [Reply to a webhook event](https://photon.codes/docs/beta/websocket/replies.md): Submit a synchronous response when a delivery expects one.
+- [Errors and reconnection](https://photon.codes/docs/beta/websocket/errors.md): Handle typed errors and let Socket.IO manage connection recovery.
+- [Node.js example](https://photon.codes/docs/beta/websocket/example.md): Connect, process events serially, and resume with a saved cursor.
+- [Event reference](https://photon.codes/docs/beta/websocket/frames.md): The generated Socket.IO event and acknowledgement contract.
+
+### Event schemas
+
+- [Event schemas AsyncAPI specification](https://api.photon.codes/asyncapi.yaml)
+
+## Optional
+
+- [Stable full text](https://photon.codes/docs/llms-full.txt): Every Stable page in one large file. It has no Beta (2.0) content.

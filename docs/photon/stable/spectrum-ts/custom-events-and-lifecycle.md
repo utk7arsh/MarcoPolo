@@ -1,0 +1,85 @@
+#### Custom Events and Lifecycle
+
+Source: https://photon.codes/docs/spectrum-ts/custom-events-and-lifecycle.md
+Documentation version: Stable
+
+##### Custom events
+
+Platform providers can emit events beyond messages — typing indicators, presence, delivery status, whatever the provider chooses to surface. Spectrum exposes each event as a flat async iterable on the app instance:
+
+```ts
+for await (const event of app.typing) {
+  console.log(`${event.platform}: typing event received`);
+}
+```
+
+The property name matches the event name the provider declared. Events are merged across every provider that emits them, and each payload is annotated with a `platform` field so you know the source.
+
+###### Lazy streams
+
+Event streams are created lazily on first access. Accessing `app.typing` once kicks off the underlying listener; subsequent iterations share the same source.
+
+###### Per-platform access
+
+The same events are available on a narrowed platform instance, scoped to that platform only:
+
+```ts
+import { imessage } from "spectrum-ts/providers/imessage";
+
+const im = imessage(app);
+for await (const event of im.typing) {
+  // iMessage-only typing events
+}
+```
+
+Use the flat form on `app` when you want a merged feed across platforms; use the narrowed form when you only care about one.
+
+###### Fusor custom events
+
+Fusor-backed providers can emit non-message events (presence, delivery status) into typed event streams using `fusorEvent`. The helper returns a `FusorEvent` envelope. Return a `fusorEvent(name, data)` from a Fusor `messages` handler to push it into an `app.<name>` stream:
+
+```ts
+import { fusorEvent } from "spectrum-ts";
+
+return fusorEvent("presence", { userId: update.userId, online: true });
+```
+
+Return an array when one webhook delivery produces both messages and custom events. Events emitted this way are available as `app.presence` (merged across providers) or `narrowedInstance.presence` (scoped to the emitting provider). Provider event declarations type the resulting streams. The `fusorEvent` helper itself accepts any name and data, so an undeclared event name produces a runtime warning.
+
+##### Lifecycle
+
+###### Graceful shutdown
+
+```ts
+await app.stop();
+```
+
+This closes the merged message stream, drains and disposes every custom event stream, tears down every platform client via its `lifecycle.destroyClient` hook (if one is defined), and flushes any pending telemetry data when [telemetry](https://photon.codes/docs/spectrum-ts/getting-started#telemetry) is enabled. It's idempotent — calling `stop()` twice is safe.
+
+###### Signal handling
+
+Spectrum does **not** register `SIGINT`/`SIGTERM` handlers and never calls `process.exit()`. It's a library, and the process belongs to you: call `stop()` from whatever shutdown hook your application already has so Spectrum tears down alongside the rest of your work rather than racing it.
+
+For a standalone script, a plain signal handler is enough:
+
+```ts
+const shutdown = async () => {
+  await app.stop();
+  process.exit(0);
+};
+process.once("SIGINT", shutdown);
+process.once("SIGTERM", shutdown);
+```
+
+In a framework, hook `stop()` into its lifecycle instead — for example NestJS's `onModuleDestroy` / `enableShutdownHooks()`, or after `worker.close()` in a BullMQ worker — so in-flight jobs finish draining before the process exits.
+
+Versions up to 12.9.x installed their own `SIGINT`/`SIGTERM` handler that called `stop()` and then `process.exit()` after at most 3 seconds. Embedded in a host with its own graceful shutdown, that exit fired as soon as Spectrum's few-millisecond teardown finished and killed the host's still-draining work. If you relied on the old handler in a standalone script, add the snippet above.
+
+###### When to call `stop()`
+
+- You're shutting down in response to a signal (see above).
+- You're embedding Spectrum in a longer-running process and want to tear it down without exiting.
+- You're writing tests that create and dispose an app per case.
+- You want deterministic cleanup before re-initializing with a different provider set.
+
+
