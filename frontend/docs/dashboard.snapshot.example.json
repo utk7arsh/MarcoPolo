@@ -1,0 +1,131 @@
+{
+  "type": "dashboard.snapshot",
+  "schemaVersion": 1,
+  "streamId": "stream-demo-001",
+  "sequence": 42,
+  "sentAt": "2026-10-17T22:00:00Z",
+  "data": {
+    "session": {
+      "id": "session-demo-001",
+      "deviceId": "iphone-demo",
+      "roomId": "room-living",
+      "roomName": "Living room",
+      "worldMapId": "map-living-001"
+    },
+    "devices": {
+      "phone": {
+        "state": "connected",
+        "lastMessageAt": "2026-10-17T22:00:00Z",
+        "tracking": "normal"
+      },
+      "airpods": {
+        "state": "connected",
+        "lastMessageAt": "2026-10-17T22:00:00Z"
+      }
+    },
+    "map": {
+      "worldMapId": "map-living-001",
+      "bounds": {
+        "minX": -2.0,
+        "maxX": 3.0,
+        "minZ": -3.0,
+        "maxZ": 3.0
+      },
+      "walls": null
+    },
+    "wearer": {
+      "at": "2026-10-17T22:00:00Z",
+      "worldMapId": "map-living-001",
+      "position": { "x": 0.0, "y": 1.25, "z": 0.0 },
+      "bodyYawDeg": 0.0,
+      "headYawDeg": 0.0
+    },
+    "items": [
+      {
+        "id": "item-keys",
+        "name": "Keys",
+        "photoUrl": "/media/items/item-keys.jpg",
+        "voiceLabel": {
+          "audioUrl": "/media/labels/item-keys.m4a",
+          "transcript": "Your house keys, with the blue ring.",
+          "authorName": "Maya",
+          "durationSeconds": 4.0,
+          "createdAt": "2026-10-17T21:30:00Z"
+        },
+        "lastSeen": {
+          "at": "2026-10-17T21:58:00Z",
+          "roomId": "room-living",
+          "roomName": "Living room",
+          "surface": "Coffee table",
+          "worldMapId": "map-living-001",
+          "position": { "x": 1.2, "y": 0.75, "z": 1.7 }
+        }
+      },
+      {
+        "id": "item-wallet",
+        "name": "Wallet",
+        "photoUrl": null,
+        "voiceLabel": null,
+        "lastSeen": {
+          "at": "2026-10-17T21:00:00Z",
+          "roomId": "room-living",
+          "roomName": "Living room",
+          "surface": "Console table",
+          "worldMapId": "map-living-001",
+          "position": { "x": -0.9, "y": 0.8, "z": -1.3 }
+        }
+      }
+    ],
+    "camera": {
+      "frameId": 42,
+      "capturedAt": "2026-10-17T21:59:59Z",
+      "widthPx": 960,
+      "heightPx": 540,
+      "imageUrl": "/media/frames/session-demo-001/42.jpg",
+      "boxes": []
+    },
+    "navigation": {
+      "state": "guiding",
+      "targetItemId": "item-keys",
+      "distanceM": 2.1,
+      "bearingDeg": 145.0,
+      "bearingReference": "head",
+      "audioPattern": "beacon",
+      "spokenInstruction": "Turn right. Your keys are behind you.",
+      "updatedAt": "2026-10-17T22:00:00Z"
+    },
+    "registrations": [
+      {
+        "id": "registration-blue-mug",
+        "status": "waiting_for_label",
+        "photoUrl": "/media/registrations/registration-blue-mug.jpg",
+        "recipientName": "Maya",
+        "itemId": null,
+        "label": null,
+        "updatedAt": "2026-10-17T21:59:50Z",
+        "message": "Waiting for Maya to reply with a name or voice message."
+      }
+    ],
+    "recentMemory": [
+      {
+        "id": "memory-keys-002",
+        "itemId": "item-keys",
+        "kind": "seen",
+        "at": "2026-10-17T21:58:00Z",
+        "surface": "Coffee table"
+      },
+      {
+        "id": "memory-keys-001",
+        "itemId": "item-keys",
+        "kind": "seen",
+        "at": "2026-10-17T21:22:00Z",
+        "surface": "Console table"
+      }
+    ],
+    "lastCommand": {
+      "commandId": "cmd-demo-find-001",
+      "status": "accepted",
+      "reason": null
+    }
+  }
+}

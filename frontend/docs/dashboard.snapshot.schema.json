@@ -1,0 +1,850 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "dashboard.snapshot"
+    },
+    "schemaVersion": {
+      "type": "number",
+      "const": 1
+    },
+    "streamId": {
+      "type": "string"
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "sentAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+    },
+    "data": {
+      "type": "object",
+      "properties": {
+        "session": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "deviceId": {
+              "type": "string"
+            },
+            "roomId": {
+              "type": "string"
+            },
+            "roomName": {
+              "type": "string"
+            },
+            "worldMapId": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "deviceId",
+            "roomId",
+            "roomName",
+            "worldMapId"
+          ]
+        },
+        "devices": {
+          "type": "object",
+          "properties": {
+            "phone": {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "connected",
+                    "disconnected",
+                    "unknown"
+                  ]
+                },
+                "lastMessageAt": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "tracking": {
+                  "type": "string",
+                  "enum": [
+                    "normal",
+                    "limited",
+                    "relocalizing",
+                    "unavailable"
+                  ]
+                }
+              },
+              "required": [
+                "state",
+                "lastMessageAt",
+                "tracking"
+              ]
+            },
+            "airpods": {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "connected",
+                    "disconnected",
+                    "unknown"
+                  ]
+                },
+                "lastMessageAt": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "state",
+                "lastMessageAt"
+              ]
+            }
+          },
+          "required": [
+            "phone",
+            "airpods"
+          ]
+        },
+        "map": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "worldMapId": {
+                  "type": "string"
+                },
+                "bounds": {
+                  "type": "object",
+                  "properties": {
+                    "minX": {
+                      "type": "number"
+                    },
+                    "maxX": {
+                      "type": "number"
+                    },
+                    "minZ": {
+                      "type": "number"
+                    },
+                    "maxZ": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "minX",
+                    "maxX",
+                    "minZ",
+                    "maxZ"
+                  ]
+                },
+                "walls": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "from": {
+                            "type": "object",
+                            "properties": {
+                              "x": {
+                                "type": "number"
+                              },
+                              "z": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "x",
+                              "z"
+                            ]
+                          },
+                          "to": {
+                            "type": "object",
+                            "properties": {
+                              "x": {
+                                "type": "number"
+                              },
+                              "z": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "x",
+                              "z"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "from",
+                          "to"
+                        ]
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "fixtures": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "table",
+                          "sofa",
+                          "storage"
+                        ]
+                      },
+                      "x": {
+                        "type": "number"
+                      },
+                      "z": {
+                        "type": "number"
+                      },
+                      "width": {
+                        "type": "number",
+                        "exclusiveMinimum": 0
+                      },
+                      "depth": {
+                        "type": "number",
+                        "exclusiveMinimum": 0
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "kind",
+                      "x",
+                      "z",
+                      "width",
+                      "depth"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "worldMapId",
+                "bounds",
+                "walls"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "wearer": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                },
+                "worldMapId": {
+                  "type": "string"
+                },
+                "position": {
+                  "type": "object",
+                  "properties": {
+                    "x": {
+                      "type": "number"
+                    },
+                    "y": {
+                      "type": "number"
+                    },
+                    "z": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "x",
+                    "y",
+                    "z"
+                  ]
+                },
+                "bodyYawDeg": {
+                  "type": "number"
+                },
+                "headYawDeg": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "at",
+                "worldMapId",
+                "position",
+                "bodyYawDeg",
+                "headYawDeg"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "photoUrl": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "voiceLabel": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "audioUrl": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "transcript": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "authorName": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "durationSeconds": {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                            "minimum": 0
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                      }
+                    },
+                    "required": [
+                      "audioUrl",
+                      "transcript",
+                      "authorName",
+                      "durationSeconds",
+                      "createdAt"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "lastSeen": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                      },
+                      "roomId": {
+                        "type": "string"
+                      },
+                      "roomName": {
+                        "type": "string"
+                      },
+                      "surface": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "worldMapId": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "position": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "x": {
+                                "type": "number"
+                              },
+                              "y": {
+                                "type": "number"
+                              },
+                              "z": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "x",
+                              "y",
+                              "z"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "at",
+                      "roomId",
+                      "roomName",
+                      "surface",
+                      "worldMapId",
+                      "position"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "photoUrl",
+              "voiceLabel",
+              "lastSeen"
+            ]
+          }
+        },
+        "camera": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "frameId": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "capturedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                },
+                "widthPx": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "heightPx": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "imageUrl": {
+                  "type": "string"
+                },
+                "boxes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "itemId": {
+                        "type": "string"
+                      },
+                      "boxPx": {
+                        "type": "array",
+                        "prefixItems": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "number"
+                          }
+                        ],
+                        "items": false,
+                        "minItems": 4,
+                        "maxItems": 4
+                      }
+                    },
+                    "required": [
+                      "itemId",
+                      "boxPx"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "frameId",
+                "capturedAt",
+                "widthPx",
+                "heightPx",
+                "imageUrl",
+                "boxes"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "navigation": {
+          "type": "object",
+          "properties": {
+            "state": {
+              "type": "string",
+              "enum": [
+                "idle",
+                "guiding",
+                "within_reach",
+                "found",
+                "paused",
+                "unavailable"
+              ]
+            },
+            "targetItemId": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "distanceM": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "bearingDeg": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "bearingReference": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "head",
+                    "body"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "audioPattern": {
+              "type": "string",
+              "enum": [
+                "off",
+                "beacon",
+                "steady",
+                "confirmation"
+              ]
+            },
+            "spokenInstruction": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "updatedAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+            }
+          },
+          "required": [
+            "state",
+            "targetItemId",
+            "distanceM",
+            "bearingDeg",
+            "bearingReference",
+            "audioPattern",
+            "spokenInstruction",
+            "updatedAt"
+          ]
+        },
+        "registrations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "photo_received",
+                  "waiting_for_label",
+                  "processing_label",
+                  "saved",
+                  "retake",
+                  "failed"
+                ]
+              },
+              "photoUrl": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "recipientName": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "itemId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "label": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "audioUrl": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "transcript": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "authorName": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "durationSeconds": {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                            "minimum": 0
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                      }
+                    },
+                    "required": [
+                      "audioUrl",
+                      "transcript",
+                      "authorName",
+                      "durationSeconds",
+                      "createdAt"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              "message": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "status",
+              "photoUrl",
+              "recipientName",
+              "itemId",
+              "label",
+              "updatedAt",
+              "message"
+            ]
+          }
+        },
+        "recentMemory": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "itemId": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "seen",
+                  "moved",
+                  "label_saved"
+                ]
+              },
+              "at": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              "surface": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "itemId",
+              "kind",
+              "at",
+              "surface"
+            ]
+          }
+        },
+        "lastCommand": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "commandId": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "accepted",
+                    "completed",
+                    "rejected"
+                  ]
+                },
+                "reason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "commandId",
+                "status",
+                "reason"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "session",
+        "devices",
+        "map",
+        "wearer",
+        "items",
+        "camera",
+        "navigation",
+        "registrations",
+        "recentMemory",
+        "lastCommand"
+      ]
+    }
+  },
+  "required": [
+    "type",
+    "schemaVersion",
+    "streamId",
+    "sequence",
+    "sentAt",
+    "data"
+  ]
+}
