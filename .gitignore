@@ -58,3 +58,6 @@ DerivedData/
 # Photon (the team's bridge has its own photon/.gitignore)
 photon/node_modules/
 photon-scaffold/node_modules/
+
+# Local Python environments
+server/.venv/

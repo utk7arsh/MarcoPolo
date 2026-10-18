@@ -44,6 +44,7 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
   - **1 frame/s inference holds:** the full per-frame pipeline on this Apple Silicon Mac (MPS), on real iPad frames, takes 0.33 s with 1 item, 0.37 s with 10 and 0.42 s with 20 (p95 0.43 s). That is `tools/bench_frame.py`; run it on the venue machine too.
   - Slower frames are dropped (latest frame wins), never queued. Touch uses the 15/s hand stream and no model, so it is independent of this.
   - Everything is reached through **Tailscale**; the server binds 127.0.0.1 only, behind a fail-closed auth gate.
+  - **Vultr (`deploy/vultr/`):** the A16 16 GB in `sjc` ($0.47/h) is live. The only plan deployable in `lax` was the A40 48 GB at $1.71/h. Billing stops only when the box is destroyed.
 - **Wire details:**
   - depth and confidence may be zlib or raw DEFLATE (Apple's `.zlib` is raw DEFLATE; the server accepts both);
   - every phone message carries `session_id`, so the server files it into the same recording.
@@ -134,6 +135,25 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
 - **Verification totals:** server 76 passed, 1 skipped (the optional ARKitScenes sample is absent locally; includes 4 Swift/server contract checks), Swift 204, Photon scaffold 8 (current local runs); `photon/` 39 (Utkarsh's preceding run).
   - `photon-scaffold`'s `npm test` now runs `node --test test/*.test.js`, which works on Node 22 (thanks, Utkarsh).
 - **Teammates' code on `main`:** `frontend/` (Sandeep, the dashboard) was built against the earlier requirements, not this contract. See the next steps.
+- **`deploy/vultr/` (Utkarsh): the Vultr GPU deployment kit.**
+  - `marco-vultr.sh` has `plans`, `up`, `deploy`, `status`, `logs`, `bench`, `ssh` and `down`.
+  - The box has no inbound ports. It joins the tailnet at first boot (cloud-init) and is reached by Tailscale SSH.
+  - The server runs as a hardened systemd unit with `MARCO_MODE=real` and `MARCO_AUTH=tailscale`. `tailscale serve` publishes it only after the gate is checked to return 403.
+  - PyTorch is a CUDA build matched to the driver.
+  - **Live since 2026-10-18:** `marco-gpu` (A16 16 GB, `sjc`, driver 580 / CUDA 13.0, torch `cu130`) at `https://marco-gpu.taild6d426.ts.net`, with `TAILSCALE_ALLOWED_LOGINS=utk7arsh@github`.
+    - **Checked with `status`:** an unauthenticated local call gets 403; an allowed tailnet call gets 200.
+    - **`bench` on the box (full per-frame pipeline):**
+
+      | Items | Mean | p95 |
+      |---|---|---|
+      | 1 | 0.18 s | 0.19 s |
+      | 10 | 0.28 s | 0.32 s |
+      | 20 | 0.40 s | 0.49 s |
+
+      That is about 2x faster than this Mac.
+  - **Fixed on the way:** a YAML quoting bug in `cloud-init.yaml` kept the first box from installing Tailscale. That box was finished by hand from the Vultr console. The check now asserts that every `runcmd` entry is a string.
+- **`server/requirements.txt` gains `scipy`.** A fresh install (what Vultr runs) couldn't load the detector without it: transformers 5's default OWLv2 image processor needs it.
+  - With it, a clean venv from `requirements.txt` runs `bench_frame.py` with real OWLv2 on MPS: 0.41 s/frame with 1 item, 0.56 s with 10.
 - **Security sweep:**
   - no wildcard binds, tunnels or tokens in the repo;
   - POC 26's server now refuses non-loopback binds too.
@@ -162,6 +182,14 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
 7. **Caretaker voice notes:** `photon/` already sends them as m4a. Server-side conversion is only needed for other clients that post `.caf`.
    - **Possible §5 additions (proposals, not built):** `label_request_seen` (the caretaker opened the photo: "Mom is looking at it") and `label_unknown` ("Mom isn't sure either"). `photon/` already detects both and only logs them.
    - **Today the server doesn't queue `label_request`** for a disconnected bridge. `photon/` reconnects with backoff and shows the socket state on `/health`.
+
+8. **Vultr (Utkarsh): the box is up** (see "Built and verified"). Left to do:
+   - point the phone's Server field and `photon/`'s `MARCO_SERVER_URL` at `https://marco-gpu.taild6d426.ts.net`;
+   - invite teammates to the `utk7arsh` tailnet, add their logins to `TAILSCALE_ALLOWED_LOGINS`, and re-run `deploy`;
+   - measure the phone-to-Vultr round trip on venue Wi-Fi (`tailscale ping marco-gpu`);
+   - try OWLv2-large on it with `bench_frame.py` (step 6).
+
+   It bills $0.47/h until `marco-vultr.sh down`; stopping it doesn't stop billing.
 
 ## Open questions / hour-one tests (need the real phone)
 - **iPhone runtime checks** of the compiled ARKit/UIKit app; no installed simulator runtime is available on this Mac yet.

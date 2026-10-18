@@ -37,6 +37,7 @@ AUTH_TEST_BYPASS=1 python -m marco.app            # http://127.0.0.1:8000
    - The app binds 127.0.0.1 only; `main()` refuses anything else.
    - `tailscale serve` is the only way in, and it adds `Tailscale-User-Login`, which the gate checks against the allow-list.
    - Never use `tailscale funnel` (that is the public internet), and don't open a LAN or cloud port. On Vultr, keep the firewall closed: Tailscale needs no inbound ports.
+   - **Vultr GPU box:** `deploy/vultr/marco-vultr.sh` does all of this (provision, install, systemd, `tailscale serve`). See [deploy/vultr/README.md](../deploy/vultr/README.md).
 3. Real models: add `MARCO_MODE=real`. Weights download on first use.
    - **1 frame/s holds.** Measured on this Apple Silicon Mac (MPS) with real iPad frames, the full per-frame pipeline takes:
      - 0.33 s with 1 item;

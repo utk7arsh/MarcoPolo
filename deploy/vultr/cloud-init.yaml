@@ -1,0 +1,15 @@
+#cloud-config
+# First boot of the Marco GPU box (marco-vultr.sh up fills in the two placeholders; nothing secret lives in this file).
+# The box joins the tailnet and is reached only through it: the Vultr firewall group has no inbound rules, SSH is
+# Tailscale SSH, and the app is published to the tailnet by `tailscale serve` (deploy step).
+package_update: true
+packages:
+  - rsync
+  - ffmpeg
+runcmd:
+  - curl -fsSL https://tailscale.com/install.sh | sh
+  - tailscale up --auth-key="__TS_AUTHKEY__" --hostname="__HOST__" --ssh
+  # Vultr's Ubuntu images run ufw; let tailnet traffic (Tailscale SSH, tailscale serve) in on its own interface only.
+  - 'ufw allow in on tailscale0 || true'
+  - curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin INSTALLER_NO_MODIFY_PATH=1 sh
+  - install -d -m 755 /opt/marco /opt/marco/server /opt/marco/deploy
