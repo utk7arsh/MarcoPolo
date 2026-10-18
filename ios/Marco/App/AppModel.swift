@@ -86,6 +86,9 @@ final class AppModel: ObservableObject {
 
     // Main thread only.
     private var guidance = Guidance()
+    private var heading = YawPredictor()                               // head yaw as it will be when a sound is heard
+    private var audioLagS = 0.15                                       // render to ears (SpatialAudio.audioLagS), 10/s
+    private var warp = BeaconWarp()                                    // the beacon is never played behind
     private var guidanceGate = Throttle(hz: Config.guidanceMsgHz)
     private var uiGate = Throttle(hz: 10)
     private var timer: Timer?
@@ -504,19 +507,22 @@ final class AppModel: ObservableObject {
         if guidance.active, guidanceScope != l.scope { losePosition() }
         watchForLookout(t, l)
         if let change = routeWatch.settle(now: t) { headphonesChanged(change) }
+        // Every sound is placed for where the head will be when the AirPods play it, not where it was.
+        let yaw = heading.predict(t: t, yawDeg: l.headYaw, aheadS: audioLagS)
         // A line from a point in the room stays there while the head turns, guiding or not.
         if case .world = voiceAnchor, let pose = l.pose, pose.usable(now: t, in: l.scope) {
             let ear = Geo.position(pose.transform) + SIMD3<Float>(0, Config.earAboveChestM, 0)
-            voicePlaced = voiceAnchor.listenerRelative(ear: ear, headYawDeg: l.headYaw)
+            voicePlaced = voiceAnchor.listenerRelative(ear: ear, headYawDeg: yaw)
             audio.moveVoice(voicePlaced)
         }
         if let pose = l.pose, pose.usable(now: t, in: guidanceScope), guidance.active {
             let T = pose.transform
             let chest = Geo.position(T)
             let ear = chest + SIMD3<Float>(0, Config.earAboveChestM, 0)
-            play(guidance.tick(now: t, chest: chest, ear: ear, headYawDeg: l.headYaw))
+            play(guidance.tick(now: t, chest: chest, ear: ear, headYawDeg: yaw))
             if let tg = guidance.target {
-                beaconPoint = Geo.listenerRelative(ear: ear, headYawDeg: l.headYaw, target: tg.position)
+                warp.fovea = guidance.withinReach ? 1 : 2
+                beaconPoint = warp.apply(Geo.listenerRelative(ear: ear, headYawDeg: yaw, target: tg.position))
                 audio.place(beaconPoint!)
             }
             if guidanceGate.ready(t) || !guidance.active { sendGuidance() }
@@ -526,6 +532,7 @@ final class AppModel: ObservableObject {
             emit(m)
         }
         if uiGate.ready(t) {
+            audioLagS = audio.audioLagS
             let target = guidance.active ? guidance.target?.itemId : nil
             if guidanceTargetId != target { guidanceTargetId = target }
             if diagnosticsVisible {
@@ -626,13 +633,16 @@ final class AppModel: ObservableObject {
         play(guidance.stop())
         silence()
         guidanceScope = scope
+        let line = spotted ? Lines.spotted(name: name, relAzimuthDeg: bodyAz, distanceM: d, surface: surface)
+                           : Lines.polo(relAzimuthDeg: bodyAz, distanceM: d, surface: surface)
         guidance.start(GuidanceTarget(itemId: id, name: name, position: p, surface: surface,
-                                      labelText: label?.text, labelAudioURL: label?.url), now: now)
+                                      labelText: label?.text, labelAudioURL: label?.url), now: now, speechS: Guidance.speechS(line))
         let ear = chest + SIMD3<Float>(0, Config.earAboveChestM, 0)
-        beaconPoint = Geo.listenerRelative(ear: ear, headYawDeg: yaw, target: p)
+        warp = BeaconWarp()
+        warp.on = !Config.trueBeacon
+        beaconPoint = warp.apply(Geo.listenerRelative(ear: ear, headYawDeg: yaw, target: p))
         audio.place(beaconPoint!)
-        say(spotted ? Lines.spotted(name: name, relAzimuthDeg: bodyAz, distanceM: d, surface: surface)
-                    : Lines.polo(relAzimuthDeg: bodyAz, distanceM: d, surface: surface), from: .world(p))
+        say(line, from: .world(p))
         note("\(spotted ? "spotted" : "find") \(name): \(surface ?? "?"), \(Int(bodyAz)) deg, \(String(format: "%.1f", d)) m")
     }
 
@@ -908,8 +918,9 @@ final class AppModel: ObservableObject {
     private func reportBeacon(_ c: Cue) {
         let at = beaconPoint ?? SoundAnchor.aheadPoint
         switch c {
-        case .beep(let muffled): report("beep", at: at, anchor: "item", muffled: muffled)
-        case .ding: report("ding", at: at, anchor: "item")
+        case .beacon(let b): report("beep", at: at, anchor: "item", muffled: b == .behind)
+        case .handPing: report("beep", at: at, anchor: "item")
+        case .ding, .arrive: report("ding", at: at, anchor: "item")
         case .steadyTone(let on): report(on ? "tone_on" : "tone_off", at: at, anchor: "item")
         case .silence: report("silence", at: at, anchor: "item")
         default: break

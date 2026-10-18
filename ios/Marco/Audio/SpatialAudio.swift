@@ -14,14 +14,21 @@ final class SpatialAudio {
     enum PlaybackError: Error { case unreadableAudio }
     let engine = AVAudioEngine()
     private let environment = AVAudioEnvironmentNode()
-    private let beacon = AVAudioPlayerNode()     // beeps and dings
-    private let tone = AVAudioPlayerNode()       // steady tone in the last 30 cm
+    private let beacon = AVAudioPlayerNode()     // beeps, dings and the hand's pings
+    private let tone = AVAudioPlayerNode()       // the held tone when the fingertip is on the item
     private let voice = AVAudioPlayerNode()      // speech and labels
     private let format = AVAudioFormat(standardFormatWithSampleRate: 48_000, channels: 1)!
-    private lazy var beep = Tones.beep(format, freq: 880, harmonics: 6, ms: 70, noise: 0.12)
-    private lazy var beepMuffled = Tones.beep(format, freq: 440, harmonics: 2, ms: 110, noise: 0)
+    // One family, ordered by pitch: low and dull behind, plain in front, bright on the beam (Core/Guidance.swift).
+    // In front they reach ~10 kHz and last 100 ms or more while the head is turning: the pinna cues live above 4 kHz,
+    // and a head turn only helps a sound that lasts through it.
+    private lazy var beamPulse = Tones.beep(format, freq: 1320, harmonics: 7, ms: 70, noise: 0.2)
+    private lazy var beep = Tones.beep(format, freq: 880, harmonics: 11, ms: 110, noise: 0.12)
+    private lazy var beepMuffled = Tones.beep(format, freq: 392, harmonics: 2, ms: 140, noise: 0)
+    private lazy var herePing = Tones.ping(format, freq: 1046.5, amp: 0.2, ms: 90)
+    private lazy var handPings = Tones.handScale.map { Tones.ping(format, freq: $0) }
     private lazy var ding = Tones.ding(format)
-    private lazy var steady = Tones.loop(format, freq: 660)
+    private lazy var arrive = Tones.arrive(format)
+    private lazy var steady = Tones.loop(format, freq: Tones.handScale.last!.rounded())
     private let synth = AVSpeechSynthesizer()
     private let speechOutput = SpeechOutputClient()
     private var speechGeneration = 0
@@ -52,8 +59,8 @@ final class SpatialAudio {
         environment.listenerAngularOrientation = AVAudio3DAngularOrientation(yaw: 0, pitch: 0, roll: 0)
         let att = environment.distanceAttenuationParameters
         att.distanceAttenuationModel = .inverse
-        att.referenceDistance = 1.0          // no change inside 1 m; about -9.5 dB at 5 m
-        att.rolloffFactor = 0.5
+        att.referenceDistance = 0.6          // louder all the way in to the stop: -3.5 dB at 2 m, -9 dB at 6 m. Gentle,
+        att.rolloffFactor = 0.35             // so it's heard across the room; the pace carries the distance
         att.maximumDistance = 10
         environment.reverbParameters.enable = false
     }
@@ -169,6 +176,17 @@ final class SpatialAudio {
         voice.position = AVAudio3DPoint(x: p.x, y: p.y, z: p.z)
     }
 
+    /// How long after rendering a sound reaches the ears: the route's output latency (most of it Bluetooth, for
+    /// AirPods), one I/O buffer, and the AirPods' motion report on the way in. YawPredictor leads the head by this.
+    var audioLagS: Double {
+        #if os(iOS)
+        let s = AVAudioSession.sharedInstance()
+        return min(max(s.outputLatency + s.ioBufferDuration + 0.03, 0.03), 0.25)
+        #else
+        return 0.05
+        #endif
+    }
+
     private func aim(_ spot: VoiceSpot, _ p: SIMD3<Float>? = nil) {
         voiceSpot = spot
         switch spot {
@@ -181,10 +199,21 @@ final class SpatialAudio {
     /// Sound cues. .say, .playLabel and .haptic are routed by the app (speech needs a place).
     func play(_ cue: Cue) {
         switch cue {
-        case .beep(let muffled):
-            beacon.scheduleBuffer(muffled ? beepMuffled : beep, at: nil, options: [], completionHandler: nil)
+        case .beacon(let b):
+            let buffer: AVAudioPCMBuffer
+            switch b {
+            case .onBeam: buffer = beamPulse
+            case .offBeam: buffer = beep
+            case .behind: buffer = beepMuffled
+            case .here: buffer = herePing
+            }
+            beacon.scheduleBuffer(buffer, at: nil, options: [], completionHandler: nil)
         case .ding:
             beacon.scheduleBuffer(ding, at: nil, options: [.interrupts], completionHandler: nil)
+        case .arrive:
+            beacon.scheduleBuffer(arrive, at: nil, options: [.interrupts], completionHandler: nil)
+        case .handPing(let step):
+            beacon.scheduleBuffer(handPings[min(max(step, 0), handPings.count - 1)], at: nil, options: [], completionHandler: nil)
         case .steadyTone(let on):
             if on {
                 tone.scheduleBuffer(steady, at: nil, options: [.loops, .interrupts], completionHandler: nil)
@@ -336,6 +365,33 @@ enum Tones {
             let f = 520 + 1400 * t                  // a glide up
             let env = min(1, t / 0.01) * exp(-t / 0.05)
             return Float(0.25 * env * (sin(2 * .pi * f * t) + 0.3 * sin(4 * .pi * f * t)))
+        }
+    }
+
+    /// Stop walking: three rising bell notes (a major triad), unlike the facing ding's two.
+    static func arrive(_ format: AVAudioFormat) -> AVAudioPCMBuffer {
+        let notes = [(1046.5, 0.0), (1318.5, 0.13), (1568.0, 0.26)]
+        return buffer(format, seconds: 0.62) { t in
+            var s = 0.0
+            for (f, t0) in notes where t >= t0 {
+                let u = t - t0
+                s += min(1, u / 0.003) * exp(-u / 0.09) * (sin(2 * .pi * f * u) + 0.3 * sin(2 * .pi * 2.76 * f * u))
+            }
+            return Float(0.3 * s)
+        }
+    }
+
+    /// The hand's pitches, rising as the fingertip closes in (D major pentatonic, D5 to D6). The held tone on
+    /// contact is the top note, so the ladder ends on it.
+    static let handScale = [587.33, 659.26, 739.99, 880.0, 987.77, 1174.66]
+
+    /// A short pitched ping with a click on its front: the click is the transient the HRTF places.
+    static func ping(_ format: AVAudioFormat, freq: Double, amp: Double = 0.3, ms: Double = 60) -> AVAudioPCMBuffer {
+        var rng = SystemRandomNumberGenerator()
+        return buffer(format, seconds: ms / 1000) { t in
+            let env = min(1, t / 0.002) * exp(-t / 0.018)
+            let click = t < 0.003 ? Double.random(in: -0.5...0.5, using: &rng) * (1 - t / 0.003) : 0
+            return Float(amp * (env * (sin(2 * .pi * freq * t) + 0.25 * sin(2 * .pi * 3 * freq * t)) + click))
         }
     }
 

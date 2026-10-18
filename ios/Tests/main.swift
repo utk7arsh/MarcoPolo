@@ -345,7 +345,15 @@ do {
 // MARK: - Guidance (INTERFACES.md §7)
 
 do {
-    check(near(Guidance.beepInterval(0), 0.15) && near(Guidance.beepInterval(1), 0.5) && near(Guidance.beepInterval(3), 1.0), "beep gap formula")
+    // On the beam the pace is the distance across the whole room; the beam is a corridor, wider up close.
+    check(near(Guidance.beepInterval(1), 0.3) && near(Guidance.beepInterval(4), 0.909, 0.001) && Guidance.beepInterval(6) == 0.95
+          && Guidance.beepInterval(0.6) == 0.2, "beam pace: 0.9 s at 4 m, 0.3 s at 1 m, 0.2 s at the stop")
+    let ds = [0.6, 1.0, 2.0, 3.0, 4.0]
+    check(zip(ds, ds.dropFirst()).allSatisfy { Guidance.beepInterval($0) < Guidance.beepInterval($1) }, "beam pace keeps a gradient out to 4 m")
+    check(near(Guidance.lockDeg(5), 12) && near(Guidance.lockDeg(1), 16.70, 0.01) && near(Guidance.lockDeg(0.6), 26.57, 0.01), "beam: 12° far, 30 cm either side up close: \(Guidance.lockDeg(1))")
+    check(Guidance.handStep(0.45) == 0 && Guidance.handStep(0.25) == 3 && Guidance.handStep(0.06) == 5 && Guidance.handStep(0) == 5, "hand pitch steps rise as it closes in")
+    check(Guidance.handInterval(0.45) == 0.3 && near(Guidance.handInterval(0.1), 0.13) && Guidance.handInterval(0) == 0.09, "hand pings speed up")
+
     var g = Guidance()
     let target = GuidanceTarget(itemId: "keys", name: "keys", position: SIMD3(0, 0.9, 2), surface: "counter", labelText: nil, labelAudioURL: nil)
     g.start(target, now: 0)
@@ -358,29 +366,72 @@ do {
             t += 1.0 / 60
         }
     }
+    func reach(_ d: Double, _ seconds: Double) {                         // the server's 15/s, fresh every tick
+        let end = t + seconds
+        while t < end {
+            g.handProximity(itemId: "keys", distanceM: d, t: t)
+            cues += g.tick(now: t, chest: SIMD3(0, 0, 1.5), ear: SIMD3(0, 0.45, 1.5), headYawDeg: 180)
+            t += 1.0 / 60
+        }
+    }
+    func beacons() -> [Beacon] { cues.compactMap { if case .beacon(let b) = $0 { return b } else { return nil } } }
+    func pings() -> [Int] { cues.compactMap { if case .handPing(let s) = $0 { return s } else { return nil } } }
+
     run(3, chest: .zero, yaw: 0)                                       // the keys are behind
-    let beeps = cues.filter { if case .beep = $0 { return true } else { return false } }
-    check(g.phase == .behind && !beeps.isEmpty && beeps.allSatisfy { $0 == .beep(muffled: true) }, "behind: muffled beeps (\(beeps.count))")
+    check(g.phase == .behind && beacons().count >= 3 && beacons().allSatisfy { $0 == .behind }, "behind: the dull beep: \(beacons())")
     check(!cues.contains(.ding), "no ding while behind")
     cues = []
-    run(0.3, chest: .zero, yaw: 179)                                   // turns around
+    run(1.2, chest: .zero, yaw: 110)                                   // turned partway: in front, 70° off
+    check(g.phase == .turning && (2...3).contains(beacons().count) && beacons().allSatisfy { $0 == .offBeam }, "turning: plain beeps 0.4 s apart: \(beacons())")
+    cues = []
+    run(0.3, chest: .zero, yaw: 179)                                   // faces it
     check(cues.filter { $0 == .ding }.count == 1 && cues.contains(.haptic) && g.phase == .facing, "facing: one ding + haptic")
     cues = []
-    run(1.0, chest: .zero, yaw: 175)
-    check(g.phase == .approach && !cues.contains(.ding), "then approach, no second ding")
-    run(0.2, chest: .zero, yaw: 140)                                   // drifts off by 39 deg: unlocks
-    check(g.phase == .turning, "unlocked when 20+ deg off: \(g.phase)")
+    run(2.0, chest: .zero, yaw: 175)
+    check(g.phase == .approach && !cues.contains(.ding) && beacons().count >= 2 && beacons().allSatisfy { $0 == .onBeam }, "on the beam: bright pulses, no second ding: \(beacons())")
+    cues = []
+    run(0.1, chest: .zero, yaw: 150)                                   // veers 30° off at 2 m
+    check(g.phase == .turning && beacons().first == .offBeam, "drifting off the beam is heard at once: \(cues)")
     cues = []
     run(0.2, chest: .zero, yaw: 180)
     check(cues.filter { $0 == .ding }.count == 1, "a new lock dings again")
     cues = []
-    run(2, chest: SIMD3(0, 0, 1.5), yaw: 180)                          // walks up to it
-    check(near(g.distanceM, 0.5, 1e-3) && cues.contains(.say("Within reach, on the counter.")), "within reach, said once")
-    g.handProximity(itemId: "keys", distanceM: 0.25, t: t)
+    run(3, chest: SIMD3(0, 0, -1), yaw: 180)                           // 3 m away
+    let far = beacons().count
     cues = []
-    run(0.1, chest: SIMD3(0, 0, 1.5), yaw: 180)
-    check(g.phase == .reach && cues == [.steadyTone(true)], "steady tone within 30 cm: \(cues)")
-    g.handProximity(itemId: "wallet", distanceM: 0.05, t: t)           // another item's proximity is ignored
+    run(3, chest: SIMD3(0, 0, 1), yaw: 180)                            // 1 m away
+    check(beacons().count > far + 2 && beacons().allSatisfy { $0 == .onBeam }, "closer is faster: \(far) pulses at 3 m, \(beacons().count) at 1 m")
+    cues = []
+    run(0.2, chest: SIMD3(0, 0, 1.5), yaw: 180)                        // walks up to it: 0.5 m
+    check(near(g.distanceM, 0.5, 1e-3) && cues == [.arrive, .haptic], "stop: three notes and a buzz, no words: \(cues)")
+    cues = []
+    run(3, chest: SIMD3(0, 0, 1.5), yaw: 180)
+    let spoke = cues.contains { if case .say = $0 { return true } else { return false } }
+    check(!beacons().isEmpty && beacons().allSatisfy { $0 == .here } && !spoke, "then soft pings from the item, no more walking pulses: \(cues)")
+    cues = []
+    run(0.2, chest: SIMD3(0, 0, 0.8), yaw: 180)                        // backs off to 1.2 m ...
+    run(0.2, chest: SIMD3(0, 0, 1.5), yaw: 180)                        // ... and comes back
+    check(cues.filter { $0 == .arrive }.count == 1, "walking away re-arms the stop")
+
+    cues = []
+    reach(0.4, 1)
+    let slow = pings()
+    check(g.phase == .reach && slow.count >= 3 && slow.allSatisfy { $0 == 0 } && beacons().isEmpty, "hand seen at 40 cm: low, slow pings: \(slow)")
+    cues = []
+    reach(0.1, 1)
+    check(pings().count > slow.count + 2 && pings().allSatisfy { $0 == 5 }, "closer: higher and faster: \(pings())")
+    cues = []
+    reach(0.03, 0.3)
+    check(cues == [.steadyTone(true)], "on it: the held tone, no pings: \(cues)")
+    cues = []
+    reach(0.07, 0.2)
+    check(cues.isEmpty, "the held tone has hysteresis: \(cues)")
+    reach(0.12, 0.2)
+    check(cues.first == .steadyTone(false) && !pings().isEmpty, "off it again: pings resume: \(cues)")
+    cues = []
+    reach(0.03, 0.1)
+    check(cues == [.steadyTone(true)], "back on it")
+    g.handProximity(itemId: "wallet", distanceM: 0.01, t: t)           // another item's proximity is ignored
     check(g.touched(itemId: "wallet", t: t).isEmpty, "a touch on another item doesn't end guidance")
     let touch = g.touched(itemId: "keys", t: t)
     check(touch == [.steadyTone(false), .silence, .haptic, .say("Got it.")] && g.phase == .touched, "touch: silence then Got it: \(touch)")
@@ -396,6 +447,78 @@ do {
     _ = h.tick(now: 0.9, chest: .zero, ear: SIMD3(0, 0.45, 0), headYawDeg: 0)
     check(h.phase != .reach, "stale proximity doesn't count")
     check(h.touched(itemId: "mug", t: 1) == [.silence, .haptic, .playLabel("/v1/audio/a", fallback: "Got it.")], "a labelled item plays its label")
+
+    // The corridor: 18° off is on the beam at 0.7 m (a 22 cm miss) but not at 3 m (93 cm).
+    var c = Guidance()
+    c.start(GuidanceTarget(itemId: "cup", name: "cup", position: SIMD3(0, 1, -0.7), surface: nil, labelText: nil, labelAudioURL: nil), now: 0)
+    check(c.tick(now: 0, chest: .zero, ear: SIMD3(0, 0.45, 0), headYawDeg: -18).contains(.ding), "18° off at 0.7 m is on the beam")
+    c.start(GuidanceTarget(itemId: "cup", name: "cup", position: SIMD3(0, 1, -3), surface: nil, labelText: nil, labelAudioURL: nil), now: 1)
+    check(!c.tick(now: 1, chest: .zero, ear: SIMD3(0, 0.45, 0), headYawDeg: -18).contains(.ding), "18° off at 3 m is not")
+
+    // A walk in at a steady speed: no words on the way, and the stop notes earlier for a faster walker.
+    func walk(speed: Double) -> (words: [String], stopAt: Double) {
+        var w = Guidance()
+        w.start(GuidanceTarget(itemId: "mug", name: "mug", position: SIMD3(0, 1, -3), surface: nil, labelText: nil, labelAudioURL: nil), now: 0)
+        var words: [String] = []
+        var tt = 0.0
+        while tt < 30 {
+            let z = -Float(max(tt - 1.5, 0) * speed)                    // stands 1.5 s for "Polo!", then walks
+            for c in w.tick(now: tt, chest: SIMD3(0, 0, z), ear: SIMD3(0, 0.45, z), headYawDeg: 0) {
+                if case .say(let line) = c { words.append(line) }
+                if c == .arrive { return (words, w.distanceM) }
+            }
+            tt += 1.0 / 60
+        }
+        return (words, .nan)
+    }
+    let brisk = walk(speed: 0.6), stroll = walk(speed: 0.2)
+    check(brisk.words.isEmpty && stroll.words.isEmpty, "only beeps on the way in: \(brisk.words)")
+    check(near(brisk.stopAt, 0.9, 0.03) && near(stroll.stopAt, 0.7, 0.03), "the stop comes earlier at walking speed: \(brisk.stopAt) m at 0.6 m/s, \(stroll.stopAt) m at 0.2 m/s")
+
+    // The beacon is never played behind: doubled near the front, squeezed to the side, pinned at 90° on the short side.
+    func heard(_ az: Double, _ w: inout BeaconWarp) -> Double {
+        let r = az * .pi / 180
+        let q = w.apply(SIMD3(Float(2 * sin(r)), -0.4, Float(-2 * cos(r))))
+        check(near(Double((q.x * q.x + q.z * q.z).squareRoot()), 2, 1e-4) && q.y == -0.4, "warp keeps distance and height")
+        return atan2(Double(q.x), Double(-q.z)) * 180 / .pi
+    }
+    var warp = BeaconWarp()
+    check(near(heard(10, &warp), 20, 1e-3) && near(heard(30, &warp), 60, 1e-3) && near(heard(60, &warp), 75, 1e-3)
+          && near(heard(-40, &warp), -65, 1e-3) && near(heard(150, &warp), 90, 1e-3), "warp: fovea, squeeze, pinned at the side")
+    check(near(heard(-170, &warp), 90, 1e-3), "dead behind keeps the side it had")
+    check(near(heard(-150, &warp), -90, 1e-3), "20° clear of the other side, it flips")
+    var near1 = BeaconWarp()
+    near1.fovea = 1
+    check(near(heard(20, &near1), 20, 1e-3) && near(heard(-70, &near1), -70, 1e-3) && near(heard(170, &near1), -90, 1e-3),
+          "within reach: true direction in front, still never behind (and the left it had)")
+    var g2 = Guidance()
+    g2.start(GuidanceTarget(itemId: "cup", name: "cup", position: SIMD3(0, 1, -0.5), surface: nil, labelText: nil, labelAudioURL: nil), now: 0)
+    check(!g2.withinReach, "not within reach before the first tick")
+    _ = g2.tick(now: 0, chest: .zero, ear: SIMD3(0, 0.45, 0), headYawDeg: 0)
+    check(g2.withinReach, "within reach once stopped at it")
+    var off = BeaconWarp()
+    off.on = false
+    check(near(heard(150, &off), 150, 1e-3), "warp off: the true direction")
+
+    // Bluetooth lag: lead the head by rate x latency, smooth over the AirPods' steps, no lead for slow drift.
+    var yp = YawPredictor()
+    var out = 0.0
+    for i in 0...30 { out = yp.predict(t: Double(i) / 60, yawDeg: 100 * Double(i) / 60, aheadS: 0.15) }
+    check(near(yp.rateDegS, 100, 0.5) && near(out, 65, 0.2), "a 100°/s turn is led by 15° at 150 ms: \(out)")
+    yp.reset()
+    for i in 0...30 { out = yp.predict(t: Double(i) / 60, yawDeg: 100 * (Double(i) / 60 * 35).rounded(.down) / 35, aheadS: 0.15) }
+    check(abs(yp.rateDegS - 100) < 15, "35 Hz steps under a 60 Hz tick still read as 100°/s: \(yp.rateDegS)")
+    yp.reset()
+    for i in 0...30 { out = yp.predict(t: Double(i) / 60, yawDeg: 10 * Double(i) / 60, aheadS: 0.15) }
+    check(near(out, 5, 1e-9), "slow drift gets no lead: \(out)")
+    yp.reset()
+    for i in 0...30 { out = yp.predict(t: Double(i) / 60, yawDeg: Geo.wrap180(170 + 100 * Double(i) / 60), aheadS: 0.15) }
+    check(near(out, -125, 0.3), "the lead crosses ±180 (220° is -140°, +15): \(out)")
+    yp.reset()
+    for i in 0...30 { out = yp.predict(t: Double(i) / 60, yawDeg: Geo.wrap180(400 * Double(i) / 60), aheadS: 0.15) }
+    check(near(Geo.wrap180(out - Geo.wrap180(200)), 25, 0.01), "the lead is capped at 25°: \(out)")
+    out = yp.predict(t: 2, yawDeg: 0, aheadS: 0.15)
+    check(out == 0 && yp.rateDegS == 0, "a pause starts the slope over")
 }
 
 // MARK: - Audit regressions: request cancellation, pose validity, map-save lifetime, live target metadata
@@ -454,13 +577,13 @@ do {
     moving.start(GuidanceTarget(itemId: "keys", name: "keys", position: SIMD3(0, 1, -2), surface: "table", labelText: nil, labelAudioURL: nil), now: 0)
     moving.retarget(itemId: "keys", position: SIMD3(0, 1, -0.3), surface: "shelf")
     let reached = moving.tick(now: 2, chest: .zero, ear: .zero, headYawDeg: 0)
-    check(reached.contains(.say("Within reach, on the shelf.")), "moved item speaks updated surface")
+    check(reached.contains(.arrive) && moving.target?.surface == "shelf", "moved within reach: the stop notes, surface updated")
     moving.retarget(itemId: "keys", position: SIMD3(0, 1, -0.3), surface: "shelf")
-    check(!moving.tick(now: 3, chest: .zero, ear: .zero, headYawDeg: 0).contains(.say("Within reach, on the shelf.")), "duplicate sighting does not repeat within-reach speech")
+    check(!moving.tick(now: 3, chest: .zero, ear: .zero, headYawDeg: 0).contains(.arrive), "duplicate sighting does not repeat the stop")
     moving.retarget(itemId: "keys", position: SIMD3(0, 1, -0.3), surface: nil)
-    check(moving.tick(now: 4, chest: .zero, ear: .zero, headYawDeg: 0).contains(.say("Within reach.")), "unknown surface clears previous spoken surface")
-    moving.handProximity(itemId: "keys", distanceM: 0.1, t: 4)
-    check(moving.tick(now: 4.1, chest: .zero, ear: .zero, headYawDeg: 0).contains(.steadyTone(true)), "proximity starts steady tone before movement")
+    check(!moving.tick(now: 4, chest: .zero, ear: .zero, headYawDeg: 0).contains(.arrive) && moving.target?.surface == nil, "a surface change alone doesn't repeat the stop")
+    moving.handProximity(itemId: "keys", distanceM: 0.03, t: 4)
+    check(moving.tick(now: 4.1, chest: .zero, ear: .zero, headYawDeg: 0).contains(.steadyTone(true)), "fingertip on it starts the held tone before movement")
     moving.retarget(itemId: "keys", position: SIMD3(0, 1, -2), surface: "table")
     check(moving.tick(now: 4.2, chest: .zero, ear: .zero, headYawDeg: 0).contains(.steadyTone(false)), "moving target drops old proximity and stops steady tone")
     moving.retarget(itemId: "other", position: .zero, surface: nil)
@@ -932,6 +1055,11 @@ do {
     let s = loop.floatChannelData![0]
     check(loop.frameLength == 48_000 && abs(s[0]) < 1e-6 && abs(s[47_999] - s[0]) < 0.06, "steady tone loops without a click")
     check(Tones.beep(fmt, freq: 880, harmonics: 6, ms: 70, noise: 0.1).frameLength == 3360, "70 ms beep")
+    let held = Tones.loop(fmt, freq: Tones.handScale.last!.rounded())
+    let hs = held.floatChannelData![0]
+    check(abs(hs[0]) < 1e-6 && abs(hs[47_999] - hs[0]) < 0.1, "the held contact tone loops without a click")
+    check(Tones.handScale.count == Guidance.handSteps && Tones.handScale == Tones.handScale.sorted(), "one rising pitch per hand step")
+    check(Tones.arrive(fmt).frameLength == 29_760 && Tones.ping(fmt, freq: 880).frameLength == 2880, "stop chord 0.62 s, ping 60 ms")
 }
 
 // MARK: - Resource policy (Core/ResourcePolicy.swift) and the lighter hand path

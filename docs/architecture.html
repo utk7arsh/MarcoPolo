@@ -210,27 +210,27 @@
         <div class="where"><code>Lines.polo</code>, <code>SpatialAudio</code></div>
         <span class="pill" data-status="built"></span>
       </div>
-      <div class="stage" data-status="built" data-kind="stage" title="Phase .behind plays muffled, lower beeps. Mac AirPods tests: left/right correct, front/back still unclear to the wearer.">
-        <div class="heard">Beep&hellip; beep, muffled while behind you</div>
-        <div class="how">Beacon from the item, relative to the head (AirPods + ARKit torso).</div>
+      <div class="stage" data-status="built" data-kind="stage" title="Behind (over 110 degrees): low muffled beep every 0.55 s; to one side: plain beep every 0.4 s. BeaconWarp never plays the beacon behind: it is pinned at 90 degrees on the shorter turning side, so front/back no longer depends on the HRTF. Head yaw advanced by the audio latency. Unit-tested and rendered offline through Apple's HRTF; not heard on the vest yet.">
+        <div class="heard">Low beep from the side to turn to</div>
+        <div class="how">Never played behind you: a dull beep from your left or right while it's behind, a plain one in front.</div>
         <div class="where"><code>Guidance</code> phase <code>behind</code></div>
         <span class="pill" data-status="built"></span>
       </div>
-      <div class="stage" data-status="built" data-kind="stage" title="Phase .facing: ding + haptic once per lock (12 degrees in, 20 degrees out). Logic tested; not felt on the vest yet.">
+      <div class="stage" data-status="built" data-kind="stage" title="Lock within max(12 degrees, atan(0.3 m / distance)): a corridor 30 cm either side of the item, so it widens up close. Releases 8 degrees outside; drifting off swaps to the plain beep at once. Logic tested; not felt on the vest yet.">
         <div class="heard">Turn: double ding + a buzz when facing</div>
-        <div class="how">Locks within 12&deg;, releases past 20&deg;.</div>
+        <div class="how">A 30 cm corridor, not a cone; drift off it and the beep changes at once.</div>
         <div class="where"><code>Guidance</code> phase <code>facing</code></div>
         <span class="pill" data-status="built"></span>
       </div>
-      <div class="stage" data-status="built" data-kind="stage" title="Phase .approach: gap = clamp(0.15 + 0.35 x distance, 0.15, 1.0) s; 'Within reach, on the table' at 0.6 m. Logic tested; walking not tested.">
-        <div class="heard">Walk: beep-beep-beep, faster</div>
-        <div class="how">Gap shrinks with distance; "Within reach" once at 0.6 m.</div>
+      <div class="stage" data-status="built" data-kind="stage" title="Bright pulse gap = clamp(0.3 x distance^0.8, 0.2, 0.95) s. Three notes + haptic at 0.6 m plus 0.5 s of walking speed (max 0.3 m early); no words. Offline render: the scripted walker stops at 0.59 m (0.31 m with the old logic). Walking on the vest not tested.">
+        <div class="heard">Walk: bright pulses, faster, then three notes: stop</div>
+        <div class="how">Pace is the distance across the room; the stop notes come early enough for your speed.</div>
         <div class="where"><code>Guidance</code> phase <code>approach</code></div>
         <span class="pill" data-status="built"></span>
       </div>
-      <div class="stage" data-status="built" data-kind="stage" title="Needs the server's hand_proximity (touch.py, synthetic data only) plus the phone's steady tone (on at 30 cm, off above 40 cm). Real hand stream untested.">
-        <div class="heard">Last ~30 cm: a steady tone</div>
-        <div class="how">Driven by the fingertip's distance from the server, 15/s.</div>
+      <div class="stage" data-status="built" data-kind="stage" title="From 45 cm (hand_proximity, 15/s): pings rising D5 to D6 and speeding 0.3 s to 0.09 s; the steady tone (top note) at 5 cm or less, off above 9 cm. Needs the server's touch.py (synthetic data only). Real hand stream untested.">
+        <div class="heard">Reach: pings climb, then a steady tone</div>
+        <div class="how">A parking sensor for the hand, from the fingertip's distance (server, 15/s).</div>
         <div class="where">server <code>touch.py</code> &rarr; <code>Guidance</code> phase <code>reach</code></div>
         <span class="pill" data-status="built"></span>
       </div>

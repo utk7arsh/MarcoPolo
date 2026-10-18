@@ -870,3 +870,26 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
   - **Not verified:** the real iPhone and AirPods sending these; Listen in heard through headphones; the Vultr box (it still runs `6f4c0ee`, without the dashboard adapter, the hub fix or this).
 - **Merged mid-task:** another session pulled `a8261b4` (ElevenLabs speech) and resolved the conflicts in `AppModel.swift`. Labels are now spoken text, so a label cue carries its words and no memo URL.
 - **Landed on its own** (October 18, after a stash pop): only this sound work is in the commit. The uncommitted beacon-sound redesign (`Guidance.swift`, `SpatialAudio.swift`, `BeaconWarp`, §7) stays in the working tree for its owner. When it lands, `AppModel.reportBeacon` must map its new cues (`.beacon`, `.handPing`, `.arrive`) to `beep`/`ding`, as the working tree already does.
+
+## Guidance sounds: front/back, distance, stop and reach (October 18, 2026, Utkarsh)
+- **Why:** the Mac AirPods tests got left/right right, but front/back, distance and "what now that I'm facing it" stayed unclear. Before, the beep didn't change once locked, losing the lock past 20° made no sound, distance pace stopped changing beyond 2.4 m, "Within reach" was the only stop cue, and the last 30 cm was a flat tone. That's a risk with a blindfolded demo walker heading for a counter.
+- **Research behind it** (three web-research passes): Microsoft Soundscape and Clew source code, Loomis et al. 1998/2005 (spatial speech of the distance left was the fastest display), AirTag Precision Finding, Parseihian 2016 sonification, So 2011 and Shinn-Cunningham 1998 on front/back and azimuth gain, and game audio (Valorant, CS2, Fortnite, Hunt: Showdown, The Last of Us Part II accessibility).
+- **What changed** (phone only: phases, cue names and message formats unchanged; `docs/INTERFACES.md` §7 rewritten, docx regenerated):
+  - **Front/back by construction:** `BeaconWarp` never plays the beacon behind. Errors up to 30° are doubled, 30-90° go into 60-90°, and anything further is pinned at 90° on the shorter turning side, with a dull "behind" beep. Within reach the direction is true.
+  - **Three beacon sounds:** low and muffled behind, plain to one side (0.4 s beat while turning), bright on the beam. Drifting off the beam swaps to the plain beep at once.
+  - **The beam is a corridor:** max(12°, atan(0.3 m / d)), so a walker who will reach it anyway isn't told to turn.
+  - **Distance:** bright-pulse gap = 0.3 × d^0.8 (0.2-0.95 s), readable across the room.
+  - **Stop:** three notes + haptic at 0.6 m plus 0.5 s of walking speed (max 0.3 m early), then soft pings from the item. Re-arms past 1.1 m.
+  - **Reach:** from 45 cm, pings rising D5 to D6 and speeding up; the steady tone (top note) at 5 cm.
+  - **Latency:** `YawPredictor` places sounds where the head will be when the AirPods play them (yaw + rate × `AVAudioSession` output latency, capped at 25°).
+  - **Beeps only (Utkarsh's call):** during a find Marco speaks just the opening "Polo!" line and "Got it" (or the label) at the touch. A spoken countdown, "Stop.", "Within reach…", turn hints, a turn-your-body nudge and a "teach me the sounds" tour were built and then removed.
+  - **A/B on the vest:** UserDefaults `trueBeacon` = true plays the true direction instead of the warp.
+- **Verified:**
+  - Swift: 461 checks pass; the MarcoPolo app builds for the iOS Simulator.
+  - Server: 171 passed, 1 skipped (on `89f07f0` plus this change).
+  - Offline Apple-HRTF render through the app's own Guidance and SpatialAudio (local tool `ios/spatial/render-guidance.sh`, gitignored; WAVs `before-walk.wav` and `after-walk.wav` in `ios/spatial/renders/`): the same scripted walker stops 0.59 m from the item with the new logic, 0.31 m with the old.
+- **Not verified:**
+  - none of it heard on the vest or real AirPods yet;
+  - the AirPods' real output latency, and how well the prediction does;
+  - the dashboard's demo story and `server/tools/sound_demo.py` still tell the old sequence. The cue names are unchanged, so nothing breaks.
+- **Next on the vest:** a behind-to-facing turn with the warp on vs `trueBeacon`; a 3 m blindfolded walk with a spotter, measuring the stop distance; then tune `Guidance.stopLeadS` and `beamHalfWidthM`.

@@ -122,7 +122,7 @@ Three owners, one contract. Change a message format only by updating this file, 
  "az_deg": 20.0, "el_deg": -35.0, "distance_m": 0.6, "text": "That's the cumin, love", "duration_s": 1.8}
 ```
 - **`cue`:**
-  - `beep` (with `muffled` true while the item is behind the head), `ding` (facing), `tone_on` and `tone_off` (the steady tone);
+  - `beep` (any beacon pulse or reach ping, with `muffled` true for the behind sound), `ding` (facing, and the stop notes), `tone_on` and `tone_off` (the steady tone);
   - `say` (Marco's voice, with `text`), `label` (an item's label, spoken in the same voice, with its words in `text`; `audio_url` only if it is a recorded voice memo), `blip` (listening, after "Marco");
   - `silence` (everything stopped).
 - **`source`:** `beacon` for beep, ding and tone; `voice` for say, label and blip.
@@ -241,7 +241,7 @@ speech. It uses the same fail-closed Tailscale authentication as every other rou
 ```
 - `seen_ago_s` may be `null`.
 - `touch.item_id` is `null` for an unknown thing being touched.
-- `hand_proximity` is sent 15 times a second while guiding: the hand's distance to the target, which drives the steady tone in §7. It's measured from the fingertip, or from the knuckles or wrist when the back of the hand hides the fingertip from the chest camera.
+- `hand_proximity` is sent 15 times a second while guiding: the hand's distance to the target, which drives the reach pings and the steady tone in §7. It's measured from the fingertip, or from the knuckles or wrist when the back of the hand hides the fingertip from the chest camera.
 - **Touching a known item** while not being guided to it names it: the phone says its label text, or "That's the {name}," through §3.5 with Apple fallback.
 - `label_audio_url` and `GET /v1/audio/{id}` remain for stored-data and older-client compatibility. The current iOS app does not download or prefer caretaker recordings; it caches synthesized replies instead.
 
@@ -361,10 +361,15 @@ The phone runs this loop at 60 Hz for low latency (`ios/Marco/Core/Guidance.swif
    - clock position = round(relative azimuth / 30°), where 12 o'clock means ahead; 12, 3, 6 and 9 are said as "straight ahead", "on your right", "behind you" and "on your left";
    - steps = round(horizontal distance / 0.7 m), at least one;
    - within 0.6 m it says *"Polo! Within reach, …"* instead.
-3. **Beacon:** beeps from `position`, rendered relative to the **head** (fused yaw). They're muffled and lower while the item is behind the head (|relative azimuth| more than 90°).
-4. **Facing** (|relative azimuth| 12° or less): a double ding plus a haptic, once per lock. The lock releases past 20°.
-5. **Walking:** the gap between beeps = clamp(0.15 + 0.35 × distance, 0.15, 1.0) s. *"Within reach, on the {surface}"* is said once at 0.6 m (POC 5).
-6. **Steady tone** once `hand_proximity.distance_m` is 0.30 or less. It releases above 0.40, or when proximity is older than 0.5 s.
+3. **Beacon** from the item, after the opening line, rendered relative to the **head**: the fused yaw, advanced by the audio output latency so a sound is placed where the head will be when it is heard. Three sounds say where the item is without relying on the HRTF:
+   - **behind** (|relative azimuth| above 110°, back under 100°): a low, muffled beep every 0.55 s;
+   - **off to one side:** a plain beep every 0.4 s;
+   - **on the beam** (step 4): a bright pulse whose pace is the distance (step 5).
+
+   The beacon is never played behind the head (`BeaconWarp`): errors up to 30° are doubled, 30-90° are squeezed into 60-90°, and anything further round is pinned at 90° on the shorter turning side. Once within reach, the direction is true.
+4. **On the beam** (|relative azimuth| within max(12°, atan(0.3 m / distance)), a corridor 30 cm either side of the item): a double ding plus a haptic, once per lock. The lock releases 8° outside that, and drifting off swaps to the plain beep at once.
+5. **Walking:** the gap between bright pulses = clamp(0.3 × distance^0.8, 0.2, 0.95) s. **Stop** at 0.6 m, called earlier by 0.5 s of walking speed (at most 0.3 m): three rising notes and a haptic, then a soft ping from the item every 1.1 s. Walking back beyond 1.1 m re-arms it. Nothing is spoken between the opening line and the touch: the beeps do the guiding.
+6. **Reach** once `hand_proximity.distance_m` is 0.45 or less (it releases above 0.55, or when proximity is older than 0.5 s): pings from the item that rise in pitch (six steps, D5 to D6) and speed up (0.3 s apart at 45 cm, 0.13 s at 10 cm). The **steady tone**, the top pitch, plays at 5 cm or less and releases above 9 cm.
 7. **On `touch` for that item:** silence, then the item's typed label or *"Got it."* through §3.5. The phone's guidance sequence does not wait for cloud speech.
 
 If an `event moved` (or `put_down`) arrives for the target, retarget to its new `position`.
@@ -435,6 +440,7 @@ If an `event moved` (or `put_down`) arrives for the target, retarget to its new 
 
 ## 13. Changes since v0.3
 - **Output-only ElevenLabs:** authenticated `POST /v1/speech` (§3.5), short exact text to mono WAV, bounded caching/timeouts and Apple fallback. iOS plays it through the existing spatial voice node.
+- **§7 guidance sounds** (phone only; no message format changed): a beam that widens to 30 cm either side up close, three beacon sounds, a beacon never played behind, distance pace across the whole room, a speed-compensated stop (notes and a haptic, no words), graded reach pings with the steady tone at contact (5 cm), and head yaw advanced by the audio latency. The only words during a find are the opening line and the touch.
 - **Typed Photon labels:** no Scribe, transcription or new caregiver audio labels. Photos and typed names, retries, corrections and source attribution stay. Stored legacy media and optional wire fields remain compatible.
 - **A hand over the guided item no longer makes it `missing`** (§7 step 7). Close up, the detector usually can't see the item under the hand. That used to mark the item `missing` after 3 frames, which took it out of touch matching, so the touch, and with it the end of the search, never came.
   - Frames where a hand is within 35 cm of an item don't count as misses.

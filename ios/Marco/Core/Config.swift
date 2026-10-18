@@ -27,6 +27,10 @@ enum Config {
         UserDefaults.standard.bool(forKey: "flipAirpodsYaw") ? 1 : -1
     }
 
+    /// A/B for the vest: play the beacon from the item's true direction instead of BeaconWarp's (never behind).
+    /// `defaults write` or the debug screen; off by default.
+    static var trueBeacon: Bool { UserDefaults.standard.bool(forKey: "trueBeacon") }
+
     /// Speech comes from the AirPods' mic when the route supports Bluetooth high-quality recording (iOS 26, AirPods
     /// Pro 3). The debug screen can force the iPhone's mic instead, e.g. if that mode turns out to cost the output
     /// its stereo (the "mic" row shows both).
