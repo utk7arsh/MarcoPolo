@@ -14,7 +14,7 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
 |---|---|---|
 | `server/` | perception and world model (Python): ingest, recording, geometry, detection, world model, touch, API | Vedant |
 | `ios/` | the iPhone app (Swift, Xcode): ARKit capture, uploads, WebSocket, spatial audio, voice | Utkarsh |
-| `photon/` | the team's Photon bridge (TypeScript, Spectrum): caretaker labelling over iMessage | Utkarsh |
+| `photon/` | the team's Photon bridge (TypeScript, **Photon 2.0**): caretaker labelling over iMessage, speaking `docs/INTERFACES.md` §5 | Utkarsh |
 | `photon-scaffold/` | reference wiring for Photon that speaks `docs/INTERFACES.md` §5 exactly, tested against the server | Vedant (for Utkarsh to use or copy) |
 | `frontend/` | the dashboard (React + Vite), with its backend contract in `frontend/docs/` | Sandeep |
 | `docs/INTERFACES.md` | **the contract** between the three parts: message formats, coordinates, who sends what | everyone |
@@ -107,31 +107,39 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
   - `docs/INTERFACES.md` v0.2 (+ `.docx`), with a changelog in §11;
   - top-level `README.md`, `server/README.md`, `server/requirements.txt`;
   - `.gitignore` covers recordings, datasets, build output and `node_modules`.
-- **Totals (all passing):** server 74 tests (including both client contract tests and the real-video tools), Swift 102, Photon scaffold 8.
-- **Teammates' code on `main`:** `photon/` (Utkarsh, Spectrum/TypeScript) and `frontend/` (Sandeep, the dashboard). Both were built against the earlier requirements and POC 26 routes, not this contract. See the next steps.
+- **`photon/` (Utkarsh, TypeScript): the team's caretaker bridge, on Photon 2.0, speaking §5 exactly** (2026-10-17).
+  - **iMessage:** the official Photon 2.0 client (`@photon-ai/api` 0.5.0) for sends and attachments, and the project's Socket.IO event stream with a saved cursor. The LA Hacks track requires Photon 2.0, so Spectrum was removed.
+  - **Server side (§5):** it listens on `/v1/photon` for `label_request`, fetches the crop, texts it to the caretaker and posts the answer to `POST /v1/labels` (`touch_id` first, then `item_id`). A voice memo sent after a typed name is added to that `item_id`. Setup photos go to `POST /v1/items` as JPEG (HEIC converted). Voice memos are sent as m4a (CAF converted), which the phone and the dashboard can both play.
+  - **Resilience:** at-least-once handling, with stable ids and idempotency keys, so a replayed event never double-posts or double-texts. If the server has forgotten a touch (a `404` after a restart), the item is registered from its crop, then labelled.
+  - **Status port:** 127.0.0.1 only (`/health`, plus `/dev/*` in sim mode). The phone never talks to `photon/`.
+  - **Checks:** `npm run doctor` checks the Photon 2.0 key, line and event stream, plus `MARCO_SERVER_URL` (`GET /v1/items`, the `/v1/photon` socket and the allow-list), read-only.
+  - **Verification:** `cd photon && npm test` runs 39 tests. One of them is end to end against the real `server/` (stub, loopback): `what_is_this` → `label_request` → iMessage → text then voice memo → `label_ready` with m4a audio → `what_is_this` known → setup photo → `GET /v1/items`. It runs when `server/.venv` (or `MARCO_SERVER_PYTHON`) has the stub dependencies.
+- **Totals (all passing):** server 74 tests (including both client contract tests and the real-video tools), Swift 102, Photon scaffold 8, `photon/` 39.
+  - `photon-scaffold`'s `npm test` script (`node --test test/`) fails to start on Node 22.21, which treats the directory as a module. `node --test test/*.test.js` runs all 8.
+- **Teammates' code on `main`:** `frontend/` (Sandeep, the dashboard) was built against the earlier requirements, not this contract. See the next steps.
 - **Security sweep:**
   - no wildcard binds, tunnels or tokens in the repo;
   - POC 26's server now refuses non-loopback binds too.
   - The GitHub token from the first push sits in `.git/credentials`: never committed, and it goes when the folder is deleted. Revoke it after the hackathon.
 
 ## In progress / next
-1. **Reconcile the routes** (`docs/INTERFACES.md` §10) with Utkarsh and Sandeep:
-   - **Photon:** `photon/` uses `/labels/request` (phone to Photon), `POST /labels/reply` and `POST /items`; §5 has `label_request` on `/v1/photon` and `POST /v1/labels`.
+1. **Reconcile the routes** (`docs/INTERFACES.md` §10) with Sandeep:
+   - **Photon: done.** `photon/` adopted §5 unchanged; no server change was needed.
    - **Dashboard:** `frontend/` expects `GET /dashboard/snapshot`, `WS /events` and `POST /dashboard/commands` (`frontend/docs/fastapi-handoff.md`). Likely a server adapter, plus a phone message for dashboard Find/Stop.
-2. **Security fix for `photon/` (Utkarsh), not applied:**
-   - `photon/src/http.ts:133` `serve({ fetch: app.fetch, port: config.port })` listens on all interfaces, and with `BRIDGE_TOKEN` unset every route is open: anyone on the venue Wi-Fi could read caretaker photos and voice notes, or make it text the caretaker.
-   - Fix: add `hostname: "127.0.0.1"` and reach it through `tailscale serve` with the same allow-list as the server, instead of a self-made token.
+2. **Security fix for `photon/`: applied.** Its HTTP port binds 127.0.0.1 and serves only `/health` (and `/dev/*` in sim mode). The phone-facing routes and `BRIDGE_TOKEN` are gone; caretaker media is never served.
 3. **Utkarsh:**
    - build `ios/` in Xcode;
    - run the hour-one tests in `ios/README.md`;
-   - run `photon/` (or `photon-scaffold/`) on the Mac with Messages.
+   - point `photon/` at the server: set `MARCO_SERVER_URL` to its tailscale serve URL, add the bridge machine's login to `TAILSCALE_ALLOWED_LOGINS`, then `npm run doctor`. Photon 2.0 itself is live and was tested.
 4. **Vedant:** the real-video test in `docs/TESTING.md`.
    - Record recordings A–D with Stray Scanner, plus one registration photo per prop.
    - Inspect each recording, label it, and score it.
    - Tune `TH_*` on one recording and confirm on another; refit the touch `CONTACT_M`.
    - Re-run `bench_frame.py` on the venue machine.
 5. **Dashboard:** live data through the adapter (step 1); until then, the stub plus `tools/replay.py` give real feeds on `/v1/dashboard`.
-6. **Possible server work:** convert caretaker voice notes (`.caf`) to m4a with ffmpeg if the phone can't play them.
+6. **Caretaker voice notes:** `photon/` already sends them as m4a. Server-side conversion is only needed for other clients that post `.caf`.
+   - **Possible §5 additions (proposals, not built):** `label_request_seen` (the caretaker opened the photo: "Mom is looking at it") and `label_unknown` ("Mom isn't sure either"). `photon/` already detects both and only logs them.
+   - **Today the server doesn't queue `label_request`** for a disconnected bridge. `photon/` reconnects with backoff and shows the socket state on `/health`.
 
 ## Open questions / hour-one tests (need the real phone)
 - **Xcode build** of `App/` and `ARSessionManager.swift`: the first compile of the ARKit glue.

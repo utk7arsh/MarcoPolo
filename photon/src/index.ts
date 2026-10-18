@@ -1,12 +1,11 @@
-import { MarcoAgent, Spaces } from "./agent.js";
+import { MarcoAgent } from "./agent.js";
 import { loadConfig } from "./config.js";
-import { EventBus } from "./events.js";
 import { startHttp } from "./http.js";
 import { log } from "./log.js";
-import { MarcoServer } from "./marco-server.js";
+import { connectPhotonSocket, MarcoServer, type PhotonSocket } from "./marco-server.js";
 import { Media } from "./media.js";
-import { simMessaging, startSpectrum, type Messaging } from "./messaging.js";
-import { SimPlatform } from "./sim.js";
+import { PhotonChannel, startEvents, type EventStream } from "./photon.js";
+import { SimChannel } from "./sim.js";
 import { Store } from "./store.js";
 import { elevenLabsTranscriber, noTranscriber } from "./transcribe.js";
 
@@ -18,24 +17,24 @@ try {
 
 const config = loadConfig();
 const store = new Store(config.dataDir);
-const media = new Media(config.dataDir, config.publicBaseUrl);
-const events = new EventBus();
-const sim = config.mode === "sim" ? new SimPlatform() : null;
+const media = new Media(config.dataDir);
+const sim = config.photon ? null : new SimChannel();
+const photon = config.photon ? new PhotonChannel(config.photon) : null;
+const server = new MarcoServer(config.marcoServerUrl);
 
-let messaging: Messaging | undefined;
-const spaces = new Spaces(async (platform, spaceId) => messaging?.lookup(platform, spaceId));
 const agent = new MarcoAgent({
   config,
   store,
   media,
-  events,
-  spaces,
+  channel: photon ?? sim!,
   transcribe: config.elevenLabsKey ? elevenLabsTranscriber(config.elevenLabsKey, config.sttModel) : noTranscriber,
-  server: new MarcoServer(config.marcoServerUrl, media),
+  server,
 });
 
-// Bind the port before connecting to Photon: a second copy must exit here, not become a second consumer of the same line.
-const http = startHttp({ config, agent, store, media, events, sim });
+let socket: PhotonSocket | null = null;
+
+// Bind the status port first: a second copy must exit here, not become a second consumer of the same line.
+const http = startHttp({ config, agent, store, sim, serverConnected: () => socket?.connected ?? false });
 await new Promise<void>((resolve, reject) => {
   http.once("listening", resolve);
   http.once("error", reject);
@@ -47,10 +46,27 @@ await new Promise<void>((resolve, reject) => {
   );
   process.exit(1);
 });
-messaging = sim ? simMessaging(sim) : await startSpectrum(config, (space, message) => agent.handle(space, message));
 
-log.info(`Marco x Photon up: mode=${config.mode} http=:${config.port} caretakers=${store.caretakers().length} items=${store.items().length}`);
-if (!config.elevenLabsKey) log.warn("ELEVENLABS_API_KEY not set: voice memos are saved and played, but not transcribed into names");
+// The Marco server asks; the caretaker answers over iMessage (docs/INTERFACES.md §5).
+socket = connectPhotonSocket(config.marcoServerUrl, (request) => agent.onLabelRequest(request));
+
+let stream: EventStream | null = null;
+if (config.photon && photon) {
+  stream = startEvents(
+    config.photon,
+    { load: () => store.eventCursor, save: (seq) => (store.eventCursor = seq) },
+    async (event) => {
+      const message = await photon.toInbound(event);
+      if (message) await agent.handle(message);
+    },
+  );
+}
+
+log.info(
+  `Marco x Photon 2.0 up: mode=${config.mode} server=${config.marcoServerUrl} status=http://127.0.0.1:${config.port}/health ` +
+    `caretakers=${store.caretakers().length}`,
+);
+if (!config.elevenLabsKey) log.warn("ELEVENLABS_API_KEY not set: voice memos are kept and sent, but not transcribed into names");
 if (config.mode === "sim") log.info("sim mode: POST /dev/inbound to play the caretaker");
 
 let stopping = false;
@@ -58,7 +74,8 @@ const shutdown = async () => {
   if (stopping) return;
   stopping = true;
   log.info("shutting down");
-  await messaging?.stop();
+  socket?.close();
+  stream?.stop();
   await agent.settled();
   http.close();
   process.exit(0);

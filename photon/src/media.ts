@@ -59,24 +59,20 @@ export function contentTypeFor(file: string): string {
   return CONTENT_TYPE[extname(file).slice(1).toLowerCase()] ?? "application/octet-stream";
 }
 
-/** Stores photos as JPEG and voice notes as m4a so iOS AVAudioPlayer and every browser can play them. */
+/**
+ * Stores photos as JPEG (what POST /v1/items expects, docs/INTERFACES.md §3.3) and voice notes as m4a, which the
+ * phone (AVAudioFile) and the dashboard's browser can both play.
+ */
 export class Media {
   readonly dir: string;
 
-  constructor(
-    dataDir: string,
-    private readonly publicBaseUrl: string,
-  ) {
+  constructor(dataDir: string) {
     this.dir = join(dataDir, "media");
     mkdirSync(this.dir, { recursive: true });
   }
 
   path(file: string): string {
     return join(this.dir, basename(file));
-  }
-
-  url(file: string | null): string | null {
-    return file ? `${this.publicBaseUrl}/media/${file}` : null;
   }
 
   private fresh(prefix: string, ext: string): string {
@@ -92,8 +88,13 @@ export class Media {
         return file;
       }
     }
-    const file = this.fresh("photo", IMAGE_EXT[mimeType.toLowerCase()] ?? (isHeif(buf) ? "heic" : "jpg"));
+    const ext = isJpeg(buf) ? "jpg" : (IMAGE_EXT[mimeType.toLowerCase()] ?? (isHeif(buf) ? "heic" : "jpg"));
+    const file = this.fresh("photo", ext);
     writeFileSync(this.path(file), buf);
+    if (ext === "jpg") return file;
+    const jpg = file.replace(/\.[^.]+$/, ".jpg");
+    if (await toJpeg(this.path(file), this.path(jpg))) return jpg;
+    log.warn(`could not convert ${file} to JPEG; keeping the original`);
     return file;
   }
 
@@ -105,6 +106,26 @@ export class Media {
     if (await toM4a(this.path(original), this.path(m4a))) return m4a;
     log.warn(`could not convert ${original} to m4a; keeping the original`);
     return original;
+  }
+}
+
+const isJpeg = (buf: Buffer) => buf.length > 3 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff;
+
+/** PNG, GIF, WebP and friends: macOS sips, else ffmpeg. */
+async function toJpeg(src: string, dst: string): Promise<boolean> {
+  if (process.platform === "darwin") {
+    try {
+      await run("sips", ["-s", "format", "jpeg", src, "--out", dst], { timeout: 15_000 });
+      return true;
+    } catch {
+      // fall through to ffmpeg
+    }
+  }
+  try {
+    await run("ffmpeg", ["-y", "-loglevel", "error", "-i", src, "-frames:v", "1", dst], { timeout: 15_000 });
+    return true;
+  } catch {
+    return false;
   }
 }
 

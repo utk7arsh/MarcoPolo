@@ -1,39 +1,27 @@
-# Photon docs (local copy)
+# Photon 2.0 docs (local copy)
 
-Pulled from https://photon.codes/docs/llms-full.txt on 2026-10-17 and split into one Markdown file per page under `stable/`. `INDEX-llms.txt` is the full page index, covering both Stable and Beta.
+Pulled from https://photon.codes/docs/beta on 2026-10-17: every Beta (2.0) page, one Markdown file per page, under `beta/`. Photon's 174-page generated SDK reference is left out. `INDEX-llms.txt` is Photon's full page index.
+
+The machine-readable specs are too large to copy (the OpenAPI spec is 3.3 MB), so fetch them live:
+- REST endpoints: https://api.photon.codes/openapi.json
+- Event schemas: https://api.photon.codes/asyncapi.yaml
 
 ## Which Photon
 
-We use **Stable: Spectrum** (`spectrum-ts`). Photon also documents a **Beta (2.0)** platform: `api.photon.codes/v1`, with Python, TS, Rust and Go clients and HTTP `listMessages`/`sendMessage`. We do not use it, because:
+The LA Hacks track requires **Photon 2.0** ("must be built on Photon 2.0 and live on at least one Photon channel").
 
-- the LA Hacks prize requires "integrate with Spectrum";
-- the HACKWITHPHOTON promo is for Spectrum Pro;
-- the Beta messaging docs say "being rewritten from the ground up".
-
-Do not mix the two: packages, hosts and credentials differ.
+- **The guidelines link is wrong.** They link `photon.co/beta`, a parked domain. The real pages are https://photon.codes/beta and the dashboard at https://app.beta.photon.codes.
+- **2.0 is not the Spectrum SDK.** The guidelines' "SDK reference" links Spectrum (`spectrum-ts`), but `spectrum-ts` 12.11.0 has no Photon 2.0 support. Photon's docs call Stable and Beta "documentation channels, not interchangeable API versions" ([skill.md](https://photon.codes/docs/skill.md)), and 2.0 uses its own dashboard, `pho_prj_` project IDs and bearer API keys.
+- **So `photon/` is built on 2.0 directly.** It uses the official client `@photon-ai/api` 0.5.0 and the Socket.IO event stream.
+- **History.** The earlier Spectrum build, and the Stable docs, are in git history at commit `c3ad80f`.
 
 ## Read these first
 
 | Page | Why |
 |---|---|
-| `stable/spectrum-ts/messages.md` | Inbound content types, including `voice`, `group` and `reply` |
-| `stable/spectrum-ts/spaces-and-users.md` | `space.send`, `space.get`, typing |
-| `stable/spectrum-ts/reactions-and-replies.md` | Tapbacks and threaded replies |
-| `stable/spectrum-ts/content/read.md` | Inbound read receipts (the "Mom is looking at it" signal) |
-| `stable/spectrum-ts/providers/imessage/connection-and-routing.md` | Shared vs dedicated lines, quotas, `space.get(chatGuid)` |
-| `stable/spectrum-ts/troubleshooting/imessage.md` | "Target not allowed for this project", handle mismatch, the debug line |
-| `stable/best-practices/imessage-deliverability.md` | What gets a line flagged by Apple |
-| `stable/spectrum-ts/providers/terminal/*.md` | Local dev without credentials |
-
-## Changes since the Oct 13 deep dive (`notes/research/photon-spectrum-dd.md`)
-
-Verified against the docs and the `spectrum-ts` 12.11.0 source:
-
-- **12.11.0** shipped Oct 15.
-- **Voice memos** now arrive as `voice` content (`audio/x-caf`, with `read()`), not as a generic attachment.
-- **Bytes come straight off inbound content.** `content.read()` returns them, so `getAttachment` is not needed.
-- **Swipe-replies** arrive on the SDK stream as `reply` content whose `target` is the message we sent. This is what lets an answer route to the exact photo it belongs to.
-- **A photo with a caption** in one iMessage arrives as `group` content.
-- **Signal handlers.** Since 12.10, Spectrum no longer installs SIGINT/SIGTERM handlers, so the app calls `app.stop()` itself.
-- **Local iMessage** moved to its own package, `@spectrum-ts/imessage-local`.
-- **The Beta docs say it outright:** "a shared line cannot send an unsolicited first message". The caretaker texts first.
+| `beta/get-started/project.md` | Project, API key and permissions |
+| `beta/get-started/imessage.md` | Shared-line assignment, and a complete send and receive program |
+| `beta/websocket/*.md` | The event stream: connect, subscribe, cursors, reconnects |
+| `beta/api-client/*.md` | Credentials, errors, retries, idempotency |
+| `beta/plans-and-billing.md` | Shared iMessage assignments per plan |
+| `beta/cookbooks/voice/*.md` | Voice agents on an SMS number (the separate Best Voice Agent prize) |

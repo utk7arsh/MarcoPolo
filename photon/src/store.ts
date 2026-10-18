@@ -1,6 +1,7 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import type { Conversation } from "./channel.js";
 
 export interface Label {
   /** Short searchable name ("cumin"), or null when only an untranscribed voice note exists. */
@@ -24,7 +25,9 @@ export interface Item {
   photo: string | null;
   label: Label | null;
   origin: ItemOrigin;
-  /** The main server's id once POST /items accepted the photo (Flow A). */
+  /** The Marco server's touch this item came from (Flow B label_request). */
+  touchId?: string | null;
+  /** The Marco server's item_id, once POST /v1/items or POST /v1/labels created it there. */
   serverItemId?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -49,30 +52,46 @@ export interface Question {
   createdAt: string;
   answeredAt: string | null;
   seenAt: string | null;
+  /** The inbound message that last answered this, so a redelivered event is recognized as a retry, not a new answer. */
+  lastAnswer?: LastAnswer | null;
+}
+
+/** How one answer was interpreted, and what reaching the Marco server produced (null until that step finished). */
+export interface LastAnswer {
+  messageId: string;
+  kind: "answer" | "correction" | "naming" | "voice" | "unknown";
+  outcome: "posted" | "held" | "retake" | "unreachable" | null;
 }
 
 export interface Caretaker {
   handle: string;
   name: string;
-  platform: string;
-  spaceId: string;
+  /** Where to text them; captured from their first message (a shared line cannot start a conversation). */
+  conversation: Conversation;
   linkedAt: string;
+  welcomedAt?: string | null;
   lastHelpAt: string | null;
 }
 
 interface Data {
-  version: 1;
+  version: 2;
   caretakers: Record<string, Caretaker>;
   items: Record<string, Item>;
   questions: Record<string, Question>;
-  /** Inbound message ids already handled; Spectrum delivery is at-least-once. */
+  /** Inbound message ids already handled; Photon event delivery is at-least-once. */
   processed: string[];
+  /** Last Photon event cursor handled, so a restart resumes the stream instead of missing messages. */
+  eventCursor: number;
 }
+
+const empty = (): Data => ({ version: 2, caretakers: {}, items: {}, questions: {}, processed: [], eventCursor: 0 });
 
 const MAX_PROCESSED = 2000;
 
 export const now = () => new Date().toISOString();
 export const newId = (prefix: string) => `${prefix}_${randomUUID().replace(/-/g, "").slice(0, 10)}`;
+/** A stable id derived from inbound data, so re-handling a redelivered event creates nothing twice. */
+export const stableId = (prefix: string, ...parts: string[]) => `${prefix}_${createHash("sha256").update(parts.join("\0")).digest("hex").slice(0, 10)}`;
 
 /** Small JSON-file store. Every write is synchronous and atomic (temp file + rename), which is plenty at household scale. */
 export class Store {
@@ -82,9 +101,21 @@ export class Store {
   constructor(dataDir: string) {
     mkdirSync(dataDir, { recursive: true });
     this.file = join(dataDir, "marco-photon.json");
-    this.data = existsSync(this.file)
-      ? (JSON.parse(readFileSync(this.file, "utf8")) as Data)
-      : { version: 1, caretakers: {}, items: {}, questions: {}, processed: [] };
+    const saved = existsSync(this.file) ? (JSON.parse(readFileSync(this.file, "utf8")) as { version?: number }) : null;
+    if (saved && saved.version !== 2) {
+      // Data from the Spectrum build has no Photon 2.0 conversation ids; keep it aside and start clean.
+      renameSync(this.file, `${this.file}.v${saved.version ?? 1}.bak`);
+    }
+    this.data = saved?.version === 2 ? (saved as Data) : empty();
+  }
+
+  get eventCursor(): number {
+    return this.data.eventCursor;
+  }
+
+  set eventCursor(seq: number) {
+    this.data.eventCursor = seq;
+    this.save();
   }
 
   private save() {
@@ -93,13 +124,16 @@ export class Store {
     renameSync(tmp, this.file);
   }
 
-  /** Returns false when this inbound message was already handled. */
-  markProcessed(messageId: string): boolean {
-    if (this.data.processed.includes(messageId)) return false;
+  isProcessed(messageId: string): boolean {
+    return this.data.processed.includes(messageId);
+  }
+
+  /** Called only after a message was fully handled, so a failure leaves it to be retried on redelivery. */
+  markProcessed(messageId: string): void {
+    if (this.isProcessed(messageId)) return;
     this.data.processed.push(messageId);
     if (this.data.processed.length > MAX_PROCESSED) this.data.processed.splice(0, this.data.processed.length - MAX_PROCESSED);
     this.save();
-    return true;
   }
 
   caretaker(handle: string): Caretaker | undefined {
@@ -124,7 +158,10 @@ export class Store {
     return Object.values(this.data.items).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   }
 
+  /** Creates an item, or returns the existing one when `fields.id` is already taken (a retried event). */
   createItem(fields: Partial<Item> & Pick<Item, "origin">): Item {
+    const existing = fields.id ? this.data.items[fields.id] : undefined;
+    if (existing) return existing;
     const at = now();
     const item: Item = { id: newId("item"), name: null, photo: null, label: null, createdAt: at, updatedAt: at, ...fields };
     this.data.items[item.id] = item;
@@ -144,8 +181,11 @@ export class Store {
     return this.data.questions[id];
   }
 
-  createQuestion(fields: Pick<Question, "kind" | "itemId" | "caretaker" | "messageIds" | "status">): Question {
-    const question: Question = { id: newId("req"), createdAt: now(), answeredAt: null, seenAt: null, ...fields };
+  /** Creates a question, or returns the existing one when `fields.id` is already taken (a retried event). */
+  createQuestion(fields: Pick<Question, "kind" | "itemId" | "caretaker" | "messageIds" | "status"> & { id?: string }): Question {
+    const existing = fields.id ? this.data.questions[fields.id] : undefined;
+    if (existing) return existing;
+    const question: Question = { id: newId("req"), createdAt: now(), answeredAt: null, seenAt: null, lastAnswer: null, ...fields };
     this.data.questions[question.id] = question;
     this.save();
     return question;
@@ -157,6 +197,11 @@ export class Store {
     Object.assign(question, patch);
     this.save();
     return question;
+  }
+
+  /** The question an inbound message already answered, if any. */
+  questionAnsweredBy(messageId: string): Question | undefined {
+    return Object.values(this.data.questions).find((q) => q.lastAnswer?.messageId === messageId);
   }
 
   questionByMessageId(messageId: string): Question | undefined {
@@ -174,6 +219,18 @@ export class Store {
     return Object.values(this.data.questions).find(
       (q) => q.itemId === itemId && q.kind === "identify" && (q.status === "open" || q.status === "pending"),
     );
+  }
+
+  /** The most recent named answer without a voice note, so a voice memo sent right after it is added to it (§5). */
+  recentWithoutVoice(caretaker: string, withinMs: number): Question | undefined {
+    const cutoff = Date.now() - withinMs;
+    return Object.values(this.data.questions)
+      .filter((q) => q.caretaker === caretaker && q.status === "answered" && q.answeredAt && Date.parse(q.answeredAt) > cutoff)
+      .filter((q) => {
+        const label = this.data.items[q.itemId]?.label;
+        return label?.name && !label.audio;
+      })
+      .sort((a, b) => (b.answeredAt ?? "").localeCompare(a.answeredAt ?? ""))[0];
   }
 
   /** The most recent question answered with a voice note but no name, so a follow-up text can name it. */

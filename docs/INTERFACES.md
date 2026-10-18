@@ -253,7 +253,7 @@ If an `event moved` (or `put_down`) arrives for the target, retarget to its new 
 - **Where the server runs:** a teammate's laptop at the venue (lowest latency, best for touch) or Vultr (the sponsor prize). Possibly both: laptop for the demo, Vultr as backup.
 - **Who names places** ("entry table"): the server names them by height, or the user names them during setup.
 - **Photon and dashboard routes.** `photon/` and `frontend/` were built against the earlier requirements and POC 26 paths. Decide which side changes, then update this file:
-  - **Photon:** `photon/` uses `/labels/request` (the phone to Photon), `POST /labels/reply` (JSON) and `POST /items`. §5 has `label_request` on `/v1/photon` and multipart `POST /v1/labels`; `photon-scaffold/` implements §5.
+  - **Photon: decided (2026-10-17).** `photon/` adopted §5 as written, on Photon 2.0, with no format changes. The phone never talks to `photon/`. Two optional additions are proposed in `STATUS.md` (`label_request_seen`, `label_unknown`); they are not part of this contract.
   - **Dashboard:** `frontend/` expects `GET /dashboard/snapshot`, `WS /events` (full snapshots at least once a second) and `POST /dashboard/commands` (Find and Stop, relayed to the phone). §6 has the `/v1/dashboard` stream. The likely path is a server adapter that serves the snapshot routes, plus a new phone message for dashboard commands.
 
 ## 11. Changes since v0.1

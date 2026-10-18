@@ -20,7 +20,7 @@ test("an iMessage voice memo (Opus in CAF) becomes m4a", { skip: !has("ffmpeg") 
   const dir = mkdtempSync(join(tmpdir(), "marco-media-"));
   const caf = join(dir, "memo.caf");
   execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "sine=frequency=440:duration=1", "-c:a", "libopus", "-ar", "48000", caf]);
-  const media = new Media(dir, "http://bridge.test");
+  const media = new Media(dir);
   const file = await media.saveAudio(readFileSync(caf), "audio/x-caf");
   assert.match(file, /\.m4a$/);
   assert.equal(readFileSync(media.path(file)).toString("latin1", 4, 8), "ftyp");
@@ -32,7 +32,7 @@ test("a HEIC photo becomes JPEG", { skip: !(has("sips") && has("ffmpeg")) && "ne
   execFileSync("sips", ["-s", "format", "heic", join(dir, "red.jpg"), "--out", join(dir, "red.heic")], { stdio: "ignore" });
   const heic = readFileSync(join(dir, "red.heic"));
   assert.ok(isHeif(heic, "application/octet-stream"));
-  const media = new Media(dir, "http://bridge.test");
+  const media = new Media(dir);
   const file = await media.saveImage(heic, "image/heic");
   assert.match(file, /\.jpg$/);
   assert.deepEqual([...readFileSync(media.path(file)).subarray(0, 2)], [0xff, 0xd8]);
