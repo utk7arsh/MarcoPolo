@@ -8,15 +8,15 @@
 
 :root {
   font-family: 'Instrument Sans', sans-serif;
-  color: #202124;
-  background: #f6f6f3;
+  color: #1d1d1f;
+  background: #f5f5f7;
   font-synthesis: none;
   font-weight: 400;
   line-height: 1.45;
-  --blue: #1559d6;
-  --secondary: #62666d;
-  --border: #dddfdb;
-  --green: #356b55;
+  --blue: #0066cc;
+  --secondary: #646870;
+  --border: #e4e6eb;
+  --green: #438069;
 }
 * {
   box-sizing: border-box;
@@ -56,7 +56,7 @@ a:focus-visible,
 summary:focus-visible,
 input:focus-visible,
 select:focus-visible {
-  outline: 3px solid #1559d6;
+  outline: 3px solid #0066cc;
   outline-offset: 4px;
 }
 h1,
@@ -87,6 +87,7 @@ button svg {
 }
 .app-header {
   height: 88px;
+  background: #fff;
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
@@ -123,7 +124,7 @@ button svg {
   font-size: 15px;
 }
 .main-nav a[aria-current='page'] {
-  color: #202124;
+  color: #1d1d1f;
   border-bottom-color: var(--blue);
   font-weight: 600;
 }
@@ -239,7 +240,7 @@ button svg {
   border: 1px solid var(--blue);
 }
 .button.primary:not(:disabled):hover {
-  background: #104ab5;
+  background: #005bb7;
 }
 .photon-button {
   gap: 10px;
@@ -309,7 +310,7 @@ button svg {
   color: inherit;
 }
 .search input::placeholder {
-  color: #62666d;
+  color: #646870;
 }
 .search:focus-within {
   color: var(--blue);
@@ -334,7 +335,7 @@ button svg {
   background: #fafafa;
 }
 .object-row.selected {
-  background: #1559d608;
+  background: #f4f7fd;
   box-shadow: inset 3px 0 var(--blue);
 }
 .object-row.selected > svg {
@@ -588,15 +589,22 @@ button svg {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 0;
+  border: 1px solid var(--border);
+  padding: 8px 13px;
   font-size: 13px;
+  border-radius: 9px;
   color: var(--secondary);
+  background: #fff;
 }
 .status-pill.active {
-  color: var(--blue);
+  background: #f4f7fd;
+  border-color: #dce5f4;
+  color: #005db7;
 }
 .status-pill.success {
-  color: var(--green);
+  color: #36715a;
+  background: #f3f8f5;
+  border-color: #d5e7da;
 }
 .live-layout {
   display: grid;
@@ -650,7 +658,7 @@ button svg {
 }
 .room-map text {
   font-family: inherit;
-  fill: #62666d;
+  fill: #646870;
 }
 .room-map .room-label {
   font-size: 12px;
@@ -661,7 +669,7 @@ button svg {
 }
 .room-map .target-label {
   font-size: 12px;
-  fill: #202124;
+  fill: #1d1d1f;
   font-weight: 500;
 }
 .map-footer {
@@ -818,7 +826,7 @@ button svg {
   grid-column: 1 / -1;
   margin: 0;
   max-width: 290px;
-  color: #202124;
+  color: #1d1d1f;
   font-size: 27px;
   line-height: 33px;
   font-weight: 500;
@@ -853,12 +861,13 @@ button svg {
   width: auto;
   min-height: 48px;
   padding: 0 24px;
-  background: #202124;
-  color: white;
-  border: 0;
+  background: #fff;
+  color: #1d1d1f;
+  border: 1px solid #d3d5db;
 }
 .guidance-actions .button.secondary:not(:disabled):hover {
-  background: #36383c;
+  background: #fafafa;
+  border-color: #aeb4be;
 }
 .idle-guidance {
   display: flex;
@@ -934,7 +943,7 @@ dd {
   max-height: 100%;
   overflow: hidden;
   border-radius: 10px;
-  background: #f6f6f3;
+  background: #f5f5f7;
 }
 .camera-frame > img {
   width: 100%;
@@ -958,7 +967,7 @@ dd {
   border-radius: 18px;
   box-shadow: 0 24px 90px #0002;
   width: min(460px, calc(100vw - 40px));
-  color: #202124;
+  color: #1d1d1f;
   max-height: calc(100dvh - 48px);
 }
 .dialog::backdrop {
@@ -989,7 +998,7 @@ dd {
   border-radius: 6px;
 }
 .icon-button:hover {
-  background: #f6f6f3;
+  background: #f5f5f7;
 }
 .dialog.drawer {
   position: fixed;
@@ -1055,7 +1064,7 @@ dd {
   padding: 10px;
   border-radius: 8px;
   background: white;
-  color: #202124;
+  color: #1d1d1f;
   max-width: 100%;
 }
 .scenario-list {
@@ -1073,7 +1082,7 @@ dd {
   gap: 14px;
 }
 .scenario-button:hover {
-  background: #f6f6f3;
+  background: #f5f5f7;
 }
 .scenario-button.selected {
   color: var(--blue);
@@ -1092,7 +1101,7 @@ dd {
 .loading-indicator {
   width: 22px;
   height: 22px;
-  border: 2px solid #dddfdb;
+  border: 2px solid #e4e6eb;
   border-top-color: var(--blue);
   border-radius: 50%;
   animation: spin 1s linear infinite;
