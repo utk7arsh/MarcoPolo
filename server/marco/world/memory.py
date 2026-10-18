@@ -7,7 +7,8 @@ Rules (POC 2, POC 25):
     inside CONFIRM_WINDOW_S: false detections are common, false moves are worse than late ones
       -> "moved", or "put_down" if the item had been picked up or was missing
   - the stored spot in view, not occluded, and no detection MISSES frames in a row -> "missing"
-    ("picked_up" instead if a hand touched it in the last TOUCH_PICKUP_S)
+    ("picked_up" instead if a hand touched it, or was at it, in the last TOUCH_PICKUP_S). A hand within HAND_NEAR_M
+    of the spot hides it from the camera, so those frames don't count as misses
   - the user enters the door zone while a CARRY item still sits on a surface -> "left_behind" (once per visit)
   - a new map (failed relocalisation) makes every stored position "stale" until the item is seen again
 """
@@ -24,6 +25,7 @@ CONFIRM = 2
 CONFIRM_WINDOW_S = 10.0
 MISSES = 3
 TOUCH_PICKUP_S = 10.0
+HAND_NEAR_M = 0.35             # a hand this close to an item covers it from the chest camera (and may be lifting it)
 CARRY = {"keys", "wallet", "phone", "glasses", "sunglasses", "cane"}
 CHEST_M = 1.30                 # a chest-mounted (or hand-held) phone sits about this far above the floor
 
@@ -49,6 +51,7 @@ class Item:
     pending: list = field(default_factory=list)   # (t, position) sightings away from the stored spot
     misses: int = 0
     touched_t: float | None = None
+    hand_t: float | None = None        # last time a hand was at it
 
     def public(self):
         return dict(item_id=self.item_id, name=self.name,
@@ -144,11 +147,15 @@ class World:
         kind = "put_down" if was in ("picked_up", "missing") else "moved"
         return [self._event(kind, it, from_position=[round(float(v), 3) for v in old])]
 
-    def check_absence(self, fr: G.Frame, detected_ids, t):
-        """Items whose stored spot is in view (and not hidden behind something nearer) but were not detected."""
+    def check_absence(self, fr: G.Frame, detected_ids, t, hand=None):
+        """Items whose stored spot is in view (and not hidden behind something nearer, the user's hand included) but
+        were not detected. hand: where the user's hand is now (world), if it was seen in the last moment."""
         out = []
         for it in self.items.values():
             if it.item_id in detected_ids or it.position is None or it.state not in ("present",):
+                continue
+            if hand is not None and np.linalg.norm(np.asarray(hand, float) - it.position) <= HAND_NEAR_M:
+                it.hand_t = t                               # reaching for it, or over it: not a miss
                 continue
             uv, z = fr.project(it.position[None])
             (u, v), z = uv[0], float(z[0])
@@ -160,7 +167,7 @@ class World:
             it.misses += 1
             if it.misses >= MISSES:
                 it.misses = 0
-                touched = it.touched_t is not None and t - it.touched_t <= TOUCH_PICKUP_S
+                touched = any(x is not None and t - x <= TOUCH_PICKUP_S for x in (it.touched_t, it.hand_t))
                 it.state = "picked_up" if touched else "missing"
                 out.append(self._event(it.state, it))
         return out

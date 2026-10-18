@@ -122,7 +122,7 @@ class RealBrain:
             size_m = max(sbox[2] - sbox[0], sbox[3] - sbox[1]) * max(z, 0.1) / K[0, 0]
             events += self.world.sighting(d["item_id"], pos, t, size_m=size_m, confidence=d.get("score") or 0.5)
             detected.add(d["item_id"])
-        events += self.world.check_absence(fr, detected, t)
+        events += self.world.check_absence(fr, detected, t, hand=self.touch.hand_near(t))
         self.frames_seen += 1
         if self.frames_seen % 5 == 1:
             self.world.set_floor(self.roommap.floor_y())

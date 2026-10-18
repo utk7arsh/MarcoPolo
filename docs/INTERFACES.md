@@ -211,7 +211,7 @@ speech. It uses the same fail-closed Tailscale authentication as every other rou
 ```
 - `seen_ago_s` may be `null`.
 - `touch.item_id` is `null` for an unknown thing being touched.
-- `hand_proximity` is sent 15 times a second while guiding: the fingertip's distance to the target, which drives the steady tone in §7.
+- `hand_proximity` is sent 15 times a second while guiding: the hand's distance to the target, which drives the steady tone in §7. It's measured from the fingertip, or from the knuckles or wrist when the back of the hand hides the fingertip from the chest camera.
 - **Touching a known item** while not being guided to it names it: the phone says its label text, or "That's the {name}," through §3.5 with Apple fallback.
 - `label_audio_url` and `GET /v1/audio/{id}` remain for stored-data and older-client compatibility. The current iOS app does not download or prefer caretaker recordings; it caches synthesized replies instead.
 
@@ -390,6 +390,9 @@ If an `event moved` (or `put_down`) arrives for the target, retarget to its new 
 ## 13. Changes since v0.3
 - **Output-only ElevenLabs:** authenticated `POST /v1/speech` (§3.5), short exact text to mono WAV, bounded caching/timeouts and Apple fallback. iOS plays it through the existing spatial voice node.
 - **Typed Photon labels:** no Scribe, transcription or new caregiver audio labels. Photos and typed names, retries, corrections and source attribution stay. Stored legacy media and optional wire fields remain compatible.
+- **A hand over the guided item no longer makes it `missing`** (§7 step 7). Close up, the detector usually can't see the item under the hand. That used to mark the item `missing` after 3 frames, which took it out of touch matching, so the touch, and with it the end of the search, never came.
+  - Frames where a hand is within 35 cm of an item don't count as misses.
+  - An item that disappears after a hand was at it is `picked_up`, not `missing`.
 - **Room layout on the dashboard map** (§6):
   - a new raw-feed message, `room_layout`;
   - in the snapshot, `map.walls` is filled, and there is a new optional `map.landmarks`;

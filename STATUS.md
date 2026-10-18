@@ -603,6 +603,11 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
    - **Proposed:** `TH_DINO` 0.30. On the venue clips that's 5 → 8 hits with no extra false alarms.
    - **Also proposed:** make restarts re-register like the first registration. Today the restart path queries with the whole photo, the first registration with the crop.
    - **Waiting on the user's go-ahead.**
+0b. **Touching the item ends the search (fixed on the server, 2026-10-18; `server/tests/test_touch_guidance.py`):**
+   - **Bug:** the hand covering the target hid it from the detector, so after 3 frames it became `missing`. That dropped it from touch matching, so no `touch` came and the search kept going. Reproduced in a test.
+   - **Fix:** frames with a hand within 35 cm of an item don't count as misses, and an item gone after a hand was at it is `picked_up`. `hand_proximity` (the steady tone) falls back to the knuckles when the back of the hand hides the fingertip.
+   - **Still to check on the phone (Utkarsh):** whether the touch itself fires from the chest. POC 24 found the back of the hand often hides the fingertip on low tables, and a hidden fingertip never counts as a touch. The thresholds are still the simulation ones.
+   - **Test:** a guided Find, then touch the item's top with the index finger, ideally at counter height. Then look for `touch` in the session recording, or the dashboard showing found.
 1. **Reconcile the routes** (`docs/INTERFACES.md` §10) with Sandeep:
    - **Photon: done.** `photon/` adopted §5 unchanged; no server change was needed.
    - **Dashboard:** `frontend/` expects `GET /dashboard/snapshot`, `WS /events` and `POST /dashboard/commands` (`frontend/docs/fastapi-handoff.md`). Likely a server adapter, plus a phone message for dashboard Find/Stop.

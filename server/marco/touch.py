@@ -12,6 +12,8 @@ Contact is a vote over the last VOTE_N messages (single LiDAR pixels are noisy).
 reaches VOTE_ON on the same nearby item for STREAK messages with the knuckles nearly still; it ends when the vote
 falls to VOTE_OFF or the fingertip is LEAVE_M from the item. Thresholds are simulation-tuned: refit on device. A hidden fingertip (low
 Vision confidence) never counts: its depth would be whatever is in front of it.
+The hand's own position (the fingertip, or the knuckles when the back of the hand hides the fingertip, as it often
+does from the chest) drives hand_proximity and tells the world model that a hand is covering an item.
 """
 import uuid
 
@@ -25,6 +27,9 @@ LEAVE_M = 0.20
 VOTE_N, VOTE_ON, VOTE_OFF = 5, 0.6, 0.2   # contact = share of the last VOTE_N messages with contact
 STREAK = 2                 # at 15 Hz: about 130 ms
 MIN_TIP_CONF = 0.5
+HAND_JOINTS = ("indexTip", "indexDIP", "indexPIP", "indexMCP", "middleMCP", "wrist")   # fingertip first
+MIN_HAND_CONF = 0.3
+HAND_FRESH_S = 1.5         # a hand last seen this long ago no longer counts as "at the item"
 STILL_PX = 16.0            # knuckle motion per message (1920x1440 px) at 15 Hz
 JOINTS = ["wrist", "thumbCMC", "thumbMP", "thumbIP", "thumbTip", "indexMCP", "indexPIP", "indexDIP", "indexTip",
           "middleMCP", "middlePIP", "middleDIP", "middleTip", "ringMCP", "ringPIP", "ringDIP", "ringTip",
@@ -50,6 +55,8 @@ class TouchDetector:
         self.knuckles = []         # recent indexMCP pixels
         self.tip = None            # latest visible fingertip (world)
         self.tip_t = None
+        self.hand = None           # latest hand position (world): the fingertip, else the knuckles or wrist
+        self.hand_t = None
         self.votes = []            # recent contact flags
 
     def set_camera(self, K, res):
@@ -95,6 +102,42 @@ class TouchDetector:
                     contact = abs(float(np.median(beyond)) - z_tip) <= CONTACT_M
         return p, contact
 
+    def hand_point(self, msg):
+        """World position of the first visible joint in HAND_JOINTS with depth under it, or None."""
+        if self.K is None:
+            return None
+        size = int(msg.get("patch", codec.PATCH))
+        names = [j["name"] for j in msg["joints"]]
+        dp = cp = None
+        for name in HAND_JOINTS:
+            if name not in names:
+                continue
+            k = names.index(name)
+            j = msg["joints"][k]
+            if j.get("conf", 0) < MIN_HAND_CONF:
+                continue
+            if dp is None:
+                dp = codec.decode_patches(msg["depth_patches_f16_b64"], "f16", size=size)
+                cp = codec.decode_patches(msg["conf_patches_u8_b64"], "u8", size=size)
+            c = size // 2
+            win, cw = dp[k, c - 2:c + 3, c - 2:c + 3], cp[k, c - 2:c + 3, c - 2:c + 3]
+            good = win[(cw >= 1) & np.isfinite(win)]
+            if good.size < 3:
+                continue
+            q = float(np.percentile(good, 25))
+            z = float(np.median(good[good <= q + 0.03]))           # the hand is the nearest surface there
+            W, H = self.res
+            fr = G.Frame(G.mat4(msg["camera_transform"]), self.K, (W, H), np.zeros((1, 1), np.float32),
+                         np.zeros((1, 1), np.uint8))
+            return fr.unproject(j["x"] * W, (1 - j["y"]) * H, z)
+        return None
+
+    def hand_near(self, t):
+        """The hand's latest position if it was seen in the last HAND_FRESH_S, else None."""
+        if self.hand is None or self.hand_t is None or t - self.hand_t > HAND_FRESH_S:
+            return None
+        return self.hand
+
     def update(self, msg, items, t, target_id=None):
         """items: {item_id: (center, size_m)}. Returns server->phone messages and the touched item (if a touch began)."""
         out, began = [], None
@@ -108,6 +151,9 @@ class TouchDetector:
             self.votes = (self.votes + [contact])[-VOTE_N:]
         else:
             self.votes = (self.votes + [False])[-VOTE_N:]
+        hp = p if p is not None else self.hand_point(msg)
+        if hp is not None:
+            self.hand, self.hand_t = hp, t
         share = sum(self.votes) / max(len(self.votes), 1)
         hit = None
         if p is not None and items:
@@ -118,8 +164,9 @@ class TouchDetector:
                     hit = k
             elif share >= VOTE_ON and ds[k] <= NEAR_ITEM_M:
                 hit = k
-            if target_id in ds:
-                out.append(dict(type="hand_proximity", item_id=target_id, distance_m=round(ds[target_id], 3)))
+        if hp is not None and target_id in items:                  # the steady tone, even with the fingertip hidden
+            c, s_ = items[target_id]
+            out.append(dict(type="hand_proximity", item_id=target_id, distance_m=round(dist_to_item(hp, c, s_), 3)))
         # Motion needs 3 knuckle samples; until then the hand does not count as still.
         moving = len(self.knuckles) < 3 or float(np.median(np.linalg.norm(np.diff(np.array(self.knuckles), axis=0), axis=1))) > STILL_PX
         if hit is not None and hit != self.current and moving:
