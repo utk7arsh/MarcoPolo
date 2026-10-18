@@ -63,6 +63,15 @@ struct GuidanceMsg: Codable, Equatable {
     var distance_m: Double           // horizontal, chest to item
 }
 
+/// §3.2: the phone's answer to a dashboard `command` (status accepted | applied | rejected, with a reason).
+struct CommandAckMsg: Codable, Equatable {
+    var type = "command_ack"
+    var session_id: String
+    var command_id: String
+    var status: String
+    var reason: String?
+}
+
 /// §3.2 queries: kind find (name), what_is_this, set_place (name "door").
 struct QueryMsg: Codable, Equatable {
     var type = "query"
@@ -169,6 +178,18 @@ struct RegistrationReply: Codable, Equatable {
     var reason: String?
 }
 
+/// §4: Find or Stop from the dashboard. Find carries the exact item (no name lookup) and where it is.
+struct CommandMsg: Codable, Equatable {
+    var command_id: String
+    var session_id: String
+    var action: String               // find | stop
+    var item_id: String?
+    var name: String?
+    var position: [Float]?
+    var surface: String?
+    var expires_wall: String?        // ISO-8601 UTC; a late command is rejected, never started
+}
+
 enum ServerMessage: Equatable {
     case find(FindAnswer)
     case whatIsThis(WhatAnswer)
@@ -179,6 +200,7 @@ enum ServerMessage: Equatable {
     case event(WorldEventMsg)
     case labelReady(LabelReadyMsg)
     case error(ServerErrorMsg)
+    case command(CommandMsg)
     case other(String)               // a type this app doesn't handle yet
 
     private struct Head: Decodable {
@@ -203,6 +225,7 @@ enum ServerMessage: Equatable {
         case "event": return .event(try d.decode(WorldEventMsg.self, from: data))
         case "label_ready": return .labelReady(try d.decode(LabelReadyMsg.self, from: data))
         case "error": return .error(try d.decode(ServerErrorMsg.self, from: data))
+        case "command": return .command(try d.decode(CommandMsg.self, from: data))
         default: return .other(h.type)
         }
     }

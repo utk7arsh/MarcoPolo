@@ -95,6 +95,7 @@ final class AppModel: ObservableObject {
     private var lastTouch: (id: String, position: SIMD3<Float>)?       // the jar a "what is this" is about
     private var routeWatch = RouteWatch()                              // are the AirPods the output?
     private var guidanceScope: NavigationScope?
+    private var commandGate = CommandGate()               // dashboard Find/Stop (docs/INTERFACES.md §4)
     private var labels: [String: (text: String?, url: String?)] = [:]  // item_id -> its label
     private var audioCache: [String: URL] = [:]                        // label_audio_url -> local file
     private var listenerStarted = false
@@ -556,6 +557,7 @@ final class AppModel: ObservableObject {
             cache(l.label_audio_url)
             say(Lines.labelReady(l), from: anchor(item: l.item_id, touch: nil))
         case .error(let e): note("server: \(e.detail)")
+        case .command(let c): command(c)
         case .other(let type): note("unhandled \(type)")
         }
     }
@@ -597,6 +599,37 @@ final class AppModel: ObservableObject {
         say(spotted ? Lines.spotted(name: name, relAzimuthDeg: bodyAz, distanceM: d, surface: surface)
                     : Lines.polo(relAzimuthDeg: bodyAz, distanceM: d, surface: surface), from: .world(p))
         note("\(spotted ? "spotted" : "find") \(name): \(surface ?? "?"), \(Int(bodyAz)) deg, \(String(format: "%.1f", d)) m")
+    }
+
+    /// Find or Stop from the dashboard: the exact item and position come from the server, no name lookup. Acks
+    /// accepted, then applied (guidance started or stopped) or rejected with a reason. Stop leaves the camera on.
+    private func command(_ c: CommandMsg) {
+        let decision = commandGate.check(c, sessionId: sessionId)
+        switch decision {
+        case .duplicate:
+            return
+        case .reject(let reason):
+            ack(c, "rejected", reason)
+        case .stop:
+            ack(c, "accepted", nil)
+            stopGuidance()
+            ack(c, "applied", nil)
+            note("dashboard: stop")
+        case .find(let id, let name, let p, let surface):
+            let l = live.read { $0 }
+            guard running, let scope = l.scope, let pose = l.pose, pose.usable(now: now, in: scope) else {
+                return ack(c, "rejected", "position_unavailable: tracking isn't ready on the iPhone")
+            }
+            ack(c, "accepted", nil)
+            finds.cancel()
+            guide(itemId: id, name: name, position: p, surface: surface, pose: pose, headYaw: l.headYaw, scope: scope)
+            ack(c, "applied", nil)
+            note("dashboard: find \(name)")
+        }
+    }
+
+    private func ack(_ c: CommandMsg, _ status: String, _ reason: String?) {
+        emit(CommandAckMsg(session_id: sessionId, command_id: c.command_id, status: status, reason: reason), hold: true)
     }
 
     private func whatIsThis(_ a: WhatAnswer) {

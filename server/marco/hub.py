@@ -48,6 +48,16 @@ class Hub:
                 q.get_nowait()
             q.put_nowait(msg)
 
+    def send_to(self, ws: WebSocket, msg: dict) -> bool:
+        """Queues msg for one socket only (a dashboard command for the bound phone). False if it isn't joined."""
+        q = self._outbox.get(ws)
+        if q is None:
+            return False
+        if q.full():
+            q.get_nowait()
+        q.put_nowait(msg)
+        return True
+
     def backlog(self, ws: WebSocket) -> int:
         q = self._outbox.get(ws)
         return 0 if q is None else q.qsize()

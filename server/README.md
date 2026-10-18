@@ -104,6 +104,29 @@ Check a phone recording against the contract (run it on the first recording from
 python tools/check_recording.py data/sessions/<session_id>
 ```
 
+## The dashboard's API
+`marco/dashboard.py` serves the dashboard in `frontend/` from what the core already publishes (`docs/INTERFACES.md` §6):
+- `GET /dashboard/snapshot`, `WS /events`, `POST /dashboard/commands` (Find and Stop, confirmed by the phone) and `GET /media/...`;
+- each also under `/api/...`, behind the same auth gate.
+
+To serve the dashboard from the server itself, so the browser and the API share one tailnet URL:
+1. Build it on a laptop with npm:
+   ```
+   cd frontend
+   VITE_DATA_SOURCE=api npm run build -- --base=/app/
+   ```
+2. Copy `frontend/dist` to the server, e.g. `/opt/marco/frontend/dist`.
+3. Set `MARCO_DASHBOARD_DIR=/opt/marco/frontend/dist` in `/etc/marco/local.env`, and restart.
+4. Open `https://<server>.<tailnet>.ts.net/app/`.
+
+During development, `npm run dev` proxies `/api` to this server instead (`API_PROXY_TARGET`).
+
+| Variable | Default | What |
+|---|---|---|
+| `MARCO_DASHBOARD_DIR` | unset | the built dashboard, served at `/app/` |
+| `MARCO_ROOM_ID`, `MARCO_ROOM_NAME` | `room`, `Room` | the room the dashboard shows |
+| `DASHBOARD_COMMAND_TIMEOUT_S` | `10` | how long a command waits for the phone's answer before `rejected` / `no_answer` |
+
 ## Code
 | Module | What |
 |---|---|
@@ -112,6 +135,7 @@ python tools/check_recording.py data/sessions/<session_id>
 | `marco/geometry.py` | column-major matrices, upright rotation from gravity, box to 3D, headings, clock positions, surfaces |
 | `marco/codec.py` | depth/confidence (zlib or raw DEFLATE), hand patches |
 | `marco/stub.py` | the stub brain |
+| `marco/dashboard.py`, `marco/dashboard_commands.py` | the dashboard's API: snapshots, the event socket, media, Find/Stop relayed to the phone |
 | `marco/brain.py` | the real brain: detection, placement, world, touch, answers, labels |
 | `marco/perception/detector.py` | OWLv2 image-guided detection + presence check + retake gate; `TruthDetector` for synthetic sessions |
 | `marco/world/memory.py` | items, sightings, moved/put down/picked up/missing/left behind, answers |

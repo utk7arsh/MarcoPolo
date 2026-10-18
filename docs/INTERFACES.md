@@ -127,6 +127,14 @@ Three owners, one contract. Change a message format only by updating this file, 
 
 **Errors:** a message the server can't use gets `{"type": "error", "detail": "…", "for_type": "hand"}` back. The socket stays open.
 
+**Command acknowledgement** (the answer to a dashboard `command`, §4):
+```json
+{"type": "command_ack", "session_id": "…", "command_id": "…", "status": "accepted|applied|rejected", "reason": "…"}
+```
+- Send `accepted` when you take the command, then `applied` once guidance has started (Find) or stopped (Stop).
+- Or send `rejected` with a reason, such as `session_mismatch`, `expired` or `position_unavailable`.
+- The server ignores acks for unknown, other-session or already-finished commands, and never replies to them.
+
 ### 3.3 Registration: `POST /v1/items` (multipart `photo` + `name`), from the app's setup flow or from Photon
 - **Photo:** any normal upright photo; EXIF is fine here, and the server applies it. Send JPEG (convert HEIC on the phone).
 - **`source`** (optional form field): who registers it, `app` (the default: the app's setup flow) or `photon` (a caretaker). It lets one source's items be removed together (§5).
@@ -175,6 +183,19 @@ Three owners, one contract. Change a message format only by updating this file, 
 - **Touching a known item** while not being guided to it names it: the phone plays its label audio, or says its label text, or "That's the {name}."
 - The phone caches label audio, so touch playback never waits for the network. `GET /v1/audio/{id}` returns the original format (an iMessage voice note is `.caf`).
 
+**Dashboard command** (Find or Stop pressed on the dashboard, §6), sent only to the socket bound to the current session:
+```json
+{"type": "command", "command_id": "…", "session_id": "…", "action": "find|stop",
+ "item_id": "…", "name": "keys", "position": [x, y, z], "surface": "table", "expires_wall": "2026-10-17T22:00:10.000Z"}
+```
+- **Ignore and reject:**
+  - drop a repeated `command_id`;
+  - reject a command for another `session_id`;
+  - reject one that arrives after `expires_wall` (with about 2 s of clock slack): never start it late.
+- **Find:** guide to exactly `item_id` at `position`, the same way as a voice Find; don't look the item up by name. Reject with `position_unavailable` when tracking isn't usable.
+- **Stop:** stop guidance only; the camera and streams stay on.
+- **Ack:** send `command_ack` (§3.2) for every command you act on or refuse.
+
 ## 5. Photon to server (Utkarsh's Photon service)
 - **Connect through the `tailscale serve` URL,** even on the server Mac, so the allow-list sees the bridge's tailnet login.
 - **Requests:** listen on WebSocket `/v1/photon` for `{"type": "label_request", "touch_id": "…", "crop_url": "/v1/touch/…/crop.jpg", "question": "What is this?"}`. These are sent when the user asks "what is this?" about an unknown item.
@@ -197,7 +218,39 @@ Three owners, one contract. Change a message format only by updating this file, 
   - The reply is `{"status": "ok", "removed": [{"item_id": "…", "name": "…"}]}`.
   - `source` is required (422 without it), so nothing is ever removed by accident. The route sits behind the same auth gate.
 
-## 6. Server to dashboard: WebSocket `/v1/dashboard` (read-only)
+## 6. Server to dashboard
+
+**The dashboard's API** (`server/marco/dashboard.py`). Its payload is `frontend/src/lib/schema.ts`, exported as `frontend/docs/dashboard.snapshot.schema.json`; the behaviour is in `frontend/docs/fastapi-handoff.md`. Every route also answers under `/api/…`, the browser's base path, and every route is behind the auth gate.
+
+| Route | What it does |
+|---|---|
+| `GET /dashboard/snapshot` | one complete `dashboard.snapshot` envelope: `schemaVersion` 1, `streamId`, a strictly increasing `sequence` shared with `/events`, and `sentAt` |
+| `WS /events` | a snapshot at once, then after each change (at most 5 per second) and at least once a second |
+| `POST /dashboard/commands` | Find (`{commandId, deviceId, type: "find", itemId}`) or Stop (`{commandId, deviceId, type: "stop"}`) |
+| `GET /media/frames/<token>.jpg`, `/media/items/<item_id>.jpg`, `/media/audio/<id>`, `/media/touch/<touch_id>.jpg` | the recent upright frames (the last 30), item photos, label audio and touch crops |
+| `GET /app/…` | the built dashboard, when `MARCO_DASHBOARD_DIR` points at `frontend/dist` (one origin with the API) |
+
+- **`deviceId`** is the phone's current `session_id`.
+- **Commands:** they go to the bound phone as `command` (§4) and come back as `command_ack` (§3.2).
+  - **Success:** HTTP 202 `{commandId, status: "pending"}` means only that the command was sent.
+  - **Status:** the snapshot's `lastCommand` follows the phone: `accepted`, then `completed` (guidance started or stopped) or `rejected` with a reason.
+  - **No answer:** after 10 s the command is `rejected` with `no_answer`, which means the outcome is unknown.
+  - **Retries:** a retry with the same `commandId` and body sends nothing again; reusing an ID for a different command gets 409.
+  - **Errors:** 400 `invalid_request`; 404 `unknown_item`; 409 `phone_disconnected`, `session_mismatch`, `busy`, `location_unavailable` or `command_conflict`, each with a body `{"error": {"code", "message"}}`.
+- **Mapping:**
+  - **Items:** the core's world items; `lastSeen.position` is null when the item's position is stale (a new map).
+  - **Wearer:** the latest pose in the current map.
+  - **Navigation:** the phone's guidance telemetry:
+    - behind, turning, facing or approach become `guiding`;
+    - reach becomes `within_reach`;
+    - touched becomes `found`;
+    - after 3 s of silence it's `idle` (or `unavailable` if the phone is gone).
+  - **Devices:** the phone is `connected` while a message arrived in the last 5 s. AirPods are `connected` while poses are AirPods-fused, and `unknown` otherwise.
+  - **Registrations:** `label_request` and `label_ready`, plus `POST /v1/items` results.
+  - **recentMemory:** `seen`, `moved`/`put_down` and `label_added` timeline events.
+- **Room name:** `MARCO_ROOM_ID` and `MARCO_ROOM_NAME`.
+
+**The raw feed**, WebSocket `/v1/dashboard` (read-only), which the adapter itself is built from:
 
 | Message | Rate | Content |
 |---|---|---|
@@ -263,9 +316,9 @@ If an `event moved` (or `put_down`) arrives for the target, retarget to its new 
 - **Vision orientation:** `.up` versus `.right` for the hand pose. Test in hour one.
 - **Where the server runs: decided (2026-10-17).** The Vultr GPU box (`deploy/vultr/`, `marco-gpu`) is the primary server; a laptop at the venue is the fallback. Nothing in this contract changes: clients only change the base URL.
 - **Who names places** ("entry table"): the server names them by height, or the user names them during setup.
-- **Photon and dashboard routes.** `photon/` and `frontend/` were built against the earlier requirements and POC 26 paths. Decide which side changes, then update this file:
+- **Photon and dashboard routes.** `photon/` and `frontend/` were built against the earlier requirements and POC 26 paths. Status of each:
   - **Photon: decided (2026-10-17).** `photon/` adopted §5 as written, on Photon 2.0, with no format changes. The phone never talks to `photon/`. Two optional additions are proposed in `STATUS.md` (`label_request_seen`, `label_unknown`); they are not part of this contract.
-  - **Dashboard:** `frontend/` expects `GET /dashboard/snapshot`, `WS /events` (full snapshots at least once a second) and `POST /dashboard/commands` (Find and Stop, relayed to the phone). §6 has the `/v1/dashboard` stream. The likely path is a server adapter that serves the snapshot routes, plus a new phone message for dashboard commands.
+  - **Dashboard: decided (2026-10-18).** The server serves `frontend/`'s own contract (§6, `marco/dashboard.py`). The phone gained `command` and `command_ack` for Find and Stop.
 
 ## 11. Changes since v0.1
 - **Compression:** DEFLATE, where raw DEFLATE (Apple's `.zlib`) and zlib are both accepted.
@@ -288,3 +341,5 @@ If an `event moved` (or `put_down`) arrives for the target, retarget to its new 
   - optional on `POST /v1/items` (default `app`) and `POST /v1/labels` (default `photon`);
   - listed in `GET /v1/items`.
 - **New route** `DELETE /v1/items?source=…`, which forgets one source's items. Photon's `/restart` command uses it (§5).
+- **Dashboard API** (§6): `GET /dashboard/snapshot`, `WS /events`, `POST /dashboard/commands`, `GET /media/…` and `/app/…`, each also under `/api/…`, all behind the auth gate.
+- **New phone messages for dashboard Find and Stop:** `command` (server to phone, §4) and `command_ack` (phone to server, §3.2).

@@ -8,14 +8,17 @@ import asyncio
 import json
 import os
 import re
+import time
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import Response
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 
 from . import codec, geometry as G
 from .auth import require_caller, ws_caller
+from .dashboard import MIN_PUSH_S, SAFE_ID, Dashboard
+from .dashboard_commands import CommandError
 from .hub import Hub
 from .recorder import Recorder
 from .stub import StubBrain
@@ -45,12 +48,15 @@ def make_brain():
 
 
 brain = make_brain()
+dash = Dashboard(brain)                 # the browser's API (frontend/), built from what the core publishes
+DASHBOARD_ONLY = {"command_ack"}        # phone messages for the dashboard adapter only, not the brain
 latest_frame: dict[str, int] = {}
 work_lock = asyncio.Lock()
 
 
 async def dispatch(out):
     for channel, msg in out:
+        dash.observe(channel, msg)
         await hub.send(channel, msg)
         if channel == "phone":
             recorder.message(msg.get("session_id", "server"), "out", msg)
@@ -89,6 +95,7 @@ async def post_frame(meta: str = Form(...), image: UploadFile = File(...), depth
     except (ValueError, KeyError, json.JSONDecodeError, OSError) as e:
         raise HTTPException(status_code=422, detail=str(e))
     recorder.frame(m, jpeg, d_raw, c_raw)
+    dash.observe_frame_meta(m)
     sid, fid = m["session_id"], int(m["frame_id"])
     latest_frame[sid] = max(fid, latest_frame.get(sid, -1))
     async with work_lock:                               # one frame through the brain at a time
@@ -118,6 +125,9 @@ async def ws_phone(ws: WebSocket):
         while True:
             msg = await ws.receive_json()
             recorder.message(msg.get("session_id", "phone"), "phone", msg)
+            dash.observe_phone(ws, msg)
+            if msg.get("type") in DASHBOARD_ONLY:
+                continue
             try:
                 out = await run_in_threadpool(brain.on_phone, msg)
             except (ValueError, KeyError) as e:
@@ -130,6 +140,7 @@ async def ws_phone(ws: WebSocket):
         pass
     finally:
         hub.leave("phone", ws)
+        dash.phone_closed(ws)
 
 
 async def _listen_only(ws: WebSocket, channel: str):
@@ -172,6 +183,7 @@ async def post_item(name: str = Form(...), photo: UploadFile = File(...), source
     src = checked_source(source)
     try:
         res, out = brain.register(name.strip(), await photo.read(), source=src)
+        dash.observe_registration(name.strip(), res, src)
     except OSError as e:
         raise HTTPException(status_code=422, detail=f"unreadable photo: {e}")
     await dispatch(out)
@@ -237,6 +249,116 @@ def get_audio(audio_id: str, caller=Depends(require_caller)):
         raise HTTPException(status_code=404, detail="unknown audio_id")
     data, ext = a
     return Response(data, media_type={"m4a": "audio/mp4", "caf": "audio/x-caf", "mp3": "audio/mpeg", "wav": "audio/wav"}.get(ext, "application/octet-stream"))
+
+
+# ---------------------------------------------------------------- the dashboard's API (frontend/docs/fastapi-handoff.md)
+# Each route also answers under /api, the browser's default base path, so it works with or without a proxy that
+# strips the prefix. All of them sit behind the same auth gate as /v1.
+
+@app.get("/dashboard/snapshot")
+@app.get("/api/dashboard/snapshot")
+def dashboard_snapshot(caller=Depends(require_caller)):
+    return dash.snapshot()
+
+
+@app.websocket("/events")
+@app.websocket("/api/events")
+async def dashboard_events(ws: WebSocket):
+    """A complete snapshot at once, then after each change (at most 5/s) and at least once a second."""
+    await ws.accept()
+    if await ws_caller(ws) is None:
+        return
+    while True:
+        snap = dash.snapshot()               # outside the try: a bug here must not look like a disconnect
+        try:
+            await ws.send_json(snap)
+        except Exception:                    # the browser went away
+            return
+        t0 = time.monotonic()
+        await dash.wait_change(1.0)
+        rest = MIN_PUSH_S - (time.monotonic() - t0)
+        if rest > 0:
+            await asyncio.sleep(rest)
+
+
+@app.post("/dashboard/commands")
+@app.post("/api/dashboard/commands")
+async def dashboard_command(request: Request, caller=Depends(require_caller)):
+    """Find or Stop for the bound phone. 202 means sent; the snapshot's lastCommand follows the phone's answer."""
+    try:
+        body = await request.json()
+    except (ValueError, UnicodeDecodeError):
+        body = None
+    try:
+        rec, msg = dash.relay.submit(body, session_id=dash.session_id, device_id=dash.device_id(),
+                                     connected=dash.phone_connected(), item=dash.item)
+    except CommandError as e:
+        return JSONResponse(e.body(), status_code=e.status)
+    cid = rec["cmd"]["commandId"]
+    if msg is not None:                                  # new: to the bound phone's outbox only (a retry sends nothing)
+        if dash.phone_ws is None or not hub.send_to(dash.phone_ws, msg):
+            dash.relay.failed(cid, "phone_disconnected: the command couldn't be sent.")
+            return JSONResponse(CommandError(409, "phone_disconnected", "iPhone is disconnected.").body(), status_code=409)
+        recorder.message(dash.session_id or "server", "out", msg)
+        dash.observe("dashboard", dict(type="command_sent"))
+    return JSONResponse(dict(commandId=cid, status="pending"), status_code=202)
+
+
+def _media(data, media_type):
+    return Response(data, media_type=media_type, headers={"Cache-Control": "private, max-age=60"})
+
+
+@app.get("/media/frames/{token}.jpg")
+@app.get("/api/media/frames/{token}.jpg")
+def media_frame(token: str, caller=Depends(require_caller)):
+    f = dash.frame(token)
+    if f is None:
+        raise HTTPException(status_code=404, detail="that frame has expired")
+    return _media(f["jpeg"], "image/jpeg")
+
+
+@app.get("/media/items/{item_id}.jpg")
+@app.get("/api/media/items/{item_id}.jpg")
+def media_item_photo(item_id: str, caller=Depends(require_caller)):
+    photo = brain.registry.photo(item_id) if SAFE_ID.match(item_id) else None
+    if photo is None:
+        raise HTTPException(status_code=404, detail="no photo for that item")
+    return _media(photo, "image/jpeg")
+
+
+@app.get("/media/audio/{audio_id}")
+@app.get("/api/media/audio/{audio_id}")
+def media_audio(audio_id: str, caller=Depends(require_caller)):
+    return get_audio(audio_id, caller)
+
+
+@app.get("/media/touch/{touch_id}.jpg")
+@app.get("/api/media/touch/{touch_id}.jpg")
+def media_touch(touch_id: str, caller=Depends(require_caller)):
+    return get_crop(touch_id, caller)
+
+
+@app.get("/app")
+def dashboard_app_root(caller=Depends(require_caller)):
+    return RedirectResponse("/app/")
+
+
+@app.get("/app/{path:path}")
+def dashboard_app(path: str, caller=Depends(require_caller)):
+    """The built dashboard (frontend/dist), when MARCO_DASHBOARD_DIR points at it: one origin with the API, so the
+    browser's calls carry the same tailnet login. Unknown paths get index.html (client-side routes)."""
+    root_dir = os.environ.get("MARCO_DASHBOARD_DIR")
+    if not root_dir:
+        raise HTTPException(status_code=404, detail="the dashboard isn't installed on this server (MARCO_DASHBOARD_DIR)")
+    root = Path(root_dir).resolve()
+    target = (root / path).resolve() if path else root / "index.html"
+    if target != root and root not in target.parents:
+        raise HTTPException(status_code=404, detail="not found")
+    if not target.is_file():
+        target = root / "index.html"
+    if not target.is_file():
+        raise HTTPException(status_code=404, detail="the dashboard build has no index.html")
+    return FileResponse(target)
 
 
 def main():

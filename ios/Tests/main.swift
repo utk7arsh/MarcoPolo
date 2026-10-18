@@ -685,6 +685,40 @@ do {
           == .labelReady(LabelReadyMsg(item_id: "i", name: "cumin", label_text: "That's the cumin, love", label_audio_url: "/v1/audio/a")), "label_ready")
     check(decode(#"{"type":"error","detail":"bad","for_type":"hand"}"#) == .error(ServerErrorMsg(detail: "bad", for_type: "hand")), "error")
     check(decode(#"{"type":"frame","jpeg_b64":"..."}"#) == .other("frame"), "unknown types don't throw")
+    if case .command(let c)? = decode(#"{"type":"command","command_id":"c-1","session_id":"s1","action":"find","item_id":"fake-keys","name":"keys","position":[1,0.75,-2],"surface":"table","expires_wall":"2026-10-17T22:00:10.000Z"}"#) {
+        check(c.action == "find" && c.item_id == "fake-keys" && c.position == [1, 0.75, -2], "dashboard command decodes")
+    } else { check(false, "dashboard command decodes") }
+}
+
+// MARK: - Dashboard Find/Stop (docs/INTERFACES.md §4 command, §3.2 command_ack)
+
+do {
+    func cmd(_ id: String, _ action: String, session: String = "s1", expires: String? = "2026-10-17T22:00:10.000Z",
+             item: String? = "k", position: [Float]? = [1, 0, -2]) -> CommandMsg {
+        CommandMsg(command_id: id, session_id: session, action: action, item_id: item, name: "keys", position: position,
+                   surface: "table", expires_wall: expires)
+    }
+    let t = CommandGate.wall("2026-10-17T22:00:05.000Z")!
+    var g = CommandGate()
+    check(g.check(cmd("a", "find"), sessionId: "s1", now: t) == .find(itemId: "k", name: "keys", position: SIMD3(1, 0, -2), surface: "table"),
+          "find hands back the exact item and its position")
+    check(g.check(cmd("a", "find"), sessionId: "s1", now: t) == .duplicate, "a repeated command is dropped")
+    check(g.check(cmd("b", "stop", item: nil, position: nil), sessionId: "s1", now: t) == .stop, "stop")
+    if case .reject(let r) = g.check(cmd("c", "find", session: "s0"), sessionId: "s1", now: t) {
+        check(r.hasPrefix("session_mismatch"), "another session's command is refused")
+    } else { check(false, "another session's command is refused") }
+    let late = CommandGate.wall("2026-10-17T22:00:13.000Z")!
+    if case .reject(let r) = g.check(cmd("d", "find"), sessionId: "s1", now: late) {
+        check(r.hasPrefix("expired"), "a late command is refused, never started")
+    } else { check(false, "a late command is refused") }
+    check(g.check(cmd("e", "find"), sessionId: "s1", now: CommandGate.wall("2026-10-17T22:00:11.500Z")!) != .reject("expired: the command arrived too late"),
+          "two seconds of clock slack")
+    if case .reject(let r) = g.check(cmd("f", "find", position: nil), sessionId: "s1", now: t) {
+        check(r.hasPrefix("invalid"), "find without a position is refused")
+    } else { check(false, "find without a position is refused") }
+    let ack = try! JSONSerialization.jsonObject(with: JSONEncoder().encode(CommandAckMsg(session_id: "s1", command_id: "a", status: "applied", reason: nil))) as! [String: Any]
+    check(ack["type"] as? String == "command_ack" && ack["command_id"] as? String == "a" && ack["status"] as? String == "applied",
+          "command_ack wire keys")
 }
 
 // MARK: - Frame encoding (CoreImage, CoreVideo)
@@ -989,6 +1023,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--emit"), i + 1 < CommandLine.a
         json(QueryMsg(session_id: sid, query_id: "q-door", kind: "set_place", name: "door")),
         json(GuidanceMsg(session_id: sid, item_id: "fake-keys", phase: "turning", rel_azimuth_deg: -140, distance_m: 1.6)),
         json(GuidanceMsg(session_id: sid, item_id: nil, phase: "off", rel_azimuth_deg: 0, distance_m: 0)),
+        json(CommandAckMsg(session_id: sid, command_id: "no-such-command", status: "applied", reason: nil)),
     ]
     write("phone.jsonl", lines.reduce(into: Data()) { $0.append($1); $0.append(0x0A) })
     lines.removeAll()

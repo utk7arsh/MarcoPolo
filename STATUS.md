@@ -211,6 +211,32 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
   - **Not used:** ElevenLabs and any cloud recognizer. Apple's on-device recognizer is offline and free and takes the hints.
   - **Verified:** 60 new Swift tests (178 in all); the full app builds for iOS with no errors or warnings. Nothing has run on the phone yet.
 
+## Dashboard adapter (2026-10-18, Vedant)
+- **What:** `server/marco/dashboard.py` and `dashboard_commands.py` serve the dashboard's own contract (`frontend/docs/fastapi-handoff.md`, `frontend/src/lib/schema.ts`).
+  - Routes: `GET /dashboard/snapshot`, `WS /events`, `POST /dashboard/commands`, `GET /media/...`, `/app/...` (the built dashboard via `MARCO_DASHBOARD_DIR`), each also under `/api/...`, all gated.
+  - It reads only what the core already publishes; no perception changes.
+- **Find/Stop:**
+  1. The browser posts a command.
+  2. The server sends `command` to the bound phone.
+  3. The phone answers with `command_ack` (accepted, applied or rejected).
+  4. The snapshot's `lastCommand` follows the answer.
+
+  Contract §3.2, §4 and §6 are updated. The app's half is `ios/Marco/Core/DashboardCommands.swift` (pure, tested) plus `AppModel.command(_:)`, which shares the voice Find's guidance start.
+- **Tests:** `server/tests/test_dashboard.py` has 8 tests:
+  - schema-valid snapshots in every state, against the exported JSON Schema and its refinements;
+  - socket heartbeat and ordering;
+  - media;
+  - the full command lifecycle, including retries, conflicts, a disconnected phone, a session mismatch, timeout and session replacement;
+  - access for every new route.
+
+  The Swift command gate has 9 tests. The contract test sends a Swift-encoded `command_ack` to the server. Totals: server 96, Swift 323.
+- **Not verified here** (code-only Mac):
+  - the dashboard against these routes in a browser;
+  - `AppModel.command(_:)` in Xcode;
+  - Find and Stop end to end with the real phone.
+
+  Needed: Sandeep runs the browser integration (`VITE_DATA_SOURCE=api`, no mocked routes); Utkarsh builds the app and redeploys; then a real Find from the dashboard.
+
 ## In progress / next
 1. **Reconcile the routes** (`docs/INTERFACES.md` §10) with Sandeep:
    - **Photon: done.** `photon/` adopted §5 unchanged; no server change was needed.
