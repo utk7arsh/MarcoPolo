@@ -22,7 +22,8 @@ from .stub import StubBrain
 DATA = Path(os.environ.get("MARCO_DATA", Path(__file__).resolve().parents[1] / "data"))
 REQUIRED_META = ("session_id", "map_id", "frame_id", "t_device", "camera_transform", "intrinsics", "image_resolution")
 
-app = FastAPI(title="Marco server", version="0.1")
+# No built-in /docs, /redoc or /openapi.json: they would answer without the auth gate. The API is docs/INTERFACES.md.
+app = FastAPI(title="Marco server", version="0.2", docs_url=None, redoc_url=None, openapi_url=None)
 hub = Hub()
 recorder = Recorder(DATA / "sessions")
 
@@ -181,6 +182,13 @@ async def post_label(name: str = Form(...), touch_id: str | None = Form(None), i
     await dispatch(out)
     item = next((m["item_id"] for _, m in out if m.get("type") == "label_ready"), None)
     return dict(status="ok", item_id=item)          # Photon adds a later voice note to this item_id
+
+
+@app.get("/")
+def status(caller=Depends(require_caller)):
+    """What a browser shows at the server's URL: it's up, who you are, where the API is (behind the same gate)."""
+    return dict(service="marco", ok=True, signed_in_as=caller, mode=os.environ.get("MARCO_MODE", "stub"),
+                items=len(brain.items_public()), api="/v1/... (docs/INTERFACES.md); try /v1/items")
 
 
 @app.get("/v1/items")

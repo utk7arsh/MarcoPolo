@@ -60,6 +60,26 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
   - large and third-party data stay out (`.gitignore`);
   - push only when the user says so.
 
+## Where it runs and who can get in (2026-10-17)
+- **Vultr GPU box `marco-gpu`** (NVIDIA A16, 16 GB), deployed by Utkarsh:
+  - `marco.service` runs under its own `marco` user from `/opt/marco/server`, with `MARCO_MODE=real` and the hardened systemd settings in `/opt/marco/deploy/`;
+  - `/opt/marco/deploy/remote-setup.sh` re-runs after each code sync; his `marco-vultr.sh deploy` does both.
+- **URL:** `https://marco-gpu.taild6d426.ts.net`, through `tailscale serve`, tailnet only. The bare URL answers with a status; the API is `/v1/...`.
+- **Login is Tailscale itself:**
+  1. A device must be signed in to Utkarsh's tailnet even to reach the URL.
+  2. `tailscale serve` adds that user's login, and the server admits only `TAILSCALE_ALLOWED_LOGINS` (now `utk7arsh@github`).
+  3. Everyone else gets 403 (WebSocket close 1008).
+- **From the internet:** ports 80, 443 and 8000 are closed (probed 2026-10-17). The app listens on 127.0.0.1, and ufw allows only SSH.
+- **Remaining risk:** root SSH with a password. Anyone with SSH can call 127.0.0.1:8000 directly. Change the password (it was shared in chat) and switch to keys only.
+- **To add a teammate:** invite them to the tailnet, add their login to `ALLOWED`, and redeploy.
+- **Deployed 2026-10-18 03:15 UTC: commit `f778d18`.** It brings the floor-relative surfaces, the 4 m range gate, the gated status at `/` and FastAPI's docs off. It was deployed with the kit's own steps over SSH.
+  - The previous code is at `/opt/marco/backup-server-20261018-031539.tgz`.
+  - **Checked on the box:**
+    - `/` shows the status, signed in as `utk7arsh@github`;
+    - `/docs` and `/openapi.json` give 404;
+    - `/v1/items` gives 200 through the URL and 403 on 127.0.0.1 without a login;
+    - a forged `Tailscale-User-Login` header sent through `tailscale serve` is replaced by the real login.
+
 ## Built and verified
 - **`server/`** (`cd server && ../poc/.venv/bin/python -m pytest -q tests`):
   - geometry, wire codecs, recorder, session reader, world model, room map, touch detector;
@@ -99,6 +119,12 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
     - **DINOv2 base or large:** no better separation than small (AUC 0.87–0.90 against 0.895), and +30 ms or +130 ms per frame.
     - **OWLv2-large:** boxes land on the item more often (17 of 20 visible frames against 15), and it catches 67% of passes with zero false alarms. But it needs 1.8 s per frame on this M3 Pro (1.3 s in half precision), so it's too slow for 1 frame/s here. Try it on a CUDA GPU (the Vultr box) with `bench_frame.py`.
     - **Half precision on the Mac** speeds up OWLv2-base from 363 to 235 ms per image pass (not yet switched on).
+    - **On the team's Vultr GPU (NVIDIA A16, 16 GB, CUDA 13; `tools/gpu_check.py`, then `bench_frame.py`)**, full pipeline in half precision:
+      - **OWLv2-base:** 0.20 s per frame with 3 items, 0.27 s with 10 and 0.38 s with 20 (p95 0.47 s). Comfortable at 1 frame/s.
+      - **OWLv2-large:** 0.74 s with 3 items, 0.84 s with 10 (p95 1.08 s) and 0.98 s with 20 (p95 1.40 s). Only a few items fit, with no room for the upload.
+      - The per-item cost is mostly DINOv2 preprocessing on the CPU; moving it to the GPU would help large.
+      - Memory peaks at 1 GB.
+      - Setup on the box: `~/marco-bench`, a venv with pip run from `pip.pyz` (no system packages), and models in `~/.cache/huggingface`. Nothing listens on any port.
     - All of this is from 34 s of video at one venue: suggestive, not settled.
   - **Live path tested:** recording 2, streamed into the real server on loopback at real-time pace.
     - The server kept up, announced "seen" events, and answered "where's my bottle?" with "on the table", 1.7 cm from the truth.
@@ -138,7 +164,7 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
   - **Status port:** 127.0.0.1 only (`/health`, plus `/dev/*` in sim mode). The phone never talks to `photon/`.
   - **Checks:** `npm run doctor` checks the Photon 2.0 key, line and event stream, plus `MARCO_SERVER_URL` (`GET /v1/items`, the `/v1/photon` socket and the allow-list), read-only.
   - **Verification:** `cd photon && npm test` runs 39 tests. One of them is end to end against the real `server/` (stub, loopback): `what_is_this` → `label_request` → iMessage → text then voice memo → `label_ready` with m4a audio → `what_is_this` known → setup photo → `GET /v1/items`. It runs when `server/.venv` (or `MARCO_SERVER_PYTHON`) has the stub dependencies.
-- **Verification totals:** server 76 passed, 1 skipped (the optional ARKitScenes sample is absent locally; includes 4 Swift/server contract checks), Swift 286, Photon scaffold 8 (current local runs); `photon/` 39 (Utkarsh's preceding run).
+- **Verification totals:** server 79 passed on Vedant's Mac (with the ARKitScenes sample; 76 + 1 skipped where it's absent), Swift 286 (after merging Utkarsh's iOS work), Photon scaffold 8; `photon/` 39 (Utkarsh's run).
   - `photon-scaffold`'s `npm test` now runs `node --test test/*.test.js`, which works on Node 22 (thanks, Utkarsh).
 - **Teammates' code on `main`:** `frontend/` (Sandeep, the dashboard) was built against the earlier requirements, not this contract. See the next steps.
 - **`deploy/vultr/` (Utkarsh): the Vultr GPU deployment kit.**
