@@ -223,6 +223,18 @@ They skip themselves where `swiftc` or `node` is missing.
 
 The same per-frame line goes to the log. Every live session is also recorded under `MARCO_DATA/sessions/<session_id>/`. Copy that folder off the box, and `tools/eval_detection.py` or `tools/run_offline.py` replay it exactly.
 
+**Investigating a live session on the box, read-only (`tools/investigate_live.py`).** It needs no models, so it can run beside the service:
+- **What it reports:**
+  - each frame's light, sharpness, LiDAR coverage and ARKit tracking;
+  - each registration photo and its crop;
+  - for every item, each spot it was placed at, as frames with the spot circled;
+  - every guidance run: how close the hand got, whether the item was `missing`, and when the touch came.
+- **Run it from a fresh clone,** so the deployed checkout is untouched, with the service's Python:
+```
+journalctl -u marco -o cat --since "2026-10-18 10:50" --until "2026-10-18 13:30" > /tmp/marco-live.log
+python tools/investigate_live.py --data /var/lib/marco/data --since "2026-10-18 10:50" --until "2026-10-18 13:30" --log /tmp/marco-live.log --out /tmp/marco-investigation
+```
+
 ## A fresh demo
 Wipe the server for a clean start. From a tailnet laptop:
 

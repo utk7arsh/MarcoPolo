@@ -1,0 +1,46 @@
+{
+ "plain": {
+  "names": {
+   "bottle": "bottle",
+   "power bank": "power bank",
+   "wallet": "wallet"
+  },
+  "registrations": {
+   "bottle": "ok",
+   "power bank": "ok",
+   "wallet": "ok"
+  },
+  "hits": 8,
+  "false_alarms": 1,
+  "per_item": {
+   "rec1-normal/bottle": "0/2",
+   "rec2-find/bottle": "2/3",
+   "rec2-find/power bank": "3/5",
+   "rec2-find/wallet": "1/3",
+   "rec3-moved/bottle": "1/4",
+   "rec3-moved/power bank": "1/1"
+  }
+ },
+ "descriptive": {
+  "names": {
+   "bottle": "black metal water bottle",
+   "power bank": "black and blue power bank",
+   "wallet": "black leather wallet"
+  },
+  "registrations": {
+   "black metal water bottle": "ok",
+   "black and blue power bank": "ok",
+   "black leather wallet": "ok"
+  },
+  "hits": 8,
+  "false_alarms": 3,
+  "per_item": {
+   "rec1-normal/bottle": "0/2",
+   "rec2-find/bottle": "2/3",
+   "rec2-find/power bank": "3/5",
+   "rec2-find/wallet": "1/3",
+   "rec3-moved/bottle": "1/4",
+   "rec3-moved/power bank": "1/1"
+  }
+ }
+}

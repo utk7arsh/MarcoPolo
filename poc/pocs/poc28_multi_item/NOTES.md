@@ -57,15 +57,65 @@
 - **"coffee" is still registered twice** (identical scores). It's harmless since Utkarsh's twin fix, but one could be removed.
 
 ## Live false positives, 2026-10-18 (a clear plastic coffee mug detected as the registered black bottle)
-- **Why it got through:**
-  - The photo + name score adds "a photo of {name}", and a generic name ("bottle", "coffee") matches every bottle and cup. Live scores were 1–9 against a threshold of −2.4, so it barely filters.
-  - DINOv2 similarity can't tell a black bottle from a clear mug at these crop sizes; live, wrong objects reached 0.3–0.4. Lowering `TH_DINO` to 0.30 for recall let more of them through.
+- **Why it can get through (from the code; the live case itself is not replayed yet):**
+  - The photo + name score adds the text score for "a photo of {name}", which every object of that kind shares.
+  - DINOv2 similarity is weak evidence at these crop sizes: the clips' one false alarm, a look-alike black bottle, scored 0.59. Lowering `TH_DINO` from 0.38 to 0.30 raised hits from 5 to 8 with the same 1 false alarm on the clips.
   - Nothing looked at colour or size.
-- **Added (`appearance_eval.py`):** a colour check. The detection crop's lightness and colourfulness (CIELAB L*, chroma, median of the middle 60 %) must be within 40 / 30 of the registration crop's.
+- **Added (`appearance_eval.py`, uncommitted):** a colour check. The detection crop's lightness and colourfulness (CIELAB L*, chroma, median of the middle 60 %) must be within 40 / 30 of the registration crop's.
   - On the venue clips it gives the same result as before (8 hits, 1 false alarm), with margin: the right item was at most 28.5 lightness and 19 colourfulness away.
-  - A light or colourful object taken for a dark item fails it.
+  - By construction, a light or colourful object taken for a dark item fails it. Not yet measured on the live mug.
 - **Tried and dropped:**
   - **Elongation check:** seen from the chest, a standing bottle looks squat, so the real bottle failed it.
   - **Top 3 boxes per item:** 9 hits but 3 false alarms, against 8 and 1.
-- **Still unsolved:** a true look-alike, such as another black bottle (the clips' one false alarm: DINOv2 0.59, same colour). Descriptive names help ("black Stanley bottle"); so would a better photo.
-- **Advice for the demo:** name items descriptively, photograph each item alone, fill the frame, and use a background that contrasts with it.
+  - **Descriptive names** (`names_eval.py`, `poc/reports/poc28_names.json`): "black metal water bottle", "black and blue power bank" and "black leather wallet" gave 8 hits / **3** false alarms against 8 / 1 with plain names. They don't help; keep short names. Calling is unaffected: the phone's matcher resolves "bottle" or "black bottle" to either name.
+- **Still unsolved:** a true look-alike, such as another black bottle (the clips' one false alarm: same colour, DINOv2 0.59).
+
+### Live log, per session (journalctl 10:54–13:17 UTC, `an/sessions.py`, `an/cooccur.py` in /tmp/poc27 on the Mac)
+- **10:54–11:11 and 11:48–12:10 (cans, Pringles, coffee):** each item stayed in 2–5 half-metre spots. Clean.
+- **12:51–13:17 (Bottle, Coffee, Pringles, Can of soda):**
+  - Bottle placed 149 times at 59 different spots (14 + 45 across the two server sessions), heights −1.53 to 0.01 m, plus 66 "present" detections 7.6–8.3 m away (beyond the 4 m range, so ignored).
+  - Coffee placed 390 times at 29 spots. Pringles stayed at 1–4 spots.
+  - Bottle and Coffee were never placed on the same spot in the same frame (closest 0.16 m). But in 59 frames where Bottle was placed, Coffee was refused for "margin over the other items": another item outscored it on its own best box. That fits the mug being taken for the bottle; which item won isn't in the log.
+  - Caveat: positions are per AR session; the phone restarting AR moves the origin, so spot counts over 23 minutes overstate the scatter.
+- **To prove it:** replay that session's frames and the Bottle and Coffee registrations locally. They're on the box under /var/lib/marco/data; not copied (needs the user's OK).
+
+## State at 2026-10-18 ~13:55 UTC (kept current for context compaction)
+- **Pushed today:**
+  - `5242509`: a hand held on the guided item is a touch.
+  - `502a26e`: `POST /v1/reset`, and the server half of the preview relay.
+  - Earlier: `174e78f`, `a064c72`, `6f88881`, `651edc7`.
+  - The box runs `b11519b`, deployed by Sandeep. **`5242509` and `502a26e` are NOT deployed yet.**
+- **Colour check: PUSHED as `6cd9dff` (13:35 UTC), not deployed.** I wrongly told the user it was local only; corrected at ~14:30.
+  - Only measured on the venue clips: 37 frames, 3 dark items. Same 8 hits / 1 FA with or without it.
+  - Unmeasured on cans, Pringles and clear items. A clear mug's colour is mostly what's behind it.
+  - Off without a code change: `TH_LIGHT=inf TH_CHROMA=inf`. Recommended: deploy it off until the replay on the user's data shows it helps.
+- **Measured and rejected:**
+  - top 3 boxes: 9 hits / 3 FA;
+  - elongation check: the real bottle fails it from the chest;
+  - **descriptive names: 8 hits / 3 FA against 1 with plain names** (`names_eval.py`, `poc/reports/poc28_names.json`). So "register with a descriptive name" was a WRONG guess; the user needs that corrected.
+- **Name matching (measured with the phone's real `ItemVocabulary`):** "bottle", "black bottle" and "water bottle" all resolve to "black metal water bottle". With two bottles registered, plain "bottle" is a tie and goes to the server as said.
+- **Live log (read-only SSH, journalctl, 10:54–13:17 UTC, 1,814 frame lines; `/tmp/poc27/live_frames.log` on this Mac):**
+  - "Bottle" was placed in 149 frames across 51 different 50 cm spots, 34 of them more than 2.5 m away, heights −1.53 to 0.01. These are scattered false positives.
+  - Other items cluster in 2–17 spots: Coffee 390 frames / 17 spots, Fanta 71 / 3, Diet coke 51 / 6, Pringles 90 / 7.
+  - Caveat: the coordinate frame changes between sessions (new map ids), so clusters across sessions mix.
+- **SSH:** the user gave the root password in chat (don't write it anywhere; advise rotating it). The auto-mode classifier allowed `journalctl` reads and refused a broader command that read `registry/items.json` ("credential leakage"). Askpass helper `/tmp/poc27/askpass.sh` reads `$MARCO_SSH_PW`; ControlPath `/tmp/poc27/ssh-%r@%h`.
+- **Running:** a background audit agent (read-only) for accuracy, false-positive and blocking bugs. When it reports, verify each finding against code and data, then confirm with the user before changing anything.
+- **Next:**
+  - verify the audit findings;
+  - analyse the live log per session;
+  - get the "Bottle" frames (the false positives) to replay here;
+  - then decide the colour check;
+  - the preview feature's phone and dashboard halves are still to do (server relay done).
+
+## 2026-10-18 ~14:30: the user fetches data, I don't touch the server
+- **The user said: "dont access the server, I will get you what you want".** SSH master closed. Don't SSH again; the classifier also refused it ("production reads").
+- **Asked the user for:**
+  - today's sessions (/var/lib/marco/data/sessions, frames since 10:50 UTC);
+  - registry items.json, photos/ and templates/;
+  - the original texted photos for removed items;
+  - ground truth: where each item was, what moved, which item is the clear mug.
+- **Morning jumps (`an/jumps.py`, `an/jumps2.py`: the logged placements through the real World.sighting):**
+  - Typical placement within 4–13 cm of the item's usual spot, but 10–35 % of placements land 0.3–0.8 m off.
+  - The dashboard dot moved 1–10 times per item in 15–20 min, by 0.3–1.0 m.
+  - Only 5 of 49 jumps were shared by two items at once (a map shift). The rest flip back and forth within 1–2 s (Fanta: 13 jumps, 12:07–12:10), so they're not real moves.
+  - So it's a wrong box or a wrong depth surface under the box (`locate_footprint` samples the surface just past the box's lowest edge). The frames will tell which.

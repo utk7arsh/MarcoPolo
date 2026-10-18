@@ -1,0 +1,347 @@
+{
+ "thresholds": {
+  "photo_name": -2.426,
+  "dino": 0.3,
+  "vs_others": 0.078
+ },
+ "registration_tries": {
+  "P189--keys": 1,
+  "P194--apple-mobile-phone": 1,
+  "P194--door-keys": 1,
+  "P194--ladies-purse": 1,
+  "P194--sunglasses": 1,
+  "P194--wrist-watch": 1,
+  "P235--apple-tv-remote": 1,
+  "P235--bose-wireless-headphones": 1,
+  "P235--wallet": 1,
+  "P778--apple-watch": 1,
+  "P778--cane": 1,
+  "P778--iphone-6": 1,
+  "P778--keys": 1,
+  "P778--sunglasses": 1,
+  "P778--wallet": 1,
+  "P867--front-door-keys": 1,
+  "P867--headphones": 1,
+  "P867--remote-control": 1
+ },
+ "results": {
+  "box chosen by image query": {
+   "box_on_item_pct_orbit": 92.9,
+   "box_on_item_venue": "18/64",
+   "auc_orbit": {
+    "dino_c": {
+     "all": 0.886,
+     "lookalike": 0.806
+    },
+    "dino_s": {
+     "all": 0.949,
+     "lookalike": 0.842
+    },
+    "photo_name": {
+     "all": 0.934,
+     "lookalike": 0.76
+    }
+   },
+   "auc_venue": {
+    "dino_c": 0.867,
+    "dino_s": 0.886,
+    "photo_name": 0.862
+   },
+   "median_dino_venue": {
+    "dino_c": {
+     "on_item": 0.315,
+     "elsewhere": 0.099
+    },
+    "dino_s": {
+     "on_item": 0.325,
+     "elsewhere": 0.059
+    }
+   },
+   "configs": {
+    "POC 26's setup: all 18 registered in one server, TH_DINO 0.38": {
+     "orbit": {
+      "caught_on_item_pct": 47.4,
+      "false_alarm_pct": 2.51,
+      "false_alarm_pct_lookalike": 5.04,
+      "false_alarm_pct_other": 2.13,
+      "two_frames_caught_pct": 32.1,
+      "two_frames_false_alarm_pct": 0.744,
+      "n_own": 156,
+      "n_neg": 2112
+     },
+     "venue": {
+      "hits": 5,
+      "false_alarms": 1,
+      "boxes_on_item": 18
+     }
+    },
+    "POC 26's setup, TH_DINO 0.30": {
+     "orbit": {
+      "caught_on_item_pct": 57.7,
+      "false_alarm_pct": 5.21,
+      "false_alarm_pct_lookalike": 9.71,
+      "false_alarm_pct_other": 4.53,
+      "two_frames_caught_pct": 42.2,
+      "two_frames_false_alarm_pct": 1.981,
+      "n_own": 156,
+      "n_neg": 2112
+     },
+     "venue": {
+      "hits": 8,
+      "false_alarms": 1,
+      "boxes_on_item": 18
+     }
+    },
+    "deployed (centre crop, TH_DINO 0.30)": {
+     "orbit": {
+      "caught_on_item_pct": 80.1,
+      "false_alarm_pct": 13.92,
+      "false_alarm_pct_lookalike": 37.77,
+      "false_alarm_pct_other": 10.31,
+      "two_frames_caught_pct": 67.7,
+      "two_frames_false_alarm_pct": 7.79,
+      "n_own": 156,
+      "n_neg": 2112
+     },
+     "venue": {
+      "hits": 8,
+      "false_alarms": 1,
+      "boxes_on_item": 18
+     }
+    },
+    "main now (+ colour check)": {
+     "orbit": {
+      "caught_on_item_pct": 75.0,
+      "false_alarm_pct": 12.26,
+      "false_alarm_pct_lookalike": 37.77,
+      "false_alarm_pct_other": 8.4,
+      "two_frames_caught_pct": 63.1,
+      "two_frames_false_alarm_pct": 7.25,
+      "n_own": 156,
+      "n_neg": 2112
+     },
+     "venue": {
+      "hits": 8,
+      "false_alarms": 1,
+      "boxes_on_item": 18
+     }
+    },
+    "POC 26 (centre crop, TH_DINO 0.38)": {
+     "orbit": {
+      "caught_on_item_pct": 64.1,
+      "false_alarm_pct": 7.15,
+      "false_alarm_pct_lookalike": 21.94,
+      "false_alarm_pct_other": 4.91,
+      "two_frames_caught_pct": 47.7,
+      "two_frames_false_alarm_pct": 3.289,
+      "n_own": 156,
+      "n_neg": 2112
+     },
+     "venue": {
+      "hits": 5,
+      "false_alarms": 1,
+      "boxes_on_item": 18
+     }
+    },
+    "square crop, TH_DINO 0.319 (same ORBIT false alarms as deployed)": {
+     "orbit": {
+      "caught_on_item_pct": 85.3,
+      "false_alarm_pct": 13.92,
+      "false_alarm_pct_lookalike": 41.73,
+      "false_alarm_pct_other": 9.71,
+      "two_frames_caught_pct": 76.5,
+      "two_frames_false_alarm_pct": 7.598,
+      "n_own": 156,
+      "n_neg": 2112
+     },
+     "venue": {
+      "hits": 9,
+      "false_alarms": 3,
+      "boxes_on_item": 18
+     }
+    }
+   },
+   "equal_recall": {
+    "caught >= 64%": {
+     "centre crop": {
+      "th_dino": 0.377,
+      "false_alarm_pct": 7.53
+     },
+     "square crop": {
+      "th_dino": 0.469,
+      "false_alarm_pct": 3.41
+     }
+    },
+    "caught >= 80%": {
+     "centre crop": {
+      "th_dino": 0.299,
+      "false_alarm_pct": 14.06
+     },
+     "square crop": {
+      "th_dino": 0.377,
+      "false_alarm_pct": 8.57
+     }
+    }
+   }
+  },
+  "box chosen by image + name": {
+   "box_on_item_pct_orbit": 92.3,
+   "box_on_item_venue": "20/64",
+   "auc_orbit": {
+    "dino_c": {
+     "all": 0.873,
+     "lookalike": 0.764
+    },
+    "dino_s": {
+     "all": 0.941,
+     "lookalike": 0.801
+    },
+    "photo_name": {
+     "all": 0.928,
+     "lookalike": 0.746
+    }
+   },
+   "auc_venue": {
+    "dino_c": 0.83,
+    "dino_s": 0.894,
+    "photo_name": 0.825
+   },
+   "median_dino_venue": {
+    "dino_c": {
+     "on_item": 0.271,
+     "elsewhere": 0.108
+    },
+    "dino_s": {
+     "on_item": 0.37,
+     "elsewhere": 0.053
+    }
+   },
+   "configs": {
+    "POC 26's setup: all 18 registered in one server, TH_DINO 0.38": {
+     "orbit": {
+      "caught_on_item_pct": 46.8,
+      "false_alarm_pct": 2.51,
+      "false_alarm_pct_lookalike": 5.04,
+      "false_alarm_pct_other": 2.13,
+      "two_frames_caught_pct": 32.0,
+      "two_frames_false_alarm_pct": 0.696,
+      "n_own": 156,
+      "n_neg": 2112
+     },
+     "venue": {
+      "hits": 5,
+      "false_alarms": 1,
+      "boxes_on_item": 20
+     }
+    },
+    "POC 26's setup, TH_DINO 0.30": {
+     "orbit": {
+      "caught_on_item_pct": 57.1,
+      "false_alarm_pct": 5.16,
+      "false_alarm_pct_lookalike": 10.07,
+      "false_alarm_pct_other": 4.42,
+      "two_frames_caught_pct": 41.9,
+      "two_frames_false_alarm_pct": 1.861,
+      "n_own": 156,
+      "n_neg": 2112
+     },
+     "venue": {
+      "hits": 8,
+      "false_alarms": 4,
+      "boxes_on_item": 20
+     }
+    },
+    "deployed (centre crop, TH_DINO 0.30)": {
+     "orbit": {
+      "caught_on_item_pct": 79.5,
+      "false_alarm_pct": 15.77,
+      "false_alarm_pct_lookalike": 45.32,
+      "false_alarm_pct_other": 11.29,
+      "two_frames_caught_pct": 66.4,
+      "two_frames_false_alarm_pct": 9.159,
+      "n_own": 156,
+      "n_neg": 2112
+     },
+     "venue": {
+      "hits": 8,
+      "false_alarms": 4,
+      "boxes_on_item": 20
+     }
+    },
+    "main now (+ colour check)": {
+     "orbit": {
+      "caught_on_item_pct": 74.4,
+      "false_alarm_pct": 13.92,
+      "false_alarm_pct_lookalike": 44.6,
+      "false_alarm_pct_other": 9.27,
+      "two_frames_caught_pct": 61.9,
+      "two_frames_false_alarm_pct": 8.57,
+      "n_own": 156,
+      "n_neg": 2112
+     },
+     "venue": {
+      "hits": 8,
+      "false_alarms": 2,
+      "boxes_on_item": 20
+     }
+    },
+    "POC 26 (centre crop, TH_DINO 0.38)": {
+     "orbit": {
+      "caught_on_item_pct": 62.8,
+      "false_alarm_pct": 7.95,
+      "false_alarm_pct_lookalike": 27.7,
+      "false_alarm_pct_other": 4.96,
+      "two_frames_caught_pct": 46.6,
+      "two_frames_false_alarm_pct": 3.577,
+      "n_own": 156,
+      "n_neg": 2112
+     },
+     "venue": {
+      "hits": 5,
+      "false_alarms": 1,
+      "boxes_on_item": 20
+     }
+    },
+    "square crop, TH_DINO 0.309 (same ORBIT false alarms as deployed)": {
+     "orbit": {
+      "caught_on_item_pct": 84.6,
+      "false_alarm_pct": 15.77,
+      "false_alarm_pct_lookalike": 49.64,
+      "false_alarm_pct_other": 10.63,
+      "two_frames_caught_pct": 75.0,
+      "two_frames_false_alarm_pct": 9.567,
+      "n_own": 156,
+      "n_neg": 2112
+     },
+     "venue": {
+      "hits": 8,
+      "false_alarms": 3,
+      "boxes_on_item": 20
+     }
+    }
+   },
+   "equal_recall": {
+    "caught >= 64%": {
+     "centre crop": {
+      "th_dino": 0.368,
+      "false_alarm_pct": 9.09
+     },
+     "square crop": {
+      "th_dino": 0.467,
+      "false_alarm_pct": 4.31
+     }
+    },
+    "caught >= 80%": {
+     "centre crop": {
+      "th_dino": 0.284,
+      "false_alarm_pct": 17.28
+     },
+     "square crop": {
+      "th_dino": 0.375,
+      "false_alarm_pct": 9.47
+     }
+    }
+   }
+  }
+ }
+}
