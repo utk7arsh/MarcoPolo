@@ -305,7 +305,7 @@
                   <div class="mod" data-status="e2e" title="Built from real depth in offline runs."><b>4 &middot; Room map</b> voxels + surfaces</div>
                   <div class="mod" data-status="built" title="Synthetic data only; refit CONTACT_M on real hands."><b>5 &middot; Touch</b> fingertip vote, proximity</div>
                   <div class="mod" data-status="e2e" title="find answered on live replay; what_is_this in the Photon end-to-end test."><b>6 &middot; Answers + events</b> find, what_is_this, set_place</div>
-                  <div class="mod wide" data-status="built" title="Phone and Photon hubs tested; one stalled dashboard socket can block the whole server (open bug); map_points every frame."><b>7 &middot; Feeds</b> phone, Photon, dashboard hubs + label audio store</div>
+                  <div class="mod wide" data-status="built" title="Phone and Photon hubs tested. A stalled dashboard no longer blocks the server (per-socket outboxes, tested live on loopback). map_points every frame."><b>7 &middot; Feeds</b> phone, Photon, dashboard hubs + label audio store</div>
                 </div>
                 <div class="hosts">
                   <div class="mod" data-status="live" title="0.18-0.40 s/frame measured on the box; no inbound ports."><b>Vultr A16</b> primary</div>
@@ -378,7 +378,7 @@
       <ol>
         <li><b>First real run on the vest</b> against <code>marco-gpu</code>: capture + upload (&#9314;&#9315;&#9316;), then hear stages 1&ndash;5 of the find flow. This turns most blue boxes green.</li>
         <li><b>Touch with real hands</b>: refit <code>CONTACT_M</code> so stages 6&ndash;7, "touch to name" and "what is this" work on the vest.</li>
-        <li><b>Dashboard adapter</b> (&#9321;) plus the per-socket queue so a stalled dashboard can't block the server.</li>
+        <li><b>Dashboard adapter</b> (&#9321;).</li>
         <li><b>Point the Photon bridge at Vultr</b> (&#9317;&#9320;): <code>MARCO_SERVER_URL</code>, allow-list, <code>npm run doctor</code>.</li>
         <li><b>Tune detection on our props</b> (recall 4/9 on the first clips), fix AirPods front/back, set <code>ELEVENLABS_API_KEY</code>.</li>
       </ol>
