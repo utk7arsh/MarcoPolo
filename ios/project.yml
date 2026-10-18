@@ -28,6 +28,10 @@ targets:
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
         UIFileSharingEnabled: true   # Finder > iPhone > Files > Marco shows Documents/sessions (recordings)
+        # Full screen: without a launch screen iOS runs the app letterboxed at an old iPhone size (black bars).
+        UILaunchScreen:
+          UIColorName: LaunchBackground  # Assets.xcassets, the app's canvas colour
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]   # the phone is portrait in the vest
         # Privacy strings also live in the plist, so MarcoPolo.xcodeproj (which has no INFOPLIST_KEY_ settings) has them:
         # without them iOS kills the app the moment it asks for the camera, mic, speech or motion.
         NSCameraUsageDescription: Marco uses the camera and LiDAR to see where your things are.

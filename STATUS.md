@@ -392,11 +392,11 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
   - **Commands:** find, what is this, caretaker labels, touch to name, "this is the door" / left behind, and register (by a sighted helper or the caretaker). The wearer never names items themselves.
   - **The 7-stage find experience:** "Polo! Behind you, two steps", the muffled beacon, the facing ding + buzz, faster beeps, the steady tone in the last 30 cm, "Got it" at touch. Each stage is mapped to its code (`Guidance.swift` phases, `Lines.swift`, server `touch.py`).
   - **A left-to-right pipeline:** sources → pre-processing (phone capture, Photon intake) → **the brain on Vultr** (ingest, detect, box to 3D, world model, touch, answers, feeds) → post-processing (phone guidance, Photon outreach, dashboard) → destinations. 13 numbered wires.
-- Snapshot at `1a06d00`:
+- Snapshot at `de9aa08` (2026-10-18; adds the registry, hub fix, keep-looking, room-anchored audio, route watch, and the bridge running against marco-gpu):
   - commands 4/6 end to end;
   - find stages 0/7 (all built, none heard on the vest);
-  - parts 16/33 (6 live);
-  - wires 8/13 (2 live).
+  - parts 18/36 (8 live);
+  - wires 8/13 (3 live).
   - Not built: the dashboard feed and screen.
 - Documentation only; no code or contract changed.
 
