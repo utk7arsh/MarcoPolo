@@ -2,6 +2,24 @@
 
 Last updated: 2026-10-18. Keep this file current: update it whenever a decision is made or a piece lands.
 
+## Server: duplicate items found again, faster frames, 202 first (October 18, 2026, Utkarsh)
+
+- **Bug fixed: an item registered twice could never be found.** The presence check's "looks more like this item than
+  my other items" compared an item with its own twin (same name, same photo), so the margin was about 0 and the item
+  never counted as present. Live, the box had Diet coke x2, Sparkling water x2 and coffee x4, all stuck at
+  "registered". Items with the same name (ignoring case and spaces) no longer compete; look-alikes with different
+  names still do (`perception/detector.py: vs_others`). Deleting the extra registrations is still tidier.
+- **Three trims, decisions unchanged** (from the model ablations): OWLv2 in fp16 on Apple GPUs too (it already was on
+  CUDA); a 960 px phone frame is padded and normalised on the GPU instead of by the processor on the CPU, checked
+  against the processor once at start and falling back if they ever disagree; every DINOv2 crop score comes back
+  from the GPU in one trip. Mac (MPS) `bench_frame.py` p50: 0.43 / 0.67 / 0.74 s at 1 / 10 / 20 items before, 0.35 /
+  0.45 / 0.53 s after; all three now within the 1 s budget (10 and 20 items were not).
+- **`POST /v1/frames` answers 202 before detection,** as INTERFACES.md 3.1 always said. Frames still go through the
+  brain one at a time with the newest winning; a brain error is logged instead of failing the upload. Tests run
+  with `MARCO_FRAMES_ASYNC=0` (conftest) so they see results; `test_frames_async.py` covers the real path.
+- Tests: `test_detector.py` (twins, look-alikes, batched scores, fast pixels vs the processor, fallback) and
+  `test_frames_async.py`.
+
 ## Saved dashboard items: startup fix (October 18, 2026)
 
 - User reported an empty Objects page, then confirmed the items became visible.

@@ -156,6 +156,7 @@ During development, `npm run dev` proxies `/api` to this server instead (`API_PR
 | `MARCO_ROOM_ID`, `MARCO_ROOM_NAME` | `room`, `Room` | the room the dashboard shows |
 | `DASHBOARD_COMMAND_TIMEOUT_S` | `10` | how long a command waits for the phone's answer before `rejected` / `no_answer` |
 | `MARCO_LAYOUT_EVERY` | `3` | frames between room layouts (walls and furniture shapes on the map, `marco/world/layout.py`); `0` turns them off |
+| `MARCO_FRAMES_ASYNC` | `1` | answer `POST /v1/frames` with 202 before detection runs (INTERFACES.md 3.1), so the phone's upload never waits on the GPU; `0` answers after the brain is done (tests) |
 | `MARCO_LAYOUT_ASYNC` | `1` | make each layout on its own thread so a big map never delays a frame; `0` makes it inline (tests, offline tools) |
 
 ## Code

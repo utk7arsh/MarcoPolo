@@ -9,6 +9,7 @@ TruthDetector for synthetic sessions with ground truth: projects the true item p
 
 Both return detections in the pixels of the UPRIGHT image they were given.
 """
+import logging
 import os
 
 import numpy as np
@@ -18,6 +19,18 @@ from .. import geometry as G
 TH = {"photo_name": float(os.environ.get("TH_PHOTO_NAME", "-2.426")), "dino": float(os.environ.get("TH_DINO", "0.38")),
       "vs_others": float(os.environ.get("TH_VS_OTHERS", "0.078"))}
 GATE_NAME_SCORE = float(os.environ.get("GATE_NAME_SCORE", "0.05"))
+
+
+def _same_name(a, b):
+    return " ".join(str(a).lower().split()) == " ".join(str(b).lower().split())
+
+
+def vs_others(scores, q, names):
+    """How far item q's photo logit at its best box beats the best OTHER item's logit at that box ("looks more like
+    this item than my other items"). An item registered twice under one name is not an "other": the twins score the
+    same everywhere and would veto each other forever. None when no other item is left to compare with."""
+    others = [j for j in range(len(names)) if j != q and not _same_name(names[j], names[q])]
+    return float(scores[q] - np.max(np.asarray(scores)[others])) if others else None
 
 
 def _device():
@@ -39,17 +52,53 @@ class OwlDetector:
         self.OWL, self.DINO = owl or self.OWL, dino or self.DINO
         self.torch = torch
         self.dev = _device()
-        dtype = torch.float16 if self.dev == "cuda" else torch.float32
+        dtype = torch.float16 if self.dev in ("cuda", "mps") else torch.float32
         self.proc = Owlv2Processor.from_pretrained(self.OWL)
         self.owl = Owlv2ForObjectDetection.from_pretrained(self.OWL, use_safetensors=True, dtype=dtype).to(self.dev).eval()
         self.dproc = AutoImageProcessor.from_pretrained(self.DINO)
         self.dino = AutoModel.from_pretrained(self.DINO, use_safetensors=True).to(self.dev).eval()
         self.dtype = dtype
         self.items = {}            # item_id -> dict(name, q_img, q_txt, dino)
+        self.fast_pixels = self._check_fast_pixels()
+        if not self.fast_pixels:
+            logging.getLogger("marco").warning("OWLv2 fast preprocessing disagrees with the processor; using the processor")
+
+    def _check_fast_pixels(self):
+        """The GPU path must give the processor's pixels exactly. Checked once at start, landscape and portrait, so a
+        different transformers version that pads or resizes differently falls back instead of shifting detections."""
+        try:
+            ip = self.proc.image_processor
+            self.side = int(ip.size["height"])
+            self.px_mean = self.torch.tensor(ip.image_mean, device=self.dev).view(1, 3, 1, 1)
+            self.px_std = self.torch.tensor(ip.image_std, device=self.dev).view(1, 3, 1, 1)
+            from PIL import Image
+            rng = np.random.default_rng(0)
+            for h, w in ((self.side * 3 // 4, self.side), (self.side, self.side * 3 // 4)):
+                im = Image.fromarray(rng.integers(0, 256, (h, w, 3), np.uint8))
+                a = self.proc(images=im, return_tensors="pt")["pixel_values"].float()
+                b = self._gpu_pixels(im).float().cpu()
+                if a.shape != b.shape or float((a - b).abs().max()) > 1e-4:
+                    return False
+            return True
+        except Exception:
+            return False
+
+    def _gpu_pixels(self, im):
+        """A frame whose long side is already OWLv2's (960 px: the phone's half-size JPEG) only needs zero padding to a
+        square and normalising, which the GPU does in a few ms instead of the processor's 20-100 ms on the CPU."""
+        w, h = im.size
+        x = self.torch.from_numpy(np.array(im)).to(self.dev).permute(2, 0, 1).float().div_(255)
+        px = self.torch.zeros((1, 3, self.side, self.side), device=self.dev)
+        px[0, :, :h, :w] = x
+        return (px - self.px_mean) / self.px_std
+
+    def _pixels(self, im):
+        if self.fast_pixels and max(im.size) == self.side and im.mode == "RGB":
+            return self._gpu_pixels(im).to(self.dtype)
+        return self.proc(images=im, return_tensors="pt")["pixel_values"].to(self.dev, self.dtype)
 
     def _pass(self, im):
-        px = self.proc(images=im, return_tensors="pt")["pixel_values"].to(self.dev, self.dtype)
-        fmap = self.owl.image_embedder(pixel_values=px)[0]
+        fmap = self.owl.image_embedder(pixel_values=self._pixels(im))[0]
         return fmap, fmap.reshape(1, -1, fmap.shape[-1])
 
     def _text(self, name):
@@ -91,6 +140,7 @@ class OwlDetector:
         if not self.items:
             return []
         ids = list(self.items)
+        names = [self.items[i]["name"] for i in ids]
         with self.torch.no_grad():
             Q = self.torch.cat([self.items[i]["q_img"] for i in ids], dim=1)
             Tq = self.torch.cat([self.items[i]["q_txt"] for i in ids], dim=1)
@@ -104,13 +154,14 @@ class OwlDetector:
                 b = best[q]
                 box = self._to_px(boxes[b].tolist(), im)
                 crops.append(im.crop(tuple(int(v) for v in box)))
-                out.append(dict(item_id=iid, name=self.items[iid]["name"], box=[round(v, 1) for v in box],
-                                photo_name=float(L[b, q] + Lt[b, q]),
-                                vs_others=float(L[b, q] - np.delete(L[b], q).max()) if len(ids) > 1 else None))
+                out.append(dict(item_id=iid, name=names[q], box=[round(v, 1) for v in box],
+                                photo_name=float(L[b, q] + Lt[b, q]), vs_others=vs_others(L[b], q, names)))
             E = self._dino(crops)
+            R = self.torch.stack([self.items[i]["dino"] for i in ids])
+            dino = (E * R).sum(-1).cpu().tolist()          # every crop check in one trip back from the GPU
         for q, iid in enumerate(ids):
             d = out[q]
-            d["dino"] = float((E[q] * self.items[iid]["dino"]).sum())
+            d["dino"] = float(dino[q])
             d["present"] = bool(d["photo_name"] >= TH["photo_name"] and d["dino"] >= TH["dino"]
                                 and (d["vs_others"] is None or d["vs_others"] >= TH["vs_others"]))
             d["score"] = round(1 / (1 + np.exp(-(d["photo_name"] - TH["photo_name"]))), 3)

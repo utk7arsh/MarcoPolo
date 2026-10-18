@@ -6,6 +6,7 @@ Run (loopback only):  AUTH_TEST_BYPASS=1 python -m marco.app        # local deve
 """
 import asyncio
 import json
+import logging
 import os
 import re
 import time
@@ -55,6 +56,8 @@ dash = Dashboard(brain)                 # the browser's API (frontend/), built f
 DASHBOARD_ONLY = {"command_ack"}        # phone messages for the dashboard adapter only, not the brain
 latest_frame: dict[str, int] = {}
 work_lock = asyncio.Lock()
+frame_tasks: set[asyncio.Task] = set()  # frames still on their way through the brain (held so they aren't collected)
+FRAMES_ASYNC = os.environ.get("MARCO_FRAMES_ASYNC", "1") != "0"   # 0: answer after the brain is done (tests)
 speech = SpeechOutput(SpeechSettings.from_env())
 pending_labels = PendingLabelRequests()
 
@@ -124,12 +127,29 @@ async def post_frame(meta: str = Form(...), image: UploadFile = File(...), depth
     dash.observe_frame_meta(m)
     sid, fid = m["session_id"], int(m["frame_id"])
     latest_frame[sid] = max(fid, latest_frame.get(sid, -1))
-    async with work_lock:                               # one frame through the brain at a time
-        if fid < latest_frame[sid]:
-            return dict(frame_id=fid, status="superseded")   # a newer frame arrived while this one waited
-        out = await run_in_threadpool(brain.on_frame, m, jpeg, d, c)
-    await dispatch(out)
+    if not FRAMES_ASYNC:
+        return dict(frame_id=fid, status=await process_frame(m, jpeg, d, c))
+    # 202 now, as INTERFACES.md 3.1 says: the phone's upload no longer waits out detection (175-380 ms on the A16).
+    task = asyncio.create_task(process_frame(m, jpeg, d, c))
+    frame_tasks.add(task)
+    task.add_done_callback(frame_tasks.discard)
     return dict(frame_id=fid, status="accepted")
+
+
+async def process_frame(m, jpeg, d, c):
+    sid, fid = m["session_id"], int(m["frame_id"])
+    try:
+        async with work_lock:                           # one frame through the brain at a time
+            if fid < latest_frame[sid]:
+                return "superseded"                     # a newer frame arrived while this one waited
+            out = await run_in_threadpool(brain.on_frame, m, jpeg, d, c)
+        await dispatch(out)
+        return "accepted"
+    except Exception:
+        if not FRAMES_ASYNC:
+            raise
+        logging.getLogger("marco").exception("frame %s of session %s failed in the brain", fid, sid)
+        return "failed"
 
 
 async def play_guidance(item_id):
