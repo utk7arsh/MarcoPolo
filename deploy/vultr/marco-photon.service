@@ -1,0 +1,26 @@
+[Unit]
+Description=Marco Photon caretaker bridge
+After=network-online.target tailscaled.service marco.service
+Wants=network-online.target tailscaled.service
+StartLimitIntervalSec=60
+StartLimitBurst=10
+
+[Service]
+User=marco
+Group=marco
+WorkingDirectory=/opt/marco/photon
+EnvironmentFile=/etc/marco/photon.env
+Environment=NODE_ENV=production
+ExecStart=/opt/marco/node/bin/node --import tsx src/index.ts
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=30
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/lib/marco-photon
+
+[Install]
+WantedBy=multi-user.target

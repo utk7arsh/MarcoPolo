@@ -1,7 +1,7 @@
 // Photon 2.0 (https://photon.codes/docs/beta): REST through the official @photon-ai/api client,
 // inbound events over the project's Socket.IO stream with cursor replay.
 import { ApiError, Photon } from "@photon-ai/api";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { basename } from "node:path";
 import { io, type Socket } from "socket.io-client";
@@ -97,7 +97,8 @@ export class PhotonChannel implements Channel {
   /** POST /attachments takes multipart/related: a JSON part describing the file, then its bytes. */
   private async upload(path: string, mimeType: string, key: string): Promise<string> {
     const bytes = await readFile(path);
-    const boundary = `marco-${randomUUID()}`;
+    // Retries reuse the upload's idempotency key, so their bytes must also match.
+    const boundary = `marco-${createHash("sha256").update(key).digest("hex")}`;
     const meta = JSON.stringify({ contentType: mimeType, sizeBytes: bytes.length, filename: basename(path) });
     const body = new Blob([
       `--${boundary}\r\nContent-Type: application/json\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: ${mimeType}\r\n\r\n`,

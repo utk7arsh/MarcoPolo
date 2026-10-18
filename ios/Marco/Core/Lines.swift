@@ -84,7 +84,7 @@ enum Lines {
     static func whatIsThis(_ a: WhatAnswer) -> String? {
         switch a.status {
         case "known": return spokenLabel(name: a.name, labelText: a.label_text)
-        case "unknown": return "I don't know this one yet. I've sent a photo to your helper."
+        case "unknown": return "I don't know this one yet. I'm asking your helper."
         case "no_touch": return "Touch it first, then ask me what it is."
         default: return nil
         }

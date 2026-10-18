@@ -40,6 +40,27 @@ def test_everything_is_closed_without_auth(tmp_path, monkeypatch):
     assert e.value.code == 1008
 
 
+def test_unknown_request_replays_to_a_late_bridge_until_a_label_is_saved(server):
+    app, c, _ = server
+    data, files, _ = frame_parts()
+    assert c.post("/v1/frames", data=data, files=files).status_code == 202
+    # No Photon socket yet: the phone must not lose the request during a restart.
+    with c.websocket_connect("/v1/phone") as phone:
+        phone.send_json(dict(type="query", session_id="s1", query_id="late", kind="what_is_this"))
+        answer = phone.receive_json()
+        assert answer["status"] == "unknown"
+        with c.websocket_connect("/v1/photon") as bridge:
+            request = bridge.receive_json()
+            assert request["touch_id"] == answer["touch_id"]
+            assert c.get(request["crop_url"]).status_code == 200
+        with c.websocket_connect("/v1/photon") as bridge:
+            assert bridge.receive_json() == request
+            reply = c.post("/v1/labels", data={"touch_id": request["touch_id"], "name": "cumin", "text": "That's cumin."})
+            assert reply.status_code == 200
+            assert phone.receive_json()["type"] == "label_ready"
+            assert app.pending_labels.pending() == []
+
+
 def test_tailscale_mode_only_admits_allowed_logins(tmp_path, monkeypatch):
     monkeypatch.setenv("MARCO_DATA", str(tmp_path))
     monkeypatch.delenv("AUTH_TEST_BYPASS", raising=False)

@@ -2,6 +2,80 @@
 
 Last updated: 2026-10-18. Keep this file current: update it whenever a decision is made or a piece lands.
 
+## Vultr server and Photon activated (October 18, 2026)
+
+- User authorized bridge setup, server restart and the GitHub workflow update.
+  Pulled teammate commit `dc985e6` without conflicts, preserving all local work.
+  Every remote source file matched a blob in repository history; saved the old
+  server source at `/opt/marco/backups/20261018T091033Z/server-source.tar.gz`.
+- Deployed the reviewed server source without syncing environments, recordings,
+  model weights or the existing dashboard build. Restarted `marco`; all **9 item
+  IDs survived**. The active process loads the private ElevenLabs environment.
+- Installed checksum-verified **Node 24.22.0**, pinned Photon dependencies and
+  `marco-photon.service`. Runs as `marco`, enabled on boot, with restart on failure,
+  loopback port 8787 and state under `/var/lib/marco-photon`. Keys remain in
+  root-owned `0600` files under `/etc/marco`, never GitHub.
+- Stopped the Mac bridge gracefully before starting Vultr. Migrated its linked
+  caretaker, 5 local items, media and cursor **12245**. Preserved the original Mac
+  state privately; marked only historical unsent `req_a2e7216234` as `failed` in
+  the migrated copy. It was not sent. No registered items were removed.
+- Live bridge health: **ok**, server connected, 1 caretaker, 0 pending/open
+  questions. Photon event subscription and read-only doctor pass on Vultr. Both
+  server and bridge listen on localhost behind private Tailscale access.
+- Live private route/feed checks pass, including invalid-write rejection and
+  unauthenticated-loopback 403. Real `/v1/speech` returned valid mono 24 kHz WAV:
+  **0.369 s** generation, **0.002 s** cache hit. No audible/device playback claimed.
+- Pre-deploy checks: **120 server tests** pass (one external dataset skipped),
+  including **387 Swift checks**; **52 Photon tests**, **8 reference client tests**,
+  **53 frontend unit tests** and **22 Chromium tests** pass. Types, lint, schema,
+  formatting, builds, shell syntax and actionlint pass.
+- Added active root GitHub workflows for frontend and server/Photon/Swift
+  integration. CI uses isolated data and no production keys or SSH credentials;
+  it does not deploy automatically. GitHub run verification follows publication.
+- Remaining: fresh physical wearer → caretaker photo → typed answer → spoken
+  label retest. No manual caretaker test messages or synthetic shared items were
+  created during deployment. The earlier local-only notes below are historical.
+
+## Private Vultr environment files staged (October 18, 2026)
+
+- At the user's request, added credentials directly on Vultr, outside Git:
+  ElevenLabs TTS settings in `/etc/marco/local.env` and the bridge configuration
+  in `/etc/marco/photon.env`. Both are root-owned, mode `0600`; read-back checks
+  passed without printing credentials. Existing dashboard settings were preserved.
+- No secret manager is needed for this demo. The server service already lists
+  `local.env` as an environment file. The future Photon service must explicitly
+  load `/etc/marco/photon.env`; it is not discovered from the bridge directory.
+- No service install, restart, code deployment, provider send, commit or push was
+  performed. The server PID/start time stayed unchanged. These settings are staged;
+  the older running server still lacks the speech route and the bridge still needs
+  installation/handoff. Prior audit findings below remain applicable.
+
+## Photon unknown-object audit and Vultr handoff (October 18, 2026)
+
+- User confirmed the demo bridge will run on **Vultr, operated by a teammate**.
+  See [the audit and handoff plan](docs/PHOTON-INTEGRATION-AUDIT.md). Only one
+  active bridge should run across the Mac and Vultr. This audit made no commit,
+  push, deployment, live send or shared-data change; the old Mac process remains.
+- Read-only credentials, line assignment, event stream and private server checks
+  pass. One saved identify request has a cached crop but no photo message ID;
+  no matching photo appears in the checked provider history window. The original
+  provider error is unavailable, so the precise historical cause is unconfirmed.
+- Fixed reproduced failures: bounded outgoing retries, saved partial sends and
+  reply recovery, identical attachment retry bodies, server replay of recent
+  unanswered requests, stale real-brain touch timestamps, and duplicate items
+  after a lost label HTTP response. Health/doctor expose incomplete sends.
+- iOS now says “I'm asking your helper” rather than claiming a photo was sent;
+  `unknown` is not a provider-delivery acknowledgement. No wire fields changed;
+  §5 documents bounded replay and retry semantics, with regenerated Word output.
+- Verification: **52 Photon tests and typecheck**, **120 server tests** (one
+  external-dataset skip), **387 Swift checks** pass. Both local flows include an
+  isolated server/bridge restart test. Real-brain tests use synthetic sensor data.
+  Updated doctor intentionally reports the saved incomplete request as a failure.
+- Remaining: review/deploy server and bridge together, inspect old pending state
+  before migration/retry, verify Vultr's tailnet identity and hand off the single
+  bridge. Physical wearer → real caretaker photo → typed reply → spoken label
+  remains unverified because the wearer phone is unavailable. No new keys needed.
+
 ## Main push verification (October 18, 2026)
 
 - User authorized integrating and pushing the local changes. Preserved tracked
@@ -432,7 +506,7 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
    - half precision on the Mac.
 7. **Caretaker voice notes:** `photon/` already sends them as m4a. Server-side conversion is only needed for other clients that post `.caf`.
    - **Possible §5 additions (proposals, not built):** `label_request_seen` (the caretaker opened the photo: "Mom is looking at it") and `label_unknown` ("Mom isn't sure either"). `photon/` already detects both and only logs them.
-   - **Today the server doesn't queue `label_request`** for a disconnected bridge. `photon/` reconnects with backoff and shows the socket state on `/health`.
+   - **Local audit fix (2026-10-18):** the server buffers up to 128 unanswered `label_request` events for 10 minutes and replays on bridge reconnect; this is memory-only and not deployed yet. See the Photon audit above.
 7. **Vultr (Utkarsh): the box is up** (see "Built and verified"). Left to do:
    - point the phone's Server field and `photon/`'s `MARCO_SERVER_URL` at `https://marco-gpu.taild6d426.ts.net`;
    - invite teammates to the `utk7arsh` tailnet, add their logins to `TAILSCALE_ALLOWED_LOGINS`, and re-run `deploy`;

@@ -257,6 +257,8 @@ class StubBrain:
         tc = self.touches.get(touch_id) if touch_id else None
         if touch_id and tc is None:
             raise KeyError(f"unknown touch_id {touch_id}")
+        if item_id is None and tc is not None:
+            item_id = tc.get("item_id")       # a lost HTTP response may retry the original touch
         if item_id and item_id not in self.items:
             raise KeyError(f"unknown item_id {item_id}")
         new_photo = None

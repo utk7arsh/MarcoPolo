@@ -13,7 +13,7 @@ interface HttpDeps {
   agent: MarcoAgent;
   store: Store;
   sim: SimChannel | null;
-  /** Whether the /v1/photon socket to the Marco server is up (label requests are lost while it is down). */
+  /** Whether the /v1/photon socket is up; recent unanswered requests replay on reconnect. */
   serverConnected: () => boolean;
 }
 
@@ -22,12 +22,15 @@ export function startHttp({ config, agent, store, sim, serverConnected }: HttpDe
 
   app.get("/health", (c) => {
     const questions = store.caretakers().flatMap((t) => store.openQuestions(t.handle));
+    const pending = store.pendingIdentifyQuestions();
+    const primary = agent.primaryCaretaker();
     return c.json({
-      ok: serverConnected(),
+      ok: serverConnected() && !!primary && pending.length === 0,
       mode: config.mode,
       marco_server: { url: config.marcoServerUrl, connected: serverConnected() },
       caretakers: store.caretakers().map((t) => t.name),
-      primary_caretaker: agent.primaryCaretaker()?.name ?? null,
+      primary_caretaker: primary?.name ?? null,
+      pending_questions: pending.length,
       open_questions: questions.length,
       items: store.items().length,
     });

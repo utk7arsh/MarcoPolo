@@ -208,3 +208,55 @@ test("the /v1/photon socket comes back after the server is down for a while (a r
     stop(srv);
   }
 });
+
+test("a transient crop/send failure retries the same label_request without a second server event", async () => {
+  const http = createServer();
+  const wss = new WebSocketServer({ server: http, path: "/v1/photon" });
+  let connections = 0;
+  wss.on("connection", (ws) => {
+    connections++;
+    ws.send(JSON.stringify({ type: "label_request", touch_id: "retry", crop_url: "/v1/touch/retry/crop.jpg" }));
+  });
+  await new Promise<void>((resolve) => http.listen(0, "127.0.0.1", resolve));
+  let attempts = 0;
+  let delivered = false;
+  const socket = connectPhotonSocket(`http://127.0.0.1:${(http.address() as AddressInfo).port}`, async () => {
+    if (++attempts === 1) throw new Error("temporary crop/send failure");
+    delivered = true;
+  });
+  try {
+    for (const end = Date.now() + 2500; !delivered && Date.now() < end;) await new Promise((r) => setTimeout(r, 20));
+    assert.equal(delivered, true, "the server does not replay this event by itself");
+    assert.equal(attempts, 2);
+    assert.equal(connections, 1);
+  } finally {
+    socket.close();
+    for (const client of wss.clients) client.terminate();
+    wss.close();
+    http.close();
+  }
+});
+
+test("request retries are bounded, permanent errors are not retried, and the next request still runs", async () => {
+  const http = createServer();
+  const wss = new WebSocketServer({ server: http, path: "/v1/photon" });
+  wss.on("connection", (ws) => {
+    for (const id of ["temporary", "permanent", "next"]) ws.send(JSON.stringify({ type: "label_request", touch_id: id, crop_url: `/v1/touch/${id}/crop.jpg` }));
+  });
+  await new Promise<void>((resolve) => http.listen(0, "127.0.0.1", resolve));
+  const attempts: string[] = [];
+  const socket = connectPhotonSocket(`http://127.0.0.1:${(http.address() as AddressInfo).port}`, async (request) => {
+    attempts.push(request.touch_id);
+    if (request.touch_id === "temporary") throw new Error("still offline");
+    if (request.touch_id === "permanent") throw new MarcoServerError("crop expired", 404);
+  });
+  try {
+    for (const end = Date.now() + 4000; !attempts.includes("next") && Date.now() < end;) await new Promise((r) => setTimeout(r, 20));
+    assert.deepEqual(attempts, ["temporary", "temporary", "temporary", "permanent", "next"]);
+  } finally {
+    socket.close();
+    for (const client of wss.clients) client.terminate();
+    wss.close();
+    http.close();
+  }
+});

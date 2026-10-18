@@ -1,0 +1,47 @@
+name: Server and Photon
+on:
+  push:
+    paths: ['server/**', 'photon/**', 'photon-scaffold/**', 'ios/**', 'poc/emulators/arkit/**', 'frontend/docs/*.schema.json', 'deploy/vultr/**', '.github/workflows/integration.yml']
+  pull_request:
+    paths: ['server/**', 'photon/**', 'photon-scaffold/**', 'ios/**', 'poc/emulators/arkit/**', 'frontend/docs/*.schema.json', 'deploy/vultr/**', '.github/workflows/integration.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: integration-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  contracts:
+    # The server suite compiles the actual Swift client and compares its bytes.
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: photon/package-lock.json
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: server/requirements.txt
+      - name: Install isolated server and bridge dependencies
+        run: |
+          python -m venv server/.venv
+          server/.venv/bin/python -m pip install -r server/requirements.txt
+          npm ci --prefix photon
+      - name: Check deployment scripts
+        run: bash -n deploy/vultr/*.sh
+      - name: Run every server route and Swift contract test
+        working-directory: server
+        run: .venv/bin/python -m pytest -q tests
+      - name: Check Photon types and both isolated integration flows
+        working-directory: photon
+        run: |
+          npm run typecheck
+          npm test
+      - name: Check the reference client
+        working-directory: photon-scaffold
+        run: npm test

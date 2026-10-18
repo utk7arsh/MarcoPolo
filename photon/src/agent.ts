@@ -131,7 +131,13 @@ export class MarcoAgent {
     const question = store.createQuestion({ id: questionId, kind: "identify", itemId: item.id, caretaker: caretaker.handle, messageIds: [], status: "pending" });
 
     const conv = caretaker.conversation;
-    const photoId = await channel.send(conv, { type: "image", path: media.path(item.photo!), mimeType: "image/jpeg" }, { key: `ask:${question.id}:photo` });
+    // Save each accepted send before the next network operation. A prompt failure
+    // must not forget the photo or break a reply to it after a restart.
+    let photoId = question.messageIds[0];
+    if (!photoId) {
+      photoId = await channel.send(conv, { type: "image", path: media.path(item.photo!), mimeType: "image/jpeg" }, { key: `ask:${question.id}:photo` });
+      store.updateQuestion(question.id, { messageIds: [photoId] });
+    }
     const askId = await channel.send(
       conv,
       { type: "text", text: `${config.userName} just touched this and asked what it is. Reply with the object's name as text.` },

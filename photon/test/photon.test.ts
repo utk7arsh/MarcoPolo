@@ -134,6 +134,23 @@ test("react: a tapback is a reaction message threaded on its target", async () =
   }
 });
 
+test("send: retrying a photo uses identical multipart bytes with the same idempotency key", async () => {
+  const api = await fakePhoton();
+  const path = join(mkdtempSync(join(tmpdir(), "marco-upload-retry-")), "jar.jpg");
+  writeFileSync(path, PHOTO_BYTES);
+  try {
+    const content = { type: "image" as const, path, mimeType: "image/jpeg" };
+    await api.channel.send(CONV, content, { key: "ask:retry:photo" });
+    await api.channel.send(CONV, content, { key: "ask:retry:photo" });
+    const uploads = api.requests.filter((r) => r.url.endsWith("/attachments"));
+    assert.equal(uploads.length, 2);
+    assert.equal(uploads[0]!.headers["idempotency-key"], uploads[1]!.headers["idempotency-key"]);
+    assert.deepEqual(uploads[0]!.body, uploads[1]!.body, "retries must not change the multipart boundary");
+  } finally {
+    api.close();
+  }
+});
+
 test("toInbound: a photo with a caption becomes media + text, with lazily downloaded bytes", async () => {
   const api = await fakePhoton();
   try {

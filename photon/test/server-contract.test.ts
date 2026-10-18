@@ -125,8 +125,8 @@ test("end to end with the real Marco server: label_request -> iMessage -> /v1/la
     assert.equal((await fetch(`${base}/v1/frames`, { method: "POST", body: frameForm(readFileSync(jpegPath)) })).status, 202);
 
     // Every variable photon/.env might set is given explicitly, so the developer's real credentials never load here.
-    children.push(
-      start(
+    const startBridge = () => {
+      const child = start(
         process.execPath,
         ["--import", "tsx", "src/index.ts"],
         PHOTON_DIR,
@@ -143,8 +143,11 @@ test("end to end with the real Marco server: label_request -> iMessage -> /v1/la
           PROMPT_DELAY_MS: "100",
         },
         logs,
-      ),
-    );
+      );
+      children.push(child);
+      return child;
+    };
+    let service = startBridge();
     await waitFor("Photon connected to /v1/photon", async () => (await (await fetch(`${bridge}/health`)).json()).marco_server.connected);
 
     const mom = async (body: Record<string, string>) => {
@@ -153,6 +156,12 @@ test("end to end with the real Marco server: label_request -> iMessage -> /v1/la
       return ((await res.json()) as { marco_sent: Array<{ type: string; text?: string }> }).marco_sent;
     };
     assert.match((await mom({ text: "hi Marco" })).find((m) => m.type === "text")?.text ?? "", /^Hi Mom! I'm Marco, Grandpa's home helper/);
+
+    // The actual bridge process is absent when the phone asks. Its saved linked
+    // caretaker survives, and the server must replay the request on reconnect.
+    const serviceExited = new Promise((resolve) => service.once("exit", resolve));
+    service.kill("SIGTERM");
+    await serviceExited;
 
     // The phone: pose, then "what is this?".
     const fromServer: Array<Record<string, unknown>> = [];
@@ -163,6 +172,9 @@ test("end to end with the real Marco server: label_request -> iMessage -> /v1/la
     phone.send(JSON.stringify({ type: "query", session_id: "photon-e2e", query_id: "q1", kind: "what_is_this" }));
     const unknown = await waitFor("the what_is_this answer", () => fromServer.find((m) => m.query_id === "q1"));
     assert.equal(unknown.status, "unknown");
+
+    service = startBridge();
+    await waitFor("the restarted bridge", async () => (await (await fetch(`${bridge}/health`)).json()).marco_server.connected);
 
     // Photon got label_request, fetched the crop and texted it to Mom.
     const outbox = async () => (await (await fetch(`${bridge}/dev/outbox`)).json()) as Array<{ id: string; type: string; mime_type?: string; text?: string }>;

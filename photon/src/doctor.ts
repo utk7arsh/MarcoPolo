@@ -4,6 +4,8 @@
 // The Marco server, per docs/INTERFACES.md §5: GET /v1/items through MARCO_SERVER_URL, and the /v1/photon socket.
 import { ApiError, Photon } from "@photon-ai/api";
 import { io } from "socket.io-client";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { loadConfig, normalizeHandle } from "./config.js";
 import { photonSocketUrl } from "./marco-server.js";
 
@@ -40,6 +42,21 @@ const photon = config.photon!;
 ok(`project ${photon.projectId.slice(0, 12)}..., key ${photon.apiKey.slice(0, 7)}..., origin ${photon.origin}`);
 
 const client = new Photon({ baseUrl: photon.origin, headers: { Authorization: `Bearer ${photon.apiKey}` } });
+
+// Do not instantiate Store: a diagnostic must not migrate or change saved state.
+const stateFile = join(config.dataDir, "marco-photon.json");
+if (existsSync(stateFile)) {
+  try {
+    const state = JSON.parse(readFileSync(stateFile, "utf8")) as { questions?: Record<string, { kind: string; status: string }> };
+    const pending = Object.values(state.questions ?? {}).filter((q) => q.kind === "identify" && q.status === "pending").length;
+    if (pending) bad(`${pending} identification request(s) still pending: crop/message delivery has not completed. Inspect before retrying; an old request may be test data.`);
+    else ok("no incomplete identification sends in local state");
+  } catch {
+    bad("cannot read saved bridge state");
+  }
+}
+if (!config.caretakerNames.size) bad("CARETAKERS is empty: nobody may label or receive a photo");
+if (config.primaryCaretaker && !config.caretakerNames.has(config.primaryCaretaker)) bad("PRIMARY_CARETAKER is not in CARETAKERS");
 
 try {
   const project = (await client.projects.get({ path: { projectId: photon.projectId } })) as { name?: string };
@@ -118,7 +135,7 @@ if (!serverUrl) {
       resolve();
     };
     const timer = setTimeout(() => finish(false, "/v1/photon: no answer within 10 s"), 10_000);
-    ws.onopen = () => setTimeout(() => finish(true, "/v1/photon accepted the socket: label requests will reach Photon"), 300);
+    ws.onopen = () => setTimeout(() => finish(true, "/v1/photon accepted the socket (connection only; not proof of iMessage delivery)"), 300);
     ws.onclose = (ev) => finish(false, ev.code === 1008 ? "/v1/photon closed with 1008: this machine's login is not in TAILSCALE_ALLOWED_LOGINS" : `/v1/photon closed (${ev.code})`);
     ws.onerror = () => {};
   });

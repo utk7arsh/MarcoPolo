@@ -142,8 +142,8 @@ export interface PhotonSocket {
 }
 
 /**
- * The server's /v1/photon WebSocket (server to bridge only), reconnecting with backoff. The server does not queue
- * label requests for a disconnected bridge, so the connection state is surfaced on /health.
+ * The server's /v1/photon WebSocket (server to bridge only), reconnecting with backoff.
+ * The server replays recent unanswered requests on reconnect; the agent deduplicates by touch_id.
  */
 export function connectPhotonSocket(
   base: string,
@@ -156,9 +156,23 @@ export function connectPhotonSocket(
   let up = false;
   let stopped = false;
   let backoff = 500;
+  let reconnect: ReturnType<typeof setTimeout> | undefined;
   let queue: Promise<unknown> = Promise.resolve();
 
+  const deliver = async (request: LabelRequest) => {
+    for (let attempt = 1; attempt <= 3 && !stopped; attempt++) {
+      try {
+        return await onRequest(request);
+      } catch (err) {
+        if (attempt === 3 || (err instanceof MarcoServerError && err.permanent)) throw err;
+        log.warn(`label_request ${request.touch_id} attempt ${attempt} failed; retrying`, err);
+        await new Promise((resolve) => setTimeout(resolve, attempt * 500));
+      }
+    }
+  };
+
   const connect = () => {
+    if (stopped) return;
     const socket = new WebSocketImpl(url);
     ws = socket;
     // Node's WebSocket fires only `error` (no `close`) when the connection is refused, e.g. while the server restarts,
@@ -171,7 +185,7 @@ export function connectPhotonSocket(
       if (up) onState(false);
       up = false;
       if (stopped) return;
-      setTimeout(connect, backoff);
+      reconnect = setTimeout(connect, backoff);
       backoff = Math.min(backoff * 2, 8_000);
     };
     const watchdog = setTimeout(() => {
@@ -201,7 +215,8 @@ export function connectPhotonSocket(
       if (msg.type !== "label_request") return;
       const request = msg as LabelRequest;
       // One request at a time, in arrival order.
-      queue = queue.then(() => onRequest(request)).catch((err) => log.error(`label_request ${request.touch_id} failed`, err));
+      log.info(`received label_request ${request.touch_id}`);
+      queue = queue.then(() => deliver(request)).catch((err) => log.error(`label_request ${request.touch_id} failed after retries`, err));
     };
     socket.onclose = (ev: CloseEvent) => {
       if (ev.code === 1008) log.error(`/v1/photon closed with 1008: ${NOT_AUTHORISED}`);
@@ -217,6 +232,8 @@ export function connectPhotonSocket(
     },
     close() {
       stopped = true;
+      clearTimeout(reconnect);
+      up = false;
       ws?.close();
     },
   };

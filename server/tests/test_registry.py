@@ -139,3 +139,17 @@ def test_without_a_data_folder_nothing_is_written(tmp_path):
     r.save("item1", name="cumin", source="photon", photo=b"x")
     r.remove(["item1"])
     assert r.items() == [] and not r.enabled
+
+
+@pytest.mark.parametrize("mode", ["stub", "real"])
+def test_retried_touch_label_reuses_the_item_after_a_lost_http_response(tmp_path, mode):
+    from marco.brain import RealBrain
+    from marco.perception.detector import TruthDetector
+    from marco.stub import StubBrain
+    b = StubBrain(tmp_path) if mode == "stub" else RealBrain(TruthDetector({}), tmp_path)
+    b.touches["touch1"] = dict(crop_jpeg=jpeg_bytes(), position=[0, 0.8, -1], item_id=None)
+    first = b.label("touch1", None, "cumin", "That's cumin.", None, "m4a")
+    # The bridge did not receive the first response and sends the same touch again.
+    second = b.label("touch1", None, "cumin", "That's cumin.", None, "m4a")
+    assert first[0][1]["item_id"] == second[0][1]["item_id"]
+    assert len(b.registry.items()) == 1

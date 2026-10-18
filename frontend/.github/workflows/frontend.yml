@@ -1,3 +1,4 @@
+# Legacy nested template. GitHub runs the repository-root .github/workflows/frontend.yml.
 name: Frontend
 on:
   push:

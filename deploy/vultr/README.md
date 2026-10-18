@@ -79,6 +79,48 @@ cd deploy/vultr
   - **Don't install your own NVIDIA driver:** the A16 and A40 are vGPUs, and the host manages their driver.
 - **The gate check:** `deploy` checks that an unauthenticated local request gets 403 before it publishes anything with `tailscale serve`.
 
+## Photon bridge on the same host
+
+The bridge uses `/etc/marco/photon.env`, root-owned mode `0600`, loaded by
+`marco-photon.service`. The required names are in `photon/.env.example`; never
+copy a real environment file into GitHub. The server's ElevenLabs TTS settings
+stay in `/etc/marco/local.env`, not in the bridge.
+
+For an update, stop the existing `marco-photon` service before replacing its
+dependencies. Keep all other copies stopped, including the venue Mac. Preserve
+`/var/lib/marco-photon`: its JSON contains the caretaker conversation and event
+cursor, and its media contains cached object photos.
+
+From a teammate's tailnet-connected checkout, after pulling and testing:
+
+```bash
+rsync -az --exclude '.env*' --exclude node_modules --exclude data --exclude dist \
+  photon/ root@marco-gpu:/opt/marco/photon/
+scp deploy/vultr/marco-photon.service deploy/vultr/remote-setup-photon.sh \
+  root@marco-gpu:/opt/marco/deploy/
+ssh root@marco-gpu 'bash /opt/marco/deploy/remote-setup-photon.sh'
+```
+
+The setup installs a checksum-verified Node 24 runtime, pinned dependencies and
+the service unit. It validates configuration but deliberately does **not** start
+the bridge. Complete the state/cursor handoff from the old instance first, then:
+
+```bash
+ssh root@marco-gpu 'systemctl enable --now marco-photon'
+ssh root@marco-gpu 'curl --fail http://127.0.0.1:8787/health'
+ssh root@marco-gpu 'cd /opt/marco/photon && /opt/marco/node/bin/node --env-file=/etc/marco/photon.env --import tsx src/doctor.ts'
+```
+
+Node is installed privately under `/opt/marco/node`; it need not be on root's
+default PATH. The bridge runs as `marco`, restarts on failure and writes only its
+private state directory. The status port stays on localhost. Preserve the
+tailnet HTTPS `MARCO_SERVER_URL` even on the same host so authentication sees
+the host's identity. `marco-vultr.sh deploy` continues to update the server only.
+
+GitHub's active root workflows test the frontend and server/Photon/Swift
+contracts. They use no production keys and do not deploy. Runtime secrets remain
+on Vultr; a secret-manager setup is not required for the demo.
+
 ## Troubleshooting
 
 - **"can't be deployed in lax right now":** run `./marco-vultr.sh plans lax`, or switch to `sjc` (see above).

@@ -39,14 +39,23 @@ stream handles incoming messages with a saved cursor. Assign the caretaker to a
 managed iMessage line: the assigned line is Marco's number; `CARETAKERS` contains
 the sender's number. The caretaker texts Marco first to establish the conversation.
 
-`MARCO_SERVER_URL` is the private `tailscale serve` HTTPS URL. This Mac must be
-on the team tailnet, with its login in the server's `TAILSCALE_ALLOWED_LOGINS`.
-The doctor checks the key, assigned line, event stream and server access.
+`MARCO_SERVER_URL` is the private `tailscale serve` HTTPS URL. The bridge host
+must be on the team tailnet, with its login in the server's
+`TAILSCALE_ALLOWED_LOGINS`, even if it shares the server's Vultr machine.
+The doctor checks the key, assigned line, event stream, server access and saved
+incomplete requests. A successful connection does not prove iMessage delivery.
+The demo bridge runs on Vultr; see the
+[audit and handoff plan](../docs/PHOTON-INTEGRATION-AUDIT.md).
+It is now installed as `marco-photon.service`; deployment and restart commands
+are in [the Vultr guide](../deploy/vultr/README.md#photon-bridge-on-the-same-host).
 For local simulation, start an isolated loopback stub server and use
 `MARCO_SERVER_URL=http://127.0.0.1:8000 npm run sim`; no Photon credentials needed.
 
 The status service binds `127.0.0.1:8787` only (`PORT` overrides it). `/dev/*`
 routes exist in sim mode only. The phone never calls this service directly.
+`/health` includes `pending_questions`; `ok` requires a server connection, a
+linked allowed caretaker and no saved incomplete identification sends. It is
+still not proof of provider delivery. Preserve `DATA_DIR` across bridge restarts.
 `npm ci` installs pinned `ffmpeg-static` in ignored `node_modules/` for image
 conversion; system ffmpeg and macOS sips are fallbacks. Install-script approvals
 are explicit in `package.json`. No binary, data or secret belongs in Git.
@@ -59,9 +68,19 @@ are explicit in `package.json`. No binary, data or secret belongs in Git.
 - Only configured `CARETAKERS` may register, answer or receive item photos.
   An empty allow-list admits nobody, including old saved caretakers.
 - The status port is claimed before connecting, preventing a second local copy.
+  Keep exactly one active bridge across all hosts; that guard cannot stop a
+  second copy on a different machine.
 - Events are checkpointed after handling. A failed delivery is replayed; stable
   message-derived IDs and outbound idempotency keys avoid duplicate labels and
   confirmations. Repeated failures are logged and skipped after three attempts.
+- Server-originated requests also get up to three send attempts. An accepted
+  photo ID is saved before the text prompt, so a failed prompt can be retried
+  without losing the reply link or resending the photo. Attachment retries use
+  the same idempotency key and identical multipart bytes.
+- The server replays recent unanswered requests when the bridge reconnects:
+  at most 128 requests, for 10 minutes, in memory only. A server restart loses
+  that buffer and its touch crops. Inspect old pending bridge records before
+  retrying; do not automatically resend historical test questions.
 - If a touch expired (404), the bridge registers its saved crop and applies the
   typed answer. State, photos and event cursor live under ignored `DATA_DIR`.
 - Existing saved records and optional server audio fields stay compatible, but
@@ -74,9 +93,10 @@ npm run typecheck
 npm test
 ```
 
-47 tests cover typed registration/answers/corrections, recording rejection,
+52 tests cover typed registration/answers/corrections, recording rejection,
 allow-list enforcement, retakes, media conversion, reconnect/replay, idempotency
-and the actual local server's persistence/reset contract. The contract test needs
+and the actual local server's persistence/reset contract, including a bridge
+restart while an unknown-object request is waiting. The contract test needs
 `server/.venv` or `MARCO_SERVER_PYTHON` with stub dependencies; it uses isolated
 data and never touches shared items. End-to-end iMessage delivery also requires
 an assigned line and a real caretaker sender; mocks do not prove that transport.

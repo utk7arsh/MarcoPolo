@@ -15,7 +15,7 @@
 >
 > No route may ever answer without a login. `/docs`, `/redoc` and `/openapi.json` stay switched off.
 
-Checked against `main` at `a8261b4` (2026-10-18). The source of truth is `server/marco/app.py` and `docs/INTERFACES.md`; if this list disagrees with them, they win, so fix this list.
+Checked against `server/marco/app.py` and the Photon replay fixes (2026-10-18). The source of truth is `server/marco/app.py` and `docs/INTERFACES.md`; if this list disagrees with them, they win, so fix this list.
 
 ## Base URL and login
 
@@ -103,7 +103,10 @@ Registrations and labels survive a server restart (under `MARCO_DATA/registry/`)
 |---|---|---|---|---|---|
 | WS | `/v1/photon` | the Photon bridge | listen only; anything it sends is ignored | server sends `label_request` `{touch_id, crop_url, question}` | closed without a login |
 
-A `label_request` made while no bridge is connected is not queued.
+The server retains up to 128 unanswered requests for 10 minutes and replays them
+when the bridge connects. Deduplicate by `touch_id`; a saved label resolves its
+request. The buffer and touch crops are memory-only and do not survive a server
+restart. Reposting the same retained touch label reuses its item ID.
 
 ## Dashboard
 

@@ -231,6 +231,7 @@ speech. It uses the same fail-closed Tailscale authentication as every other rou
 ## 5. Photon to server (Utkarsh's Photon service)
 - **Connect through the `tailscale serve` URL,** even on the server Mac, so the allow-list sees the bridge's tailnet login.
 - **Requests:** listen on WebSocket `/v1/photon` for `{"type": "label_request", "touch_id": "…", "crop_url": "/v1/touch/…/crop.jpg", "question": "What is this?"}`. These are sent when the user asks "what is this?" about an unknown item.
+- **Reconnect delivery:** the server retains up to 128 unanswered requests for 10 minutes and replays them to an authenticated bridge when it connects. Delivery is at least once: deduplicate by `touch_id`, including across bridge restarts. Saving a label resolves that request. This buffer and touch crops are memory-only; a server restart loses them. The bridge can use its saved crop if a later answer encounters an expired touch (404).
 - **Asking:** send the crop (the touched item boxed) to the caretaker over iMessage.
 - **Replying:** post the answer to `POST /v1/labels` as multipart:
   - `touch_id`, `name` (short, e.g. "cumin"), and `text` (the caretaker's words, which the phone speaks);
@@ -241,6 +242,8 @@ speech. It uses the same fail-closed Tailscale authentication as every other rou
   - anchors it where it was touched;
   - sends `label_ready` to the phone;
   - replies `{"status": "ok", "item_id": "…"}`.
+- **Retried answers:** posting the same retained `touch_id` again reuses its existing `item_id`, so a lost HTTP response does not create a second item. It can emit `label_ready` again. Prefer `item_id` for subsequent corrections. This does not make arbitrary `POST /v1/items` uploads idempotent.
+- **Delivery status:** the phone's `unknown` answer means a helper request was generated, not that iMessage accepted or delivered a photo. This contract has no provider-delivery acknowledgement to the phone.
 - **Corrections:** post again with that `item_id` (instead of `touch_id`), the corrected `name` and typed `text`. A standalone recording gets a request to type the name; it is not downloaded, transcribed or uploaded as a label.
 - **Caretaker-initiated setup:** the caretaker sends a photo with a caption. Post it to `POST /v1/items` with `name` = the caption.
 - **`source=photon`** goes on every Photon `POST /v1/items` and `POST /v1/labels` (an item a label creates gets this source).

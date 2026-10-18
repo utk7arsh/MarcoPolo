@@ -222,7 +222,7 @@ export class Store {
   /** Open questions for one caretaker, oldest first. */
   openQuestions(caretaker: string): Question[] {
     return Object.values(this.data.questions)
-      .filter((q) => q.caretaker === caretaker && q.status === "open")
+      .filter((q) => q.caretaker === caretaker && (q.status === "open" || (q.status === "pending" && q.messageIds.length > 0)))
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   }
 
@@ -230,6 +230,10 @@ export class Store {
     return Object.values(this.data.questions).find(
       (q) => q.itemId === itemId && q.kind === "identify" && (q.status === "open" || q.status === "pending"),
     );
+  }
+
+  pendingIdentifyQuestions(): Question[] {
+    return Object.values(this.data.questions).filter((q) => q.kind === "identify" && q.status === "pending");
   }
 
 }

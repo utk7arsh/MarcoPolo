@@ -9,6 +9,8 @@ import { MarcoServerError, type LabelPost, type LabelRequest, type MarcoServerAp
 import { Media } from "../src/media.js";
 import { SimChannel, type SimPart } from "../src/sim.js";
 import { Store } from "../src/store.js";
+import { startHttp } from "../src/http.js";
+import type { AddressInfo } from "node:net";
 
 const MOM = "+13105550101";
 const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46]);
@@ -178,6 +180,52 @@ test("ask: no caretaker yet, and a repeated label_request, send nothing extra", 
   const photos = t.sim.outbox.filter((o) => o.type === "attachment").length;
   assert.equal((await t.agent.onLabelRequest(request("t1"))).status, "already_asked");
   assert.equal(t.sim.outbox.filter((o) => o.type === "attachment").length, photos);
+});
+
+test("ask: a failed text prompt preserves the sent photo across a bridge restart and accepts its reply", async () => {
+  const t = setup();
+  await t.say([{ text: "hi Marco" }]);
+  const send = t.sim.send.bind(t.sim);
+  let failPrompt = true;
+  t.sim.send = async (conversation, content, options) => {
+    if (content.type === "text" && content.text.includes("just touched") && failPrompt) {
+      failPrompt = false;
+      throw new Error("prompt connection lost");
+    }
+    return send(conversation, content, options);
+  };
+  await assert.rejects(t.agent.onLabelRequest(request("partial")), /connection lost/);
+  const photoId = t.sim.outbox.find((o) => o.type === "attachment")!.id;
+  assert.ok(t.store.questionByMessageId(photoId), "persist the accepted photo before sending the prompt");
+  assert.equal(t.store.openQuestions(MOM).length, 1, "a photo-only request can receive an unthreaded answer");
+  const restored = new Store(t.config.dataDir);
+  const agent = new MarcoAgent({ config: t.config, store: restored, media: new Media(t.config.dataDir), channel: t.sim, server: t.server });
+  assert.equal((await agent.onLabelRequest(request("partial"))).status, "sent");
+  assert.equal(t.sim.outbox.filter((o) => o.type === "attachment").length, 1, "retry only the missing prompt");
+  await agent.handle(t.sim.inbound(MOM, [{ text: "cumin" }], { replyTo: photoId }));
+  assert.equal(t.server.labels[0]?.touchId, "partial");
+});
+
+test("health reports an incomplete identification send instead of a healthy empty queue", async () => {
+  const t = setup();
+  await t.say([{ text: "hi Marco" }]);
+  t.sim.failSends = 1;
+  await assert.rejects(t.agent.onLabelRequest(request("health")));
+  const http = startHttp({ config: t.config, agent: t.agent, store: t.store, sim: t.sim, serverConnected: () => true });
+  await new Promise<void>((resolve) => http.once("listening", resolve));
+  const url = `http://127.0.0.1:${(http.address() as AddressInfo).port}/health`;
+  try {
+    const unhealthy = await (await fetch(url)).json();
+    assert.equal(unhealthy.marco_server.connected, true);
+    assert.equal(unhealthy.pending_questions, 1);
+    assert.equal(unhealthy.ok, false);
+    await t.agent.onLabelRequest(request("health"));
+    const healthy = await (await fetch(url)).json();
+    assert.equal(healthy.pending_questions, 0);
+    assert.equal(healthy.ok, true);
+  } finally {
+    http.close();
+  }
 });
 
 test("teach: a photo with a caption is registered with POST /v1/items as JPEG", async () => {

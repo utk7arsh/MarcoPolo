@@ -49,6 +49,7 @@ class RealBrain:
         self.last_frame = None         # (upright image, meta, Frame, k, jpeg_scale)
         self.guidance_target = None
         self.last_touch = None         # (touch_id, item_id, t)
+        self._sensor_clock = None      # (latest streamed device time, server monotonic receipt)
         self._last_world = 0.0
         self.frames_seen = 0
         self.registry = Registry(Path(data_dir) / "registry" if data_dir else None)
@@ -88,6 +89,8 @@ class RealBrain:
         self.world.observe_camera(T)
         self.touch.set_camera(K, res)
         t = float(meta["t_device"])
+        if self._sensor_clock is None:
+            self._sensor_clock = (t, time.monotonic())
         k = G.upright_turns(T)
         im = Image.open(io.BytesIO(jpeg)).convert("RGB")
         jw, jh = im.size
@@ -137,6 +140,13 @@ class RealBrain:
     def on_phone(self, msg):
         kind = msg.get("type")
         t = float(msg.get("t_device") or 0.0)
+        if kind in ("pose", "hand"):
+            self._sensor_clock = (t, time.monotonic())
+        elif kind == "query" and msg.get("t_device") is None and self._sensor_clock is not None:
+            # iOS QueryMsg deliberately has no t_device. Comparing its former
+            # default zero to device uptime made old fingers/touches fresh forever.
+            device_t, received = self._sensor_clock
+            t = device_t + max(0.0, time.monotonic() - received)
         if kind == "pose":
             T = G.mat4(msg["camera_transform"])
             out = [("phone", e) for e in self.world.user_pose(T, t)]
@@ -181,12 +191,12 @@ class RealBrain:
             self.world.set_door(self.world.user_T[:3, 3])
             return [("phone", dict(type="answer", query_id=qid, kind="set_place", name="door", ok=True))]
         if qk == "what_is_this":
-            if self.last_touch and t - self.last_touch[2] <= RECENT_TOUCH_S and self.last_touch[1] in self.world.items:
+            if self.last_touch and 0 <= t - self.last_touch[2] <= RECENT_TOUCH_S and self.last_touch[1] in self.world.items:
                 it = self.world.items[self.last_touch[1]]
                 return [("phone", dict(type="answer", query_id=qid, kind="what_is_this", status="known", item_id=it.item_id,
                                        name=it.name, label_text=it.label_text, label_audio_url=it.label_audio_url,
                                        touch_id=self.last_touch[0]))]
-            tip = self.touch.tip if self.touch.tip_t is not None and t - self.touch.tip_t <= RECENT_TOUCH_S else None
+            tip = self.touch.tip if self.touch.tip_t is not None and 0 <= t - self.touch.tip_t <= RECENT_TOUCH_S else None
             if tip is None or self.last_frame is None:
                 return [("phone", dict(type="answer", query_id=qid, kind="what_is_this", status="no_touch"))]
             crop = self._crop_around(tip)
@@ -235,6 +245,8 @@ class RealBrain:
         tc = self.touches.get(touch_id) if touch_id else None
         if touch_id and tc is None:
             raise KeyError(f"unknown touch_id {touch_id}")
+        if item_id is None and tc is not None:
+            item_id = tc.get("item_id")       # a lost HTTP response may retry the original touch
         if item_id and item_id not in self.world.items:
             raise KeyError(f"unknown item_id {item_id}")
         new_photo = None

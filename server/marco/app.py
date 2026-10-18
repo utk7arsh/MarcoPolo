@@ -24,6 +24,7 @@ from .hub import Hub
 from .recorder import Recorder
 from .stub import StubBrain
 from .speech import SpeechOutput, SpeechSettings, SpeechUnavailable
+from .photon_requests import PendingLabelRequests
 
 DATA = Path(os.environ.get("MARCO_DATA", Path(__file__).resolve().parents[1] / "data"))
 REQUIRED_META = ("session_id", "map_id", "frame_id", "t_device", "camera_transform", "intrinsics", "image_resolution")
@@ -55,6 +56,7 @@ DASHBOARD_ONLY = {"command_ack"}        # phone messages for the dashboard adapt
 latest_frame: dict[str, int] = {}
 work_lock = asyncio.Lock()
 speech = SpeechOutput(SpeechSettings.from_env())
+pending_labels = PendingLabelRequests()
 
 
 class SpeechRequest(BaseModel):
@@ -78,6 +80,8 @@ async def spoken_reply(body: SpeechRequest, caller=Depends(require_caller)):
 
 async def dispatch(out):
     for channel, msg in out:
+        if channel == "photon" and msg.get("type") == "label_request":
+            pending_labels.add(msg)
         dash.observe(channel, msg)
         await hub.send(channel, msg)
         if channel == "phone":
@@ -171,6 +175,9 @@ async def _listen_only(ws: WebSocket, channel: str):
         return
     hub.join(channel, ws)
     try:
+        if channel == "photon":
+            for request in pending_labels.pending():
+                hub.send_to(ws, request)
         if channel == "dashboard":
             await ws.send_json(brain.snapshot())
             await ws.send_json(dict(type="timeline", events=brain.events[-200:]))
@@ -225,6 +232,7 @@ async def post_label(name: str = Form(...), touch_id: str | None = Form(None), i
         out = brain.label(touch_id, item_id, name.strip(), text, data, ext, source=src)
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    pending_labels.resolve(touch_id)
     await dispatch(out)
     item = next((m["item_id"] for _, m in out if m.get("type") == "label_ready"), None)
     return dict(status="ok", item_id=item)          # Photon adds a later voice note to this item_id
