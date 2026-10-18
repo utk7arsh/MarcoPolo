@@ -70,6 +70,13 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
 - **From the internet:** ports 80, 443 and 8000 are closed (probed 2026-10-17). The app listens on 127.0.0.1, and ufw allows only SSH.
 - **Remaining risk:** root SSH with a password. Anyone with SSH can call 127.0.0.1:8000 directly. Change the password (it was shared in chat) and switch to keys only.
 - **To add a teammate:** invite them to the tailnet, add their login to `ALLOWED`, and redeploy.
+- **Deployed 2026-10-18 03:15 UTC: commit `f778d18`.** It brings the floor-relative surfaces, the 4 m range gate, the gated status at `/` and FastAPI's docs off. It was deployed with the kit's own steps over SSH.
+  - The previous code is at `/opt/marco/backup-server-20261018-031539.tgz`.
+  - **Checked on the box:**
+    - `/` shows the status, signed in as `utk7arsh@github`;
+    - `/docs` and `/openapi.json` give 404;
+    - `/v1/items` gives 200 through the URL and 403 on 127.0.0.1 without a login;
+    - a forged `Tailscale-User-Login` header sent through `tailscale serve` is replaced by the real login.
 
 ## Built and verified
 - **`server/`** (`cd server && ../poc/.venv/bin/python -m pytest -q tests`):
