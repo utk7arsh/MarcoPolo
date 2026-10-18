@@ -19,6 +19,9 @@ Last updated: 2026-10-18. Keep this file current: update it whenever a decision 
   with `MARCO_FRAMES_ASYNC=0` (conftest) so they see results; `test_frames_async.py` covers the real path.
 - Tests: `test_detector.py` (twins, look-alikes, batched scores, fast pixels vs the processor, fallback) and
   `test_frames_async.py`.
+- **Live on Vultr: `6f5315d`** (server only; dashboard build untouched). A16 `bench_frame.py` mean: 0.138 / 0.234 /
+  0.348 s at 1 / 10 / 20 items, against 0.174 / 0.266 / 0.377 s before; the box reports the fast path on, fp16 on CUDA.
+  Restart kept all 12 items; unauthenticated calls still get 403. Full server suite: 149 passed, 1 skipped.
 
 ## Saved dashboard items: startup fix (October 18, 2026)
 
