@@ -1,5 +1,5 @@
 // macOS hardware check using the same HeadTracker and SpatialAudio as the iPhone app.
-// Run through spatial/check-airpods.sh. No microphone capture or network access.
+// Run through ios/spatial/check-airpods.sh. No microphone capture or network access.
 import CoreMotion
 import CoreAudio
 import AVFAudio

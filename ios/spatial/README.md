@@ -3,7 +3,7 @@
 Mac test tools for Marco Polo's iPhone audio pipeline. Run commands from the
 repository root on macOS with Xcode's Swift tools installed.
 
-These tools compile the actual classes in `../ios/Marco/Audio/` and the portable
+These tools compile the actual classes in `../Marco/Audio/` and the portable
 iOS core. There is no second copy of the production audio engine. The iPhone
 still owns ARKit positioning, head fusion and live guidance; the server supplies
 world-space targets and touch events.
@@ -11,14 +11,14 @@ world-space targets and touch events.
 ## Automated checks (silent)
 
 ```sh
-sh spatial/check-render.sh       # Apple offline HRTF renderer
-sh spatial/check-simulation.sh   # deterministic scripted trajectory checks
-sh spatial/check-airpods.sh --build-only
-sh spatial/check-options.sh      # withdrawn mode refuses playback in script and app
+sh ios/spatial/check-render.sh       # Apple offline HRTF renderer
+sh ios/spatial/check-simulation.sh   # deterministic scripted trajectory checks
+sh ios/spatial/check-airpods.sh --build-only
+sh ios/spatial/check-options.sh      # withdrawn mode refuses playback in script and app
 sh ios/check.sh                 # production portable Swift checks
 ```
 
-Build output stays in ignored `spatial/build/`. No package installation is needed.
+Build output stays in ignored `ios/spatial/build/`. No package installation is needed.
 The scripts work when invoked from another directory as well.
 
 ## AirPods checks (physical hardware)
@@ -28,9 +28,9 @@ permission for the helper when prompted. Listening uses a 35% app mixer gain,
 does not change system volume, and does not record the microphone or use a server.
 
 ```sh
-sh spatial/check-airpods.sh              # 12-second motion sample check
-sh spatial/check-airpods.sh --listen     # timed left/right/front/back voice tour
-sh spatial/check-airpods.sh --front-back # timed A/B tour with live head yaw
+sh ios/spatial/check-airpods.sh              # 12-second motion sample check
+sh ios/spatial/check-airpods.sh --listen     # timed left/right/front/back voice tour
+sh ios/spatial/check-airpods.sh --front-back # timed A/B tour with live head yaw
 ```
 
 The tours advance on a timer to compare sounds. They do **not** track walking,
@@ -45,7 +45,7 @@ claimed a touch even while they stayed still. That option now exits without
 audio. The old sequence is preserved only for explicit sound demonstrations:
 
 ```sh
-sh spatial/check-airpods.sh --simulate-approach
+sh ios/spatial/check-airpods.sh --simulate-approach
 ```
 
 Stay seated. Only head yaw comes from hardware. Distance, hand proximity and

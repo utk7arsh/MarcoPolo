@@ -20,7 +20,7 @@ announcements continue to originate ahead. No wire formats changed.
 
 ## Automated results
 
-- `sh spatial/check-render.sh`: **21 passed**, using the app's actual `SpatialAudio`
+- `sh ios/spatial/check-render.sh`: **21 passed**, using the app's actual `SpatialAudio`
   class and Apple's offline HRTF renderer. It exercises mono content through the
   voice-file path, immediate left/right placement, centered front/back positions,
   distinct front/back filtering, returning from a general announcement to an item
@@ -33,7 +33,7 @@ announcements continue to originate ahead. No wire formats changed.
   back **−0.73 dB**. These are rendered channel-energy differences for the test
   signal, not measured localization accuracy or a promised volume at the ear.
 - `sh ios/check.sh`: **204 passed**.
-- After relocation into `spatial/`, all **21 renderer and 18 scripted-simulator
+- After relocation into `ios/spatial/`, all **21 renderer and 18 scripted-simulator
   checks** passed again; **two withdrawn-option checks** verify both the script
   and helper executable reject `--guidance`. The relocated helper builds/signs.
 - Xcode Debug build for generic iOS Simulator: **BUILD SUCCEEDED**. This is a build,
@@ -58,10 +58,10 @@ For this test, turn macOS Spatialize Stereo off so it does not add another
 spatialization layer to the app's already binaural output.
 
 ```sh
-sh spatial/check-airpods.sh           # 12-second motion check; no microphone capture
-sh spatial/check-airpods.sh --listen  # 28-second spatial voice and head-turn check
-sh spatial/check-airpods.sh --front-back # 46-second tracked voice/beacon retest
-sh spatial/check-airpods.sh --simulate-approach # explicit scripted sound demo only
+sh ios/spatial/check-airpods.sh           # 12-second motion check; no microphone capture
+sh ios/spatial/check-airpods.sh --listen  # 28-second spatial voice and head-turn check
+sh ios/spatial/check-airpods.sh --front-back # 46-second tracked voice/beacon retest
+sh ios/spatial/check-airpods.sh --simulate-approach # explicit scripted sound demo only
 ```
 
 The helper is compiled from the app's existing audio and head-tracker classes.
@@ -271,7 +271,7 @@ execution. The wearer then reported no movement while all stages happened, so
 this run fails their requested interaction test. Body distance, hand reach and
 touch were simulated; the apparent head lock needs further diagnosis.
 
-`sh spatial/check-simulation.sh`: **18 checks passed**, exercising the scripted
+`sh ios/spatial/check-simulation.sh`: **18 checks passed**, exercising the scripted
 sequence, fixed world target, monotonic approach, progressively faster beeps,
 distance narration, near-hand tone, touch and explicit unconfirmed-alignment
 timeout. These checks validate the simulator, including behavior the wearer

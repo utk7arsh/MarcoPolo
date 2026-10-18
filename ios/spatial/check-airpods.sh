@@ -21,7 +21,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <key>NSMotionUsageDescription</key><string>Verify headphone head tracking for Marco Polo spatial guidance.</string>
 </dict></plist>
 PLIST
-swiftc -swift-version 5 -Onone ../ios/Marco/Core/*.swift ../ios/Marco/Capture/FrameEncoder.swift ../ios/Marco/Capture/HandTracker.swift ../ios/Marco/Net/*.swift ../ios/Marco/Audio/*.swift ../ios/Marco/Voice/*.swift Tools/SpatialAudioCheck/*.swift -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __info_plist -Xlinker "$APP/Contents/Info.plist" -o "$APP/Contents/MacOS/MarcoAirPodsCheck"
+swiftc -swift-version 5 -Onone ../Marco/Core/*.swift ../Marco/Capture/FrameEncoder.swift ../Marco/Capture/HandTracker.swift ../Marco/Net/*.swift ../Marco/Audio/*.swift ../Marco/Voice/*.swift Tools/SpatialAudioCheck/*.swift -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __info_plist -Xlinker "$APP/Contents/Info.plist" -o "$APP/Contents/MacOS/MarcoAirPodsCheck"
 codesign --force --sign - "$APP" >/dev/null 2>&1
 if [ "${1:-}" = "--build-only" ]; then exit 0; fi
 # LaunchServices gives the motion permission request the helper's own app identity.
