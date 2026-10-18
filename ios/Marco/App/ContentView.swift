@@ -70,10 +70,11 @@ struct ContentView: View {
                     Spacer(minLength: 28)
                     cameraControl.frame(maxWidth: .infinity).padding(.top, 20)
                     if model.control.phase == .running {
-                        Button("Check camera view") { preview = true }
+                        Button("Open LiDAR view") { preview = true }
                             .font(Theme.font(15, .medium, relativeTo: .subheadline))
                             .frame(maxWidth: .infinity, minHeight: 44)
-                            .accessibilityIdentifier("showCameraPreview")
+                            .accessibilityHint("Shows the camera, LiDAR depth, the room as points, and remembered items.")
+                            .accessibilityIdentifier("showLiDARView")
                     }
                 }
                 .padding(.horizontal, 28).padding(.bottom, 22)
@@ -82,7 +83,7 @@ struct ContentView: View {
             }.background(Theme.canvas)
         }
         .sheet(isPresented: $settings) { ConnectionSettingsView().environmentObject(model) }
-        .sheet(isPresented: $preview) { CameraPreviewSheet(session: model.arSession) }
+        .fullScreenCover(isPresented: $preview) { LiDARScreen().environmentObject(model) }
         .accessibilityElement(children: .contain)
         .accessibilityAction(.magicTap) { if !settings && !preview { performCameraAction() } }
         .onAppear { model.refreshCameraAccess(); audio.refresh() }
@@ -265,33 +266,4 @@ struct ConnectionSettingsView: View {
         .onAppear { address = model.serverText }.presentationDetents([.medium, .large])
         .accessibilityAction(.escape) { dismiss() }
     }
-}
-
-private struct CameraPreviewSheet: View {
-    let session: ARSession
-    @Environment(\.dismiss) private var dismiss
-    var body: some View {
-        ZStack(alignment: .topTrailing) {
-            ARCameraPreview(session: session).ignoresSafeArea()
-            Button("Done") { dismiss() }.font(Theme.font(17, .medium)).foregroundStyle(.white)
-                .padding(16).background(.black.opacity(0.65), in: Capsule()).padding(20)
-                .accessibilityLabel("Close camera preview")
-        }
-        .accessibilityAction(.escape) { dismiss() }
-    }
-}
-private struct ARCameraPreview: UIViewRepresentable {
-    let session: ARSession
-    func makeUIView(context: Context) -> ARSCNView {
-        let view = ARSCNView(frame: .zero)
-        let captureDelegate = session.delegate
-        let captureQueue = session.delegateQueue
-        view.session = session // Reuse capture; never start another camera or replace the ARSession delegate.
-        session.delegate = captureDelegate
-        session.delegateQueue = captureQueue
-        view.scene = SCNScene()
-        view.accessibilityElementsHidden = true // The preview has no interpreted status; controls stay accessible.
-        return view
-    }
-    func updateUIView(_ view: ARSCNView, context: Context) {}
 }

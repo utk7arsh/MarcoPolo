@@ -164,7 +164,7 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
   - **Status port:** 127.0.0.1 only (`/health`, plus `/dev/*` in sim mode). The phone never talks to `photon/`.
   - **Checks:** `npm run doctor` checks the Photon 2.0 key, line and event stream, plus `MARCO_SERVER_URL` (`GET /v1/items`, the `/v1/photon` socket and the allow-list), read-only.
   - **Verification:** `cd photon && npm test` runs 39 tests. One of them is end to end against the real `server/` (stub, loopback): `what_is_this` → `label_request` → iMessage → text then voice memo → `label_ready` with m4a audio → `what_is_this` known → setup photo → `GET /v1/items`. It runs when `server/.venv` (or `MARCO_SERVER_PYTHON`) has the stub dependencies.
-- **Verification totals:** server 79 passed on Vedant's Mac (with the ARKitScenes sample; 76 + 1 skipped where it's absent), Swift 286 (after merging Utkarsh's iOS work), Photon scaffold 8; `photon/` 39 (Utkarsh's run).
+- **Verification totals:** server 79 passed on Vedant's Mac (with the ARKitScenes sample; 76 + 1 skipped where it's absent), Swift 314 (after merging Utkarsh's iOS work and the LiDAR view), Photon scaffold 8; `photon/` 39 (Utkarsh's run).
   - `photon-scaffold`'s `npm test` now runs `node --test test/*.test.js`, which works on Node 22 (thanks, Utkarsh).
 - **Teammates' code on `main`:** `frontend/` (Sandeep, the dashboard) was built against the earlier requirements, not this contract. See the next steps.
 - **`deploy/vultr/` (Utkarsh): the Vultr GPU deployment kit.**
@@ -264,6 +264,11 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
 
 ## Open questions / hour-one tests (need the real phone)
 - **iPhone runtime checks** of the compiled ARKit/UIKit app; no installed simulator runtime is available on this Mac yet.
+- **LiDAR view on the phone (2026-10-17, Utkarsh; built, not yet run on hardware):** "Open LiDAR view" on the running panel (replaces "Check camera view"). Camera, a depth heat map (Turbo, 0.2 to 5 m, opacity and confidence controls) or the room as a GPU point cloud (up to 600k points, grows as you move), plus a centre distance, tap-to-measure pins anchored in 3D, and the server's remembered items drawn where they are (refreshed from the server every 5 s and moved live by events; the guidance target in blue). VoiceOver: "Describe view" and Magic Tap read the distance and items.
+  - It only reads `session.currentFrame` (no second camera, never the session delegate), so frame upload is untouched.
+  - Shaders are Swift source compiled on the phone at runtime: Xcode 26's Metal compiler is a separate download, and a `.metal` file would break the build without it.
+  - Verified on this Mac: `check.sh` runs the point-cloud kernel and the heat-map shader on the Mac's GPU (3D points within 1 mm of `CameraMath`, the server's convention; colours match `DepthPalette`); `MarcoPolo.xcodeproj` builds for iOS.
+  - Not verified: frame rate, heat and battery on the iPhone with capture running; how the overlay lines up on the real display transform.
 - **Phone to Vultr:** the iPhone is on the tailnet and reaches `marco-gpu` (`GET /v1/items` from Safari); the app's streaming to it is not yet run.
 - **AirPods mic (hour-one test 7):** does high-quality recording turn on with the AirPods Pro 3, does the output stay 2 channels, and how much input latency does it add from the vest?
 - **Relocalization** after an app relaunch: time and anchor error.

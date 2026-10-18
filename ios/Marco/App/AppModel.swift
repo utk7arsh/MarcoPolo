@@ -36,6 +36,9 @@ final class AppModel: ObservableObject {
     @Published var airpodsInfo = "not connected"
     @Published var signInfo = ""
     @Published var shareFile: ShareFile?
+    /// Where the server remembers each item, in this map's world frame, for the LiDAR view (LiDAR/LiDARScreen.swift).
+    @Published private(set) var itemMarks: [ItemMark] = []
+    @Published private(set) var guidanceTargetId: String?
 
     let sessionId = UUID().uuidString
 
@@ -299,6 +302,9 @@ final class AppModel: ObservableObject {
         uploader?.items { [weak self] items in
             DispatchQueue.main.async {
                 guard let self, self.running, self.control.generation == ticket, let items else { return }
+                self.itemMarks = items.compactMap { it in
+                    Geo.vec(it.position).map { ItemMark(id: it.item_id, name: it.name, position: $0, surface: it.surface, state: it.state) }
+                }
                 for it in items where it.label_text != nil || it.label_audio_url != nil {
                     self.labels[it.item_id] = (Lines.spokenLabel(name: it.name, labelText: it.label_text), it.label_audio_url)
                     self.cache(it.label_audio_url)
@@ -306,6 +312,12 @@ final class AppModel: ObservableObject {
                 self.learn(items.map(\.name))
             }
         }
+    }
+
+    /// The LiDAR view asks for fresh positions every few seconds while it's open.
+    func refreshItemsNow() {
+        guard running else { return }
+        refreshItems(ticket: control.generation)
     }
 
     /// Item names also arrive on server messages (an item registered over Photon after launch): no refetch needed.
@@ -428,6 +440,9 @@ final class AppModel: ObservableObject {
         emit(MapMsg(session_id: sessionId, event: event, map_id: id), hold: true)
         DispatchQueue.main.async {
             guard self.running, self.control.generation == ticket, self.live.read({ $0.scope == scope }) else { return }
+            if event == "new_map" {                  // new coordinates: remembered positions no longer apply
+                self.itemMarks = self.itemMarks.map { var m = $0; m.state = "stale"; return m }
+            }
             if (self.guidance.active && self.guidanceScope != scope) ||
                 (self.finds.pending != nil && self.finds.pending?.scope != scope) {
                 self.losePosition()
@@ -462,6 +477,8 @@ final class AppModel: ObservableObject {
             phase = guidance.phase
             relAzimuth = guidance.relAzimuthDeg
             distance = guidance.distanceM
+            let target = guidance.active ? guidance.target?.itemId : nil
+            if guidanceTargetId != target { guidanceTargetId = target }
             refreshHealth(t, l)
         }
     }
@@ -572,12 +589,29 @@ final class AppModel: ObservableObject {
     }
 
     private func worldEvent(_ e: WorldEventMsg) {
+        markItem(e)
         switch e.kind {
         case "moved", "put_down", "seen":
             if let p = Geo.vec(e.position) { guidance.retarget(itemId: e.item_id, position: p, surface: e.surface) }
         case "left_behind":
             haptic.impactOccurred()
             speak(Lines.leftBehind(e))
+        default:
+            break
+        }
+    }
+
+    /// Keeps the LiDAR view's item positions live between refreshes.
+    private func markItem(_ e: WorldEventMsg) {
+        let i = itemMarks.firstIndex { $0.id == e.item_id }
+        switch e.kind {
+        case "seen", "moved", "put_down":
+            guard let p = Geo.vec(e.position) else { return }
+            let m = ItemMark(id: e.item_id, name: e.name, position: p, surface: e.surface ?? (i.map { itemMarks[$0].surface } ?? nil),
+                             state: "present")
+            if let i { itemMarks[i] = m } else { itemMarks.append(m) }
+        case "picked_up", "missing":
+            if let i { itemMarks[i].state = e.kind }
         default:
             break
         }

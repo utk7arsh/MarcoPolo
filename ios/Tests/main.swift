@@ -4,6 +4,7 @@ import AVFAudio
 import CoreVideo
 import Foundation
 import ImageIO
+import Metal
 import simd
 
 var passed = 0
@@ -657,6 +658,191 @@ do {
     let s = loop.floatChannelData![0]
     check(loop.frameLength == 48_000 && abs(s[0]) < 1e-6 && abs(s[47_999] - s[0]) < 0.06, "steady tone loops without a click")
     check(Tones.beep(fmt, freq: 880, harmonics: 6, ms: 70, noise: 0.1).frameLength == 3360, "70 ms beep")
+}
+
+// MARK: - LiDAR view (Core/DepthVision.swift)
+
+do {
+    // Colour: near warm, far cool, always a valid colour.
+    let warm = DepthPalette.color(depthM: 0.2), cool = DepthPalette.color(depthM: 4.2), mid = DepthPalette.color(depthM: 2.0)
+    check(warm.x > warm.z && warm.x > 0.4, "near is warm: \(warm)")
+    check(cool.z > cool.x, "far is cool: \(cool)")
+    check([warm, cool, mid].allSatisfy { simd_reduce_min($0) >= 0 && simd_reduce_max($0) <= 1 }, "colours in 0...1")
+    check(DepthPalette.normalized(-1) == 0 && DepthPalette.normalized(99) == 1 && DepthPalette.normalized(.nan) == 1, "normalized clamps")
+
+    // Depth under a point: median of confident pixels; a flying pixel and low confidence don't count.
+    var d = [Float](repeating: 2.0, count: 16 * 12), c = [UInt8](repeating: 2, count: 16 * 12)
+    d[6 * 16 + 8] = 0.3                                     // one flying pixel right under the probe
+    d[5 * 16 + 8] = .nan
+    for i in 0..<16 { c[7 * 16 + i] = 0; d[7 * 16 + i] = 9 }  // a low-confidence row
+    check(DepthProbe.median(depth: d, confidence: c, width: 16, height: 12, u: 8, v: 6) == 2.0, "probe ignores outliers")
+    check(DepthProbe.median(depth: d, confidence: c, width: 16, height: 12, u: 99, v: 6) == nil, "probe outside the map")
+    let allLow = [UInt8](repeating: 0, count: 16 * 12)
+    check(DepthProbe.median(depth: d, confidence: allLow, width: 16, height: 12, u: 8, v: 6) == nil, "no confident pixels: nil")
+    // Straight from padded CVPixelBuffers, as ARKit hands them over.
+    var ramp = [Float](repeating: 0, count: 256 * 192)
+    for v in 0..<192 { for u in 0..<256 { ramp[v * 256 + u] = 0.5 + Float(u) / 100 } }
+    let dpb = padded(ramp, 256, 192, format: kCVPixelFormatType_DepthFloat32)
+    let cpb = padded([UInt8](repeating: 2, count: 256 * 192), 256, 192, format: kCVPixelFormatType_OneComponent8)
+    let probed = DepthProbe.median(depth: dpb, confidence: cpb, at: CGPoint(x: 0.5, y: 0.5)) ?? -1
+    check(abs(probed - (0.5 + 128.0 / 100)) < 1e-4, "probe from a padded buffer: \(probed)")
+
+    // Stats.
+    let st = DepthStats.of(depth: [1, 2, 3, .nan, 9, 0], confidence: [2, 2, 1, 2, 2, 2], step: 1)
+    check(near(st.validFraction, 0.5) && near(st.highFraction, 2.0 / 6) && st.medianM == 2, "depth stats: \(st)")
+
+    // Pinhole round trip, in the server's conventions: the principal point at 2 m is 2 m down the optical axis.
+    let K = simd_float3x3(columns: (SIMD3(1450, 0, 0), SIMD3(0, 1450, 0), SIMD3(960, 720, 1)))
+    let size = CGSize(width: 1920, height: 1440)
+    let T = pose(yawLeftDeg: 35, pitchDeg: -25, at: SIMD3(0.4, 1.3, -0.2))
+    let center = CameraMath.unproject(CGPoint(x: 960.0 / 1920, y: 720.0 / 1440), depthM: 2, intrinsics: K, imageSize: size, cameraToWorld: T)
+    let axis = T * SIMD4<Float>(0, 0, -2, 1)
+    check(simd_distance(center, SIMD3(axis.x, axis.y, axis.z)) < 1e-4, "principal point unprojects along -z")
+    let p0 = CGPoint(x: 0.21, y: 0.77)
+    let w = CameraMath.unproject(p0, depthM: 1.7, intrinsics: K, imageSize: size, cameraToWorld: T)
+    if let back = CameraMath.project(w, intrinsics: K, imageSize: size, cameraToWorld: T) {
+        check(abs(back.point.x - p0.x) < 1e-4 && abs(back.point.y - p0.y) < 1e-4 && abs(back.depthM - 1.7) < 1e-4, "project inverts unproject")
+    } else { check(false, "project returned nil for a point in front") }
+    let behind = T * SIMD4<Float>(0, 0, 2, 1)
+    check(CameraMath.project(SIMD3(behind.x, behind.y, behind.z), intrinsics: K, imageSize: size, cameraToWorld: T) == nil, "behind: nil")
+
+    // Portrait display transform (ARKit's for a 4:3 sensor image on a 3:4 view): the sensor's top-left corner shows
+    // at the view's top-right, as in the server's upright rotation.
+    let portrait = CGAffineTransform(a: 0, b: 1, c: -1, d: 0, tx: 1, ty: 0)
+    let view = CGSize(width: 390, height: 520)
+    let tl = ViewMapping.viewPoint(fromImage: .zero, viewSize: view, displayTransform: portrait)
+    check(abs(tl.x - 390) < 1e-6 && abs(tl.y) < 1e-6, "sensor top-left at view top-right: \(tl)")
+    let img = ViewMapping.imagePoint(fromView: CGPoint(x: 100, y: 300), viewSize: view, displayTransform: portrait)
+    let again = ViewMapping.viewPoint(fromImage: img, viewSize: view, displayTransform: portrait)
+    check(abs(again.x - 100) < 1e-6 && abs(again.y - 300) < 1e-6, "view to image and back")
+
+    // Remembered items: in front and on screen are labelled (target first), behind and stale are not.
+    let I = matrix_identity_float4x4                         // camera at the origin looking down -z
+    let marks = [ItemMark(id: "k", name: "keys", position: SIMD3(0, 0, -2), surface: "table", state: "present"),
+                 ItemMark(id: "m", name: "mug", position: SIMD3(0.1, 0, -1), surface: nil, state: nil),
+                 ItemMark(id: "w", name: "wallet", position: SIMD3(0, 0, 2), surface: nil, state: nil),
+                 ItemMark(id: "s", name: "bottle", position: SIMD3(0, 0, -1.5), surface: nil, state: "stale")]
+    let r = ItemOverlay.place(marks, cameraToWorld: I, intrinsics: K, imageSize: size, viewSize: view,
+                              displayTransform: portrait, targetId: "k")
+    check(r.shown.map(\.id) == ["k", "m"] && r.outOfView == 1, "placed: \(r.shown.map(\.id)), out \(r.outOfView)")
+    check(r.shown.first?.text == "keys · 2.0 m · table" && r.shown.first?.isTarget == true, "label: \(r.shown.first?.text ?? "")")
+    let said = ItemOverlay.spoken(centerM: 1.42, items: r.shown, outOfView: r.outOfView, viewWidth: view.width)
+    check(said.hasPrefix("Straight ahead, 1.4 meters.") && said.contains("Keys, 2.0 meters") && said.hasSuffix("1 more item out of view."), said)
+
+    // The point cloud grows only when the camera moves or turns.
+    var gate = PointAccumulationGate()
+    check(gate.shouldAdd(I) && !gate.shouldAdd(I), "first frame adds, the same pose doesn't")
+    var moved = I
+    moved.columns.3 = SIMD4(0.03, 0, 0, 1)
+    check(gate.shouldAdd(moved), "3 cm move adds")
+    check(gate.shouldAdd(pose(yawLeftDeg: 3, at: SIMD3(0.03, 0, 0))), "3 deg turn adds")
+
+    // The Swift mirrors of the shader structs match Metal's layout byte for byte.
+    typealias QU = LiDARQuadUniforms
+    typealias UU = LiDARUnprojectUniforms
+    check(MemoryLayout<QU>.offset(of: \.viewToImageT) == 16 && MemoryLayout<QU>.offset(of: \.overlay) == 24
+          && MemoryLayout<QU>.offset(of: \.cameraBrightness) == 40 && MemoryLayout<QU>.stride == 48, "quad uniforms layout")
+    check(MemoryLayout<UU>.offset(of: \.intrinsics) == 64 && MemoryLayout<UU>.offset(of: \.imageSize) == 80
+          && MemoryLayout<UU>.offset(of: \.gridW) == 88 && MemoryLayout<UU>.offset(of: \.capacity) == 100
+          && MemoryLayout<UU>.offset(of: \.minConfidence) == 112 && MemoryLayout<UU>.stride == 128, "unproject uniforms layout")
+    check(MemoryLayout<LiDARParticle>.stride == 32, "particle is 32 bytes")
+}
+
+// MARK: - LiDAR shaders on this Mac's GPU (the phone compiles the same source at runtime)
+
+if let dev = MTLCreateSystemDefaultDevice(), let queue = dev.makeCommandQueue() {
+    do {
+        let lib = try dev.makeLibrary(source: LiDARShaderSource.source, options: nil)
+        let missing = LiDARShaderSource.functions.filter { lib.makeFunction(name: $0) == nil }
+        check(missing.isEmpty, "shader functions missing: \(missing)")
+
+        func texture<T>(_ fmt: MTLPixelFormat, _ w: Int, _ h: Int, _ values: [T]) -> MTLTexture {
+            let d = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: fmt, width: w, height: h, mipmapped: false)
+            d.storageMode = .shared
+            d.usage = [.shaderRead]
+            let t = dev.makeTexture(descriptor: d)!
+            values.withUnsafeBytes { t.replace(region: MTLRegionMake2D(0, 0, w, h), mipmapLevel: 0, withBytes: $0.baseAddress!,
+                                                bytesPerRow: $0.count / h) }
+            return t
+        }
+        // A grey camera image, a depth ramp (1 m + u/256 + v/1000) and confidence 0 on the left eighth of the map.
+        let yTex = texture(.r8Unorm, 16, 12, [UInt8](repeating: 128, count: 16 * 12))
+        let cTex = texture(.rg8Unorm, 8, 6, [UInt8](repeating: 128, count: 8 * 6 * 2))
+        var ramp = [Float](repeating: 0, count: 256 * 192), conf = [UInt8](repeating: 2, count: 256 * 192)
+        for v in 0..<192 { for u in 0..<256 { ramp[v * 256 + u] = 1 + Float(u) / 256 + Float(v) / 1000; if u < 32 { conf[v * 256 + u] = 0 } } }
+        let dTex = texture(.r32Float, 256, 192, ramp), kTex = texture(.r8Uint, 256, 192, conf)
+
+        // lidarUnproject puts each grid point where CameraMath.unproject (the server's convention) does.
+        let K = simd_float3x3(columns: (SIMD3(1450, 0, 0), SIMD3(0, 1450, 0), SIMD3(960, 720, 1)))
+        let T = pose(yawLeftDeg: -40, pitchDeg: -30, at: SIMD3(0.5, 1.3, -1))
+        let gw = 8, gh = 6
+        var uu = LiDARUnprojectUniforms(cameraToWorld: T, intrinsics: SIMD4(1450, 1450, 960, 720), imageSize: SIMD2(1920, 1440),
+                                        gridW: UInt32(gw), gridH: UInt32(gh), base: 0, capacity: UInt32(gw * gh),
+                                        nearM: 0.1, farM: 5, minConfidence: 1)
+        let buf = dev.makeBuffer(length: gw * gh * MemoryLayout<LiDARParticle>.stride, options: .storageModeShared)!
+        let pso = try dev.makeComputePipelineState(function: lib.makeFunction(name: "lidarUnproject")!)
+        let cmd = queue.makeCommandBuffer()!, enc = cmd.makeComputeCommandEncoder()!
+        enc.setComputePipelineState(pso)
+        enc.setBytes(&uu, length: MemoryLayout<LiDARUnprojectUniforms>.stride, index: 0)
+        enc.setBuffer(buf, offset: 0, index: 1)
+        enc.setTextures([yTex, cTex, dTex, kTex], range: 0..<4)
+        enc.dispatchThreads(MTLSize(width: gw, height: gh, depth: 1), threadsPerThreadgroup: MTLSize(width: gw, height: gh, depth: 1))
+        enc.endEncoding()
+        cmd.commit()
+        cmd.waitUntilCompleted()
+        let ps = buf.contents().bindMemory(to: LiDARParticle.self, capacity: gw * gh)
+        var worst: Float = 0, empty = 0, grey = true
+        for gy in 0..<gh {
+            for gx in 0..<gw {
+                let p = ps[gy * gw + gx]
+                let uv = CGPoint(x: (Double(gx) + 0.5) / Double(gw), y: (Double(gy) + 0.5) / Double(gh))
+                let u = Int(uv.x * 256), v = Int(uv.y * 192)
+                if u < 32 { empty += p.position.w == 0 ? 1 : 0; continue }
+                let want = CameraMath.unproject(uv, depthM: 1 + Float(u) / 256 + Float(v) / 1000, intrinsics: K,
+                                                imageSize: CGSize(width: 1920, height: 1440), cameraToWorld: T)
+                worst = max(worst, simd_distance(SIMD3(p.position.x, p.position.y, p.position.z), want))
+                grey = grey && abs(p.color.x - 0.5) < 0.02 && abs(p.color.y - 0.5) < 0.02 && abs(p.color.z - 0.5) < 0.02
+            }
+        }
+        check(worst < 1e-3, "GPU unproject matches CameraMath: worst \(worst) m")
+        check(empty == gh, "low-confidence samples are empty slots: \(empty) of \(gh)")
+        check(grey, "point colours come from the camera image (grey)")
+
+        // lidarQuadFragment paints depth with DepthPalette's colour (overlay 1, identity view-to-image map).
+        let rp = MTLRenderPipelineDescriptor()
+        rp.vertexFunction = lib.makeFunction(name: "lidarQuadVertex")
+        rp.fragmentFunction = lib.makeFunction(name: "lidarQuadFragment")
+        rp.colorAttachments[0].pixelFormat = .rgba8Unorm
+        let rps = try dev.makeRenderPipelineState(descriptor: rp)
+        let od = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .rgba8Unorm, width: 32, height: 24, mipmapped: false)
+        od.storageMode = .shared
+        od.usage = [.renderTarget]
+        let out = dev.makeTexture(descriptor: od)!
+        let pass = MTLRenderPassDescriptor()
+        pass.colorAttachments[0].texture = out
+        pass.colorAttachments[0].loadAction = .clear
+        pass.colorAttachments[0].storeAction = .store
+        var qu = LiDARQuadUniforms(viewToImage: SIMD4(1, 0, 0, 1), viewToImageT: SIMD2(0, 0), overlay: 1, minConfidence: 1,
+                                   nearM: DepthPalette.nearM, farM: DepthPalette.farM, cameraBrightness: 1)
+        let cmd2 = queue.makeCommandBuffer()!, re = cmd2.makeRenderCommandEncoder(descriptor: pass)!
+        re.setRenderPipelineState(rps)
+        re.setFragmentBytes(&qu, length: MemoryLayout<LiDARQuadUniforms>.stride, index: 0)
+        re.setFragmentTextures([yTex, cTex, dTex, kTex], range: 0..<4)
+        re.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
+        re.endEncoding()
+        cmd2.commit()
+        cmd2.waitUntilCompleted()
+        var px = [UInt8](repeating: 0, count: 4)
+        out.getBytes(&px, bytesPerRow: 32 * 4, from: MTLRegionMake2D(24, 12, 1, 1), mipmapLevel: 0)   // view = image here
+        let uvx = (24.0 + 0.5) / 32, uvy = (12.0 + 0.5) / 24
+        let want = DepthPalette.color(depthM: 1 + Float(Int(uvx * 256)) / 256 + Float(Int(uvy * 192)) / 1000) * 255
+        let got = SIMD3<Float>(Float(px[0]), Float(px[1]), Float(px[2]))
+        check(simd_reduce_max(simd_abs(got - want)) <= 3, "GPU heat map matches DepthPalette: \(got) vs \(want)")
+    } catch {
+        check(false, "LiDAR shaders: \(error)")
+    }
+} else {
+    print("note: no Metal device here, LiDAR shader checks skipped")
 }
 
 // MARK: - Connecting to the server (venue Mac or the Vultr box, over the tailnet)
