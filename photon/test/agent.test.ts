@@ -436,7 +436,7 @@ test("a greeting from a linked caretaker gets the warm introduction again", asyn
   await t.say([{ text: "hi Marco" }]);
   const welcome = t.lastText();
   assert.match(welcome, /^Hi Mom! I'm Marco, Dad's home helper/);
-  assert.match(welcome, /Teach me: .*\n• Answer me: .*\n• Start fresh: text \/restart/);
+  assert.equal(welcome, "Hi Mom! I'm Marco, Dad's home helper 👋 I help Dad find things through the day. To teach me something, send a photo of it with its name.");
   await t.say([{ text: "Hi!" }]);
   assert.equal(t.lastText(), welcome);
 });

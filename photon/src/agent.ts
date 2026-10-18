@@ -178,12 +178,7 @@ export class MarcoAgent {
   private intro(caretaker: Caretaker): string {
     const user = this.deps.config.userName;
     const hi = caretaker.name === "Family" ? "Hi!" : `Hi ${caretaker.name}!`;
-    return [
-      `${hi} I'm Marco, ${user}'s home helper 👋 I help ${user} find everyday things by sound and know what's in hand, and you can help me learn the house:`,
-      `• Teach me: send a photo of something with its name, like "${user}'s keys".`,
-      `• Answer me: when ${user} touches something I don't know, I'll text you a photo. Just reply with its name.`,
-      `• Start fresh: text /restart to clear what you've taught me.`,
-    ].join("\n");
+    return `${hi} I'm Marco, ${user}'s home helper 👋 I help ${user} find things through the day. To teach me something, send a photo of it with its name.`;
   }
 
   /** Flow A: the caretaker sent one or more photos, maybe with a typed caption in the same message. */
