@@ -22,6 +22,10 @@ class PendingLabelRequests:
     def resolve(self, touch_id):
         self._requests.pop(touch_id, None)
 
+    def clear(self):
+        """POST /v1/reset: no question about an item that no longer exists is replayed to the bridge."""
+        self._requests.clear()
+
     def pending(self):
         now = self.clock()
         expired = [key for key, (created, _) in self._requests.items() if now - created >= self.max_age_s]

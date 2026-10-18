@@ -26,6 +26,7 @@ from .recorder import Recorder
 from .stub import StubBrain
 from .speech import SpeechOutput, SpeechSettings, SpeechUnavailable
 from .photon_requests import PendingLabelRequests
+from .preview import PreviewRelay
 
 DATA = Path(os.environ.get("MARCO_DATA", Path(__file__).resolve().parents[1] / "data"))
 REQUIRED_META = ("session_id", "map_id", "frame_id", "t_device", "camera_transform", "intrinsics", "image_resolution")
@@ -33,6 +34,7 @@ REQUIRED_META = ("session_id", "map_id", "frame_id", "t_device", "camera_transfo
 # No built-in /docs, /redoc or /openapi.json: they would answer without the auth gate. The API is docs/INTERFACES.md.
 app = FastAPI(title="Marco server", version="0.2", docs_url=None, redoc_url=None, openapi_url=None)
 hub = Hub()
+preview = PreviewRelay()               # the dashboard's live view, beside (never instead of) the 1 frame/s frames
 recorder = Recorder(DATA / "sessions")
 
 
@@ -161,6 +163,28 @@ async def play_guidance(item_id):
         brain.guidance_done(item_id)
 
 
+@app.websocket("/v1/preview")
+async def ws_preview_phone(ws: WebSocket):
+    """The phone's live-view socket (§3.2): it sends small upright JPEGs (binary) while a dashboard is watching."""
+    await ws.accept()
+    if await ws_caller(ws) is None:
+        return
+    try:
+        await preview.serve_phone(ws)
+    except WebSocketDisconnect:
+        pass
+
+
+@app.websocket("/preview")
+@app.websocket("/api/preview")
+async def ws_preview_dashboard(ws: WebSocket):
+    """A dashboard's live view (§6): binary messages, each the newest JPEG from the phone, about 10 a second."""
+    await ws.accept()
+    if await ws_caller(ws) is None:
+        return
+    await preview.serve_dashboard(ws)
+
+
 @app.websocket("/v1/phone")
 async def ws_phone(ws: WebSocket):
     await ws.accept()
@@ -264,6 +288,28 @@ async def delete_items(source: str, caller=Depends(require_caller)):
     when a caretaker texts /restart to start testing afresh. The phone's own setup items (source=app) are untouched."""
     removed, out = brain.remove(checked_source(source))
     await dispatch(out)
+    return dict(status="ok", removed=removed)
+
+
+@app.post("/v1/reset")
+async def reset_everything(request: Request, caller=Depends(require_caller)):
+    """For a fresh demo: forget every item (photos, crops, labels, voice notes), every event and sighting, and the room
+    map, here and on the dashboard; pending label questions are dropped too. Recordings of past sessions are kept.
+    Body {"confirm": "reset"}, so it can't happen by accident. Photon keeps its own list (send /restart), and the
+    phone keeps its ARKit map (Developer tools: "Forget the map and start a new one")."""
+    try:
+        body = await request.json()
+    except (ValueError, UnicodeDecodeError):
+        body = None
+    if not isinstance(body, dict) or body.get("confirm") != "reset":
+        raise HTTPException(status_code=400, detail='send {"confirm": "reset"} to forget everything')
+    async with work_lock:                               # never in the middle of a frame
+        removed, out = await run_in_threadpool(brain.reset)
+    pending_labels.clear()
+    preview.latest = None
+    dash.reset()
+    await dispatch(out)
+    logging.getLogger("marco").warning("reset by %s: forgot %d items", caller, len(removed))
     return dict(status="ok", removed=removed)
 
 

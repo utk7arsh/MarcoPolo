@@ -165,6 +165,14 @@ Three owners, one contract. Change a message format only by updating this file, 
 - Or send `rejected` with a reason, such as `session_mismatch`, `expired` or `position_unavailable`.
 - The server ignores acks for unknown, other-session or already-finished commands, and never replies to them.
 
+### 3.2b WebSocket `wss://…/v1/preview` (the dashboard's live view; binary, phone to server)
+The phone sends small upright JPEGs, about 480 × 360 at quality 0.5 (around 20 KB each), so the dashboard's camera view moves smoothly. They are separate from the 1 frame/s detection frames (§3.1), which don't change, and they never go on `/v1/phone`, so a picture can't hold up a pose or hand message.
+- **Server to phone:** `{"type": "preview", "want": true|false, "hz": 10}`. It's sent on connecting and whenever a dashboard starts or stops watching.
+- **Phone:** sends only while `want` is true, at most `hz` per second, with one frame in flight at a time (skip, never queue).
+  - "Upright" means turned by the same quarter turns the server uses for detection frames (`upright_turns`), so the detection boxes line up.
+  - It drops to 5 a second when the phone is warm and stops when it's hot, before hand tracking or the camera has to give way.
+- **Server:** passes the bytes to the dashboards without decoding or recording them, newest first. It refuses anything that isn't a JPEG, is over 256 KB, or comes faster than `hz`. `MARCO_PREVIEW_HZ=0` turns previews off.
+
 ### 3.3 Registration: `POST /v1/items` (multipart `photo` + `name`), from the app's setup flow or from Photon
 - **Photo:** any normal upright photo; EXIF is fine here, and the server applies it. Send JPEG (convert HEIC on the phone).
 - **`source`** (optional form field): who registers it, `app` (the default: the app's setup flow) or `photon` (a caretaker). It lets one source's items be removed together (§5).
@@ -294,6 +302,8 @@ speech. It uses the same fail-closed Tailscale authentication as every other rou
 | `POST /dashboard/commands` | Find (`{commandId, deviceId, type: "find", itemId}`) or Stop (`{commandId, deviceId, type: "stop"}`) |
 | `GET /media/frames/<token>.jpg`, `/media/items/<item_id>.jpg`, `/media/audio/<id>`, `/media/touch/<touch_id>.jpg` | the recent upright frames (the last 30), item photos, label audio and touch crops |
 | `GET /app/…` | the built dashboard, when `MARCO_DASHBOARD_DIR` points at `frontend/dist` (one origin with the API) |
+| `WS /preview` | the live view: binary messages, each the newest JPEG from the phone (§3.2b), about 10 a second while it's open. The phone only sends while a dashboard has this open. |
+| `POST /v1/reset` | `{"confirm": "reset"}`: a fresh demo. Forgets every item (photos, crops, labels, voice notes), every event and sighting, the room map and pending label questions, on the server and the dashboard. Recordings of past sessions are kept. Photon's own list needs `/restart`, and the phone's ARKit map needs "Forget the map" in the app. |
 
 - **`deviceId`** is the phone's current `session_id`.
 - **Commands:** they go to the bound phone as `command` (§4) and come back as `command_ack` (§3.2).
@@ -451,6 +461,8 @@ If an `event moved` (or `put_down`) arrives for the target, retarget to its new 
 - **A hand over the guided item no longer makes it `missing`** (§7 step 7). Close up, the detector usually can't see the item under the hand. That used to mark the item `missing` after 3 frames, which took it out of touch matching, so the touch, and with it the end of the search, never came.
   - Frames where a hand is within 35 cm of an item don't count as misses.
   - An item that disappears after a hand was at it is `picked_up`, not `missing`.
+- **Live view (§3.2b, §6):** phone `/v1/preview` and dashboard `WS /preview`, with small JPEGs about 10 a second, beside the unchanged 1 frame/s detection frames.
+- **`POST /v1/reset`** (§6), for starting a demo afresh.
 - **Room layout on the dashboard map** (§6):
   - a new raw-feed message, `room_layout`;
   - in the snapshot, `map.walls` is filled, and there is a new optional `map.landmarks`;

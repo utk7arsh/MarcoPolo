@@ -169,6 +169,16 @@ class Dashboard:
         self.spoken = None            # (the latest `say` line, monotonic until which it is shown)
         self._changed = asyncio.Event()
 
+    def reset(self):
+        """POST /v1/reset: the read model forgets every item, frame, memory entry, label request, command and the room
+        layout. The phone's connection and pose stay: it's the same phone in the same place."""
+        self.items, self.memory, self.memory_keys, self.memory_counter = [], [], set(), 0
+        self.registrations.clear()
+        self.frames.clear()
+        self.frame_meta, self.bounds, self.layout, self.guidance = None, None, None, None
+        self.relay = CommandRelay(self.relay.timeout_s)
+        self._bump()
+
     # ---------------------------------------------------------------- observations
     def _bump(self):
         self._changed.set()

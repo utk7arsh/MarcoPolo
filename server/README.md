@@ -165,6 +165,7 @@ During development, `npm run dev` proxies `/api` to this server instead (`API_PR
 | `MARCO_FRAMES_ASYNC` | `1` | answer `POST /v1/frames` with 202 before detection runs (INTERFACES.md 3.1), so the phone's upload never waits on the GPU; `0` answers after the brain is done (tests) |
 | `MARCO_LAYOUT_ASYNC` | `1` | make each layout on its own thread so a big map never delays a frame; `0` makes it inline (tests, offline tools) |
 | `MARCO_DINO_TURNS` | `1` | `4` compares the DINOv2 crop against the registration crop at 4 quarter turns and keeps the best: finds more items lying flat in any direction, and more look-alikes (POC 28) |
+| `MARCO_PREVIEW_HZ` | `10` | the dashboard's live view: the most preview JPEGs a second the phone may send while a dashboard watches; `0` turns it off |
 | `MARCO_LOG` | `INFO` | server log level; at INFO every frame logs, per item, where it was placed or which check it failed (`journalctl -u marco`) |
 
 ## Code
@@ -221,4 +222,15 @@ They skip themselves where `swiftc` or `node` is missing.
   - `present, not placed`: no usable LiDAR depth under the box, or beyond `MAX_RANGE_M`.
 
 The same per-frame line goes to the log. Every live session is also recorded under `MARCO_DATA/sessions/<session_id>/`. Copy that folder off the box, and `tools/eval_detection.py` or `tools/run_offline.py` replay it exactly.
+
+## A fresh demo
+Wipe the server for a clean start. From a tailnet laptop:
+
+```
+curl -X POST https://marco-gpu.taild6d426.ts.net/v1/reset -H 'Content-Type: application/json' -d '{"confirm": "reset"}'
+```
+
+This forgets every item (with its photo, crop, label and voice note), every event, the room map, and any pending label question. The dashboard empties too. Recordings under `MARCO_DATA/sessions/` are kept. Two lists live elsewhere:
+- Photon's: send `/restart` in Messages.
+- The phone's ARKit map: in the app, Developer tools, "Forget the map and start a new one".
 

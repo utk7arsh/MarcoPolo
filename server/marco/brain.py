@@ -411,6 +411,27 @@ class RealBrain:
                                label_audio_url=it.label_audio_url)),
                 ("dashboard", dict(type="timeline", events=[ev])), ("dashboard", self.world.snapshot())]
 
+    def reset(self):
+        """POST /v1/reset, for a fresh demo: forget every item (with its saved photo, crop, label and voice note), the
+        world model's history and the room map. Returns ([{item_id, name}], messages)."""
+        removed = [dict(item_id=it.item_id, name=it.name) for it in self.world.items.values()]
+        for iid in list(self.world.items):
+            self.detector.forget(iid)
+        for iid in list(getattr(self.detector, "items", {})):
+            self.detector.forget(iid)
+        self.registry.remove(set(self.registry.records) | {r["item_id"] for r in removed})
+        self.world = World()
+        self.roommap = RoomMap()
+        self.touch = TouchDetector()
+        self.map_id, self._layout = None, None
+        self.touches.clear()
+        self.audio.clear()
+        self.last_touch = self.guidance_target = self.last_frame = None
+        self.frames_seen = 0
+        self.diag.clear()
+        self.reg_log.clear()
+        return removed, [("dashboard", self.world.snapshot())]
+
     def remove(self, source):
         """DELETE /v1/items?source=...: forget every item from that source (its detector entry, label audio and saved
         files). Returns ([{item_id, name}], messages)."""

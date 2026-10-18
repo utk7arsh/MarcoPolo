@@ -285,6 +285,15 @@ class StubBrain:
                                label_audio_url=it["label_audio_url"])),
                 ("dashboard", dict(type="timeline", events=[ev])), ("dashboard", self.world())]
 
+    def reset(self):
+        """POST /v1/reset: forget every item and everything that happened. Returns ([{item_id, name}], messages)."""
+        removed = [dict(item_id=iid, name=it["name"]) for iid, it in self.items.items()]
+        self.registry.remove(set(self.registry.records) | set(self.items))
+        self.items, self.pose, self.trajectory, self.voxels = {}, {}, [], set()
+        self.touches, self.audio, self.events, self.guiding = {}, {}, [], set()
+        self.last_frame, self.door, self.seeded = None, None, False
+        return removed, [("dashboard", self.world())]
+
     def remove(self, source):
         """DELETE /v1/items?source=...: forget every item from that source. Returns ([{item_id, name}], messages)."""
         gone = [it for it in self.items.values() if it.get("source", "app") == source]
