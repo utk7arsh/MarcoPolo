@@ -27,7 +27,7 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from marco import codec, geometry as G  # noqa: E402
-from marco.brain import TRANSPOSE, RealBrain  # noqa: E402
+from marco.brain import TRANSPOSE, RealBrain, crop_around  # noqa: E402
 from marco.session import Session  # noqa: E402
 from run_offline import timing_summary, truth_crops  # noqa: E402
 
@@ -67,6 +67,13 @@ def box_contains(sbox, uv, grow=0.25):
     return u0 - grow * w <= uv[0] <= u1 + grow * w and v0 - grow * h <= uv[1] <= v1 + grow * h
 
 
+def physical_size(sbox, fr):
+    """The detection's longer side in metres, from its box and the LiDAR depth inside it (None without depth)."""
+    u0, v0, u1, v1 = sbox
+    z = fr.depth_at((u0 + u1) / 2, (v0 + v1) / 2, r=2, min_conf=1)
+    return None if z is None else round(float(max(u1 - u0, v1 - v0) * z / fr.K[0, 0]), 3)
+
+
 def runs(indices, gap=1):
     """Consecutive frame indices, allowing `gap` missing frames, as lists: the passes past an item."""
     out = []
@@ -101,7 +108,7 @@ def score(rows, minutes, present=lambda r: r["present"]):
     return per, total
 
 
-SWEEP = dict(photo_name=[-6, -5, -4, -3, -2.426, -2, -1, 0, 1, 2], dino=[0.2, 0.3, 0.38, 0.45, 0.55],
+SWEEP = dict(photo_name=[-6, -5, -4, -3, -2.426, -2, -1, 0, 1, 2], dino=[0.0, 0.1, 0.15, 0.2, 0.25, 0.3, 0.38, 0.45, 0.55],
              vs_others=[-99, 0.0, 0.078, 0.5, 1.0])
 
 
@@ -112,7 +119,7 @@ def sweep(rows, minutes, grid=SWEEP):
     out = []
     for a, b, c in itertools.product(grid["photo_name"], grid["dino"], grid["vs_others"]):
         def present(r, a=a, b=b, c=c):
-            return (r.get("photo_name") is not None and r["photo_name"] >= a and r["dino"] >= b
+            return (r.get("photo_name") is not None and r.get("in_range", True) and r["photo_name"] >= a and r["dino"] >= b
                     and (r.get("vs_others") is None or r["vs_others"] >= c))
         _, t = score(rows, minutes, present)
         out.append(dict(th=dict(photo_name=a, dino=b, vs_others=c), frame_recall=t["frame_recall"],
@@ -130,7 +137,26 @@ def operating_points(points, max_fa_per_min=(0.5, 1.0, 2.0)):
     return best
 
 
-def evaluate(path, register=None, from_truth=False, only=None, detector="owl", gate=True, out_dir=None, sheet=True):
+def frame_crop(spec, half_m=0.2):
+    """A registration crop from a vest-camera frame, as the phone would register an item: "SESSION:FRAME_ID:u,v"
+    (u, v in sensor pixels on the item). Crops about 40 cm around it, sized by LiDAR depth."""
+    from PIL import Image
+    sess, fid, uv = spec.rsplit(":", 2)
+    u, v = (float(x) for x in uv.split(","))
+    ses = Session(sess)
+    meta = next(m for m in ses.frames if m["frame_id"] == int(fid))
+    jpeg, d, c = ses.frame_bytes(meta)
+    fr = G.Frame(G.mat4(meta["camera_transform"]), G.mat3(meta["intrinsics"]), tuple(meta["image_resolution"]),
+                 codec.decode_depth(d), codec.decode_conf(c))
+    k = G.upright_turns(fr.T)
+    im = Image.open(io.BytesIO(jpeg)).convert("RGB")
+    up = im.transpose(TRANSPOSE[k]) if k else im
+    z = fr.depth_at(u, v, r=2, min_conf=1) or 1.0
+    return crop_around(up, fr, k, float(meta.get("jpeg_scale", 0.5)), (u, v), z, half_m)
+
+
+def evaluate(path, register=None, from_truth=False, only=None, detector="owl", gate=True, out_dir=None, sheet=True,
+             register_frames=None):
     ses = Session(path)
     if not ses.truth or not ses.truth.get("items"):
         raise SystemExit("no truth.json items: label the recording first (tools/label_truth.py)")
@@ -146,9 +172,13 @@ def evaluate(path, register=None, from_truth=False, only=None, detector="owl", g
     photos = {}
     if from_truth:
         photos = {n: c for n, c in truth_crops(ses, only).items()}
+    for name, spec in (register_frames or {}).items():
+        photos[name] = frame_crop(spec)
     for name, p in (register or {}).items():
-        from PIL import Image
-        photos[name] = Image.open(p).convert("RGB")
+        from PIL import Image, ImageOps
+        im = ImageOps.exif_transpose(Image.open(p)).convert("RGB")         # as the server does with an upload
+        im.thumbnail((2048, 2048))
+        photos[name] = im
     for name, im in photos.items():
         if name not in truth:
             print(f"warning: {name} has no ground truth: it can't be scored")
@@ -182,16 +212,16 @@ def evaluate(path, register=None, from_truth=False, only=None, detector="owl", g
             state, uv, z = view_state(fr, t["position"], t.get("size", 0.1))
             d_ = dets.get(iid)
             sbox = G.detector_box_to_sensor(d_["box"], k, jw, jh, scale) if d_ else None
+            pos = brain.place(sbox, fr) if sbox else None              # the server's own rule: placeable, within range
             row = dict(item=name, frame_index=fi, frame_id=meta["frame_id"], state=state, distance_m=round(z, 2),
-                       present=bool(d_ and d_["present"]),
+                       present=bool(d_ and d_["present"]) and pos is not None, present_raw=bool(d_ and d_["present"]),
+                       in_range=pos is not None, det_size_m=physical_size(sbox, fr) if sbox else None,
                        box_hit=bool(sbox and state == "visible" and box_contains(sbox, uv)),
                        photo_name=d_.get("photo_name") if d_ else None, dino=d_.get("dino") if d_ else None,
                        vs_others=d_.get("vs_others") if d_ else None)
             if row["present"] and row["box_hit"]:
-                pos = G.locate_footprint(sbox, fr)
-                if pos is not None:
-                    e = np.asarray(pos) - np.asarray(t["position"])
-                    row.update(err_h_m=round(float(np.hypot(e[0], e[2])), 3), err_v_m=round(float(e[1]), 3))
+                e = np.asarray(pos) - np.asarray(t["position"])
+                row.update(err_h_m=round(float(np.hypot(e[0], e[2])), 3), err_v_m=round(float(e[1]), 3))
             rows.append(row)
             marks.append((name, state, uv, row, d_["box"] if d_ else None))
         sheet_frames.append((meta, marks))
@@ -265,12 +295,14 @@ if __name__ == "__main__":
     ap.add_argument("session")
     ap.add_argument("--register", nargs="*", default=[], help="name=photo.jpg (one registration photo per item)")
     ap.add_argument("--register-from-truth", action="store_true", help="registration crops from the recording itself")
+    ap.add_argument("--register-frame", nargs="*", default=[],
+                    help="name=SESSION:FRAME_ID:u,v - register from a vest-camera frame (use another recording's frame)")
     ap.add_argument("--only", nargs="*", default=None, help="limit --register-from-truth to these names")
     ap.add_argument("--detector", choices=["owl", "truth"], default="owl")
     ap.add_argument("--no-gate", action="store_true", help="register even if the retake check would reject the photo")
     ap.add_argument("--no-sheet", action="store_true")
     a = ap.parse_args()
     rep = evaluate(a.session, dict(r.split("=", 1) for r in a.register), a.register_from_truth, a.only, a.detector,
-                   gate=not a.no_gate, sheet=not a.no_sheet)
+                   gate=not a.no_gate, sheet=not a.no_sheet, register_frames=dict(r.split("=", 1) for r in a.register_frame))
     print(json.dumps({k: rep[k] for k in ("total", "items", "timing", "operating_points")}, indent=1))
     print(f"wrote {Path(a.session) / 'eval'}")

@@ -3,6 +3,7 @@ queries -> answers; Photon labels -> new items. Same methods as StubBrain, so ap
 """
 import base64
 import io
+import os
 import time
 import uuid
 
@@ -15,7 +16,23 @@ from .world.memory import World, now_wall
 from .world.roommap import RoomMap
 
 TRANSPOSE = [None, Image.Transpose.ROTATE_270, Image.Transpose.ROTATE_180, Image.Transpose.ROTATE_90]
+MAX_PHOTO_PX = 2048
+MAX_RANGE_M = float(os.environ.get("MAX_RANGE_M", "4.0"))   # LiDAR placement isn't reliable further away
 RECENT_TOUCH_S = 3.0
+
+
+def crop_around(up, fr, k, scale, uv, z, half_m=0.12):
+    """Square crop of an upright frame around sensor pixel uv at depth z, about 2 * half_m across in the world (the
+    size comes from LiDAR, so a near and a far item give the same physical crop)."""
+    u, v = uv
+    s = fr.K[0, 0] * half_m / max(float(z), 0.1)
+    jw, jh = (up.height, up.width) if k % 2 else (up.width, up.height)
+    b = G.rotate_box([(u - s) * scale, (v - s) * scale, (u + s) * scale, (v + s) * scale], k, jw, jh)
+    b = [max(0, b[0]), max(0, b[1]), min(up.width, b[2]), min(up.height, b[3])]
+    if b[2] - b[0] < 16 or b[3] - b[1] < 16:
+        w, h = up.size
+        b = [w // 4, h // 4, 3 * w // 4, 3 * h // 4]
+    return up.crop(tuple(int(x) for x in b))
 
 
 class RealBrain:
@@ -30,6 +47,7 @@ class RealBrain:
         self.guidance_target = None
         self.last_touch = None         # (touch_id, item_id, t)
         self._last_world = 0.0
+        self.frames_seen = 0
 
     # ---------------------------------------------------------------- views used by app.py
     @property
@@ -47,6 +65,7 @@ class RealBrain:
         T, K = G.mat4(meta["camera_transform"]), G.mat3(meta["intrinsics"])
         res = tuple(meta["image_resolution"])
         fr = G.Frame(T, K, res, depth, conf)
+        self.world.observe_camera(T)
         self.touch.set_camera(K, res)
         t = float(meta["t_device"])
         k = G.upright_turns(T)
@@ -62,7 +81,7 @@ class RealBrain:
             if not d["present"] or d["item_id"] not in self.world.items:
                 continue
             sbox = G.detector_box_to_sensor(d["box"], k, jw, jh, scale)
-            pos = G.locate_footprint(sbox, fr)
+            pos = self.place(sbox, fr)
             if pos is None:
                 continue
             z = float(-((pos - T[:3, 3]) @ T[:3, :3])[2])
@@ -70,6 +89,9 @@ class RealBrain:
             events += self.world.sighting(d["item_id"], pos, t, size_m=size_m, confidence=d.get("score") or 0.5)
             detected.add(d["item_id"])
         events += self.world.check_absence(fr, detected, t)
+        self.frames_seen += 1
+        if self.frames_seen % 5 == 1:
+            self.world.set_floor(self.roommap.floor_y())
         buf = io.BytesIO()
         up.save(buf, "JPEG", quality=70)
         out = [("dashboard", dict(type="frame", frame_id=meta["frame_id"], t_wall=meta.get("t_wall"), upright_turns=k,
@@ -81,6 +103,15 @@ class RealBrain:
             out += [("phone", e), ("dashboard", dict(type="timeline", events=[e]))]
         out.append(("dashboard", self.world.snapshot()))
         return out
+
+    def place(self, sbox, fr):
+        """3D footprint of a detection box (sensor px), or None: no depth there, or beyond MAX_RANGE_M (a far
+        false alarm would otherwise move the item)."""
+        pos = G.locate_footprint(sbox, fr)
+        if pos is None:
+            return None
+        z = float(-((pos - fr.T[:3, 3]) @ fr.T[:3, :3])[2])
+        return pos if 0.1 < z <= MAX_RANGE_M else None
 
     # ---------------------------------------------------------------- phone stream
     def on_phone(self, msg):
@@ -151,15 +182,7 @@ class RealBrain:
         """Square crop of the latest upright frame around world point p (about 24 cm across)."""
         up, meta, fr, k, scale = self.last_frame
         uv, z = fr.project(np.asarray(p)[None])
-        (u, v), z = uv[0], max(float(z[0]), 0.1)
-        s = fr.K[0, 0] * half_m / z
-        jw, jh = (up.height, up.width) if k % 2 else (up.width, up.height)
-        b = G.rotate_box([(u - s) * scale, (v - s) * scale, (u + s) * scale, (v + s) * scale], k, jw, jh)
-        b = [max(0, b[0]), max(0, b[1]), min(up.width, b[2]), min(up.height, b[3])]
-        if b[2] - b[0] < 16 or b[3] - b[1] < 16:
-            w, h = up.size
-            b = [w // 4, h // 4, 3 * w // 4, 3 * h // 4]
-        return up.crop(tuple(int(x) for x in b))
+        return crop_around(up, fr, k, scale, uv[0], float(z[0]), half_m)
 
     # ---------------------------------------------------------------- stub-only hooks (no fake sequences here)
     def guidance_sequence(self, item_id):
@@ -171,6 +194,7 @@ class RealBrain:
     # ---------------------------------------------------------------- registration and labels
     def register(self, name, photo: bytes):
         im = ImageOps.exif_transpose(Image.open(io.BytesIO(photo))).convert("RGB")
+        im.thumbnail((MAX_PHOTO_PX, MAX_PHOTO_PX))          # phone photos are 12-48 MP; OWLv2 looks at 960 px anyway
         it = self.world.add_item(name)
         res = self.detector.register(it.item_id, name, im)
         if res["quality"] != "ok":
@@ -195,7 +219,7 @@ class RealBrain:
             self.detector.register(it.item_id, name, crop, gate=False)     # a person already said what it is
             if tc.get("position"):
                 it.position, it.state = np.asarray(tc["position"], float), "present"
-                it.surface, it.last_seen_wall = G.surface_name(float(it.position[1])), now_wall()
+                it.surface, it.last_seen_wall = self.world.surface_for(it.position[1]), now_wall()
             item_id = it.item_id
         it = self.world.items[item_id]
         it.name = name or it.name

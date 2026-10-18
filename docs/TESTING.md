@@ -10,8 +10,10 @@ Use the free **Stray Scanner** app on the iPhone 16 Pro. It records the video, t
    - two or three identical spice jars with different contents.
 
    Put them where they'll be in the demo (jar lids at counter height, for touch).
-2. **Registration photos:** one ordinary photo per item with the Camera app, as a user would take it, with the item filling about a third of the frame.
-   - The server reads JPEG, not HEIC: set Camera > Formats > Most Compatible, or convert with `sips -s format jpeg in.heic --out out.jpg`.
+2. **Registration, from the vest's view.** Register the way the product will: with the phone in the harness, about 1 m from the item, at the angle the vest sees it.
+   - Until the app has "remember this", record a few seconds per item with Stray Scanner, and use a frame of that clip: `eval_detection.py --register-frame "wallet=data/sessions/reg-place-a:3:1005,1065"` (frame 3, sensor pixel on the item).
+   - Photos from the Camera app also work (`--register`). On the first recordings, top-down close-ups matched video crops badly. The server reads JPEG, not HEIC: set Camera > Formats > Most Compatible.
+   - **Register in a different place from the tests:** a different table or room, other light, another time. Registering and testing at the same table makes the item look the same in both (same light, angle and background), and the score comes out higher than it will be in the demo.
 3. **Recording A, "find" (2–3 min):**
    - the phone at chest height, portrait (in the vest if you can);
    - walk slowly through the room, passing each item at 1–3 m;
@@ -64,10 +66,11 @@ It writes two files under `data/sessions/kitchen-a/eval/`:
 
 Frame recall (the share of individual frames with a hit) is reported too. It can be well below 100% while every pass is caught.
 
-## 5. Tune, then confirm
+## 5. Tune, then confirm (never on the video you score)
 - If recall is low or false alarms are high, the report's `operating_points` give the best thresholds from that recording, within 0.5, 1 and 2 false alarms per minute.
 - Set them with `TH_PHOTO_NAME`, `TH_DINO` and `TH_VS_OTHERS`.
-- **Confirm on a different recording:** thresholds tuned and scored on the same video look better than they are.
+- **Confirm on a recording from a different place:** thresholds tuned and scored on the same video, or the same table, look better than they are.
+- Nothing in the code is tuned to a particular recording. Only `TH_*` changes, and only after it holds on held-out places.
 - Retake the registration photos that the retake check rejects.
 
 ## 6. The whole pipeline on a recording
@@ -80,6 +83,22 @@ python tools/bench_frame.py data/sessions/kitchen-a --items 1 10 20             
 
 ## 7. With our app
 The server records everything the phone sends under `data/sessions/<session_id>/`, so steps 2–6 work the same on a live session. For touch, record touches on the counter-height jar lids; `run_offline.py` lists the detected touches with their times.
+
+## First iPhone 16 Pro recordings (2026-10-17, three clips, 34 s, all at one venue)
+- **The recordings are good:**
+  - frame-to-frame agreement of 1.5–2.4 cm;
+  - depth lines up with the image;
+  - Stray Scanner's OpenCV pose convention was detected automatically.
+- **When found, items are placed 1.7–6.7 cm from the truth.** Every frame takes 0.37–0.40 s.
+- **Recall with top-down photos is low:** 4 of 9 passes, and the wallet never. Most misses had the right box, rejected by the DINOv2 crop check: sharp top-down photos don't resemble blurred, angled video crops.
+- **Registering from a vest-camera frame** of another clip caught 7 of 10 passes (the wallet 5 of 6 frames), with more false alarms. Those clips were taken at the same table minutes apart, so this is an upper bound. The test across places above decides it.
+- **False alarms are real look-alikes:**
+  - the iPhone, taken for the power bank;
+  - other people's black bottles, one 3.5 m away.
+- **Fixed after these recordings:**
+  - surfaces are named from the floor seen in the LiDAR map (ARKit's origin is where the phone started);
+  - sightings beyond 4 m don't place items;
+  - large photos are shrunk, with their EXIF rotation applied.
 
 ## What we already know
 - **Synthetic room:**

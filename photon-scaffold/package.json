@@ -4,10 +4,12 @@
   "private": true,
   "description": "Reference wiring for Marco's caretaker bridge, exactly as docs/INTERFACES.md section 5 (photon/ is the team's bridge)",
   "type": "module",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "start": "node src/main.js",
-    "test": "node --test test/"
+    "test": "node --test test/*.test.js"
   },
   "dependencies": {
     "@photon-ai/imessage-kit": "^3.0.0"

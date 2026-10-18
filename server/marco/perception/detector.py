@@ -3,6 +3,7 @@
 OwlDetector   the real one (POC 22/25/26): OWLv2 image-guided search with the item's one registration photo, plus
               the presence check (photo + name logit, DINOv2 crop check, "looks more like this item than my other
               items"). Thresholds default to POC 26's calibration on ORBIT; refit them on your own props.
+              Models: MARCO_OWL_MODEL and MARCO_DINO_MODEL (Hugging Face ids); thresholds belong to a model pair.
 TruthDetector for synthetic sessions with ground truth: projects the true item positions into the frame (with
               misses and jitter), so the world model and the dashboard can be tested without any model.
 
@@ -29,12 +30,13 @@ def _device():
 
 
 class OwlDetector:
-    OWL = "google/owlv2-base-patch16-ensemble"
-    DINO = "facebook/dinov2-small"
+    OWL = os.environ.get("MARCO_OWL_MODEL", "google/owlv2-base-patch16-ensemble")
+    DINO = os.environ.get("MARCO_DINO_MODEL", "facebook/dinov2-small")
 
-    def __init__(self):
+    def __init__(self, owl=None, dino=None):
         import torch
         from transformers import AutoImageProcessor, AutoModel, Owlv2ForObjectDetection, Owlv2Processor
+        self.OWL, self.DINO = owl or self.OWL, dino or self.DINO
         self.torch = torch
         self.dev = _device()
         dtype = torch.float16 if self.dev == "cuda" else torch.float32

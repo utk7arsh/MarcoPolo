@@ -25,6 +25,7 @@ CONFIRM_WINDOW_S = 10.0
 MISSES = 3
 TOUCH_PICKUP_S = 10.0
 CARRY = {"keys", "wallet", "phone", "glasses", "sunglasses", "cane"}
+CHEST_M = 1.30                 # a chest-mounted (or hand-held) phone sits about this far above the floor
 
 
 def now_wall():
@@ -65,6 +66,26 @@ class World:
         self.door = None                   # (position, radius) once set
         self.in_door = False
         self.map_id = None
+        self.floor_y = None                # from the room map; until then, CHEST_M below the first camera pose
+        self.first_cam_y = None
+
+    def observe_camera(self, T):
+        if self.first_cam_y is None:
+            self.first_cam_y = float(T[1, 3])
+
+    def surface_for(self, y):
+        """Surface name for an item resting at world height y, measured from the floor."""
+        floor = self.floor_y if self.floor_y is not None else (self.first_cam_y - CHEST_M if self.first_cam_y is not None else 0.0)
+        return G.surface_name(float(y) - floor)
+
+    def set_floor(self, floor_y):
+        """A new floor estimate: rename the surfaces of items already placed."""
+        if floor_y is None or (self.floor_y is not None and abs(floor_y - self.floor_y) < 0.03):
+            return
+        self.floor_y = floor_y
+        for it in self.items.values():
+            if it.position is not None:
+                it.surface = self.surface_for(it.position[1])
 
     # ---------------------------------------------------------------- items
     def add_item(self, name, item_id=None, **kw):
@@ -97,7 +118,7 @@ class World:
             it.size_m = 0.7 * it.size_m + 0.3 * size_m
         def refresh(p):
             it.position = p
-            it.surface = G.surface_name(float(p[1]))
+            it.surface = self.surface_for(p[1])
             it.last_seen_t, it.last_seen_wall, it.confidence = t, now_wall(), confidence
         if it.position is None or it.state == "stale":     # first sighting, or first since a new map
             refresh(pos)
@@ -148,6 +169,7 @@ class World:
 
     # ---------------------------------------------------------------- user
     def user_pose(self, T, t):
+        self.observe_camera(T)
         self.user_T, self.user_t = T, t
         self.trajectory.append([round(float(T[0, 3]), 3), round(float(T[2, 3]), 3), t])
         if len(self.trajectory) > 20000:

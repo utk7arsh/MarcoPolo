@@ -21,7 +21,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from marco import codec, geometry as G  # noqa: E402
 from marco.session import Session  # noqa: E402
 
-DEFAULT_SIZE = {"keys": 0.08, "wallet": 0.10, "mug": 0.10, "bottle": 0.22, "jar": 0.10, "remote": 0.18}
+# Height in metres (the click is lowered by half of it to the footprint; flat things lying down are ~2 cm).
+DEFAULT_SIZE = {"keys": 0.02, "wallet": 0.02, "power bank": 0.02, "phone": 0.01, "remote": 0.03, "mug": 0.10,
+                "jar": 0.10, "bottle": 0.25}
 
 
 def frame_of(ses, meta):
@@ -119,7 +121,7 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("session")
     ap.add_argument("--click", nargs="*", default=[], help="name=frame_id:u,v (sensor pixels)")
-    ap.add_argument("--size", nargs="*", default=[], help="name=metres (item height/width, for visibility)")
+    ap.add_argument("--size", nargs="*", default=[], help="name=metres: the item's height as it stands (flat things ~0.02)")
     a = ap.parse_args()
     ses = Session(a.session)
     sizes = {k: float(v) for k, v in (s.split("=", 1) for s in a.size)}

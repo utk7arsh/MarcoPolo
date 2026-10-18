@@ -79,6 +79,23 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
     - the table was rejected by the DINOv2 check (large objects);
     - thresholds must be refit on the real demo props.
   - **1 frame/s:** the full pipeline takes 0.33 s per frame with 1 item and 0.42 s with 20 (p95 0.43 s), on MPS on this Mac.
+  - **First iPhone 16 Pro recordings** (3 clips, 34 s, one venue; details in `docs/TESTING.md`):
+    - good capture: 1.5–2.4 cm agreement between frames;
+    - placement 1.7–6.7 cm when found;
+    - 0.37–0.40 s per frame;
+    - recall with top-down photos only 4 of 9 passes (the wallet never), because the DINOv2 check rejects blurred, angled crops;
+    - registering from a vest frame caught 7 of 10, but the clips share a table, so that's an upper bound.
+    - False alarms are look-alikes: the iPhone taken for the power bank, other black bottles.
+    - Fixed: floor-relative surface names, a 4 m range gate, large-photo handling.
+    - Next: register at place A, test at place B.
+  - **Bigger models** (same recordings, photo registration; `MARCO_OWL_MODEL` / `MARCO_DINO_MODEL` pick them):
+    - **DINOv2 base or large:** no better separation than small (AUC 0.87–0.90 against 0.895), and +30 ms or +130 ms per frame.
+    - **OWLv2-large:** boxes land on the item more often (17 of 20 visible frames against 15), and it catches 67% of passes with zero false alarms. But it needs 1.8 s per frame on this M3 Pro (1.3 s in half precision), so it's too slow for 1 frame/s here. Try it on a CUDA GPU (the Vultr box) with `bench_frame.py`.
+    - **Half precision on the Mac** speeds up OWLv2-base from 363 to 235 ms per image pass (not yet switched on).
+    - All of this is from 34 s of video at one venue: suggestive, not settled.
+  - **Live path tested:** recording 2, streamed into the real server on loopback at real-time pace.
+    - The server kept up, announced "seen" events, and answered "where's my bottle?" with "on the table", 1.7 cm from the truth.
+    - It recorded the stream as a session.
   - **Real iPad video scored with `eval_detection.py`:**
     - the oven was hit in 2 of its 2 visible frames, 11 cm from the truth;
     - with "table" registered, three other tables and a chair were false alarms, which moved the stored table 3.2 m. That's the look-alike problem: thresholds need tuning on our props.
@@ -114,8 +131,8 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
   - **Status port:** 127.0.0.1 only (`/health`, plus `/dev/*` in sim mode). The phone never talks to `photon/`.
   - **Checks:** `npm run doctor` checks the Photon 2.0 key, line and event stream, plus `MARCO_SERVER_URL` (`GET /v1/items`, the `/v1/photon` socket and the allow-list), read-only.
   - **Verification:** `cd photon && npm test` runs 39 tests. One of them is end to end against the real `server/` (stub, loopback): `what_is_this` → `label_request` → iMessage → text then voice memo → `label_ready` with m4a audio → `what_is_this` known → setup photo → `GET /v1/items`. It runs when `server/.venv` (or `MARCO_SERVER_PYTHON`) has the stub dependencies.
-- **Totals (all passing):** server 74 tests (including both client contract tests and the real-video tools), Swift 102, Photon scaffold 8, `photon/` 39.
-  - `photon-scaffold`'s `npm test` script (`node --test test/`) fails to start on Node 22.21, which treats the directory as a module. `node --test test/*.test.js` runs all 8.
+- **Totals (all passing):** server 77 tests (including both client contract tests and the real-video tools), Swift 102, Photon scaffold 8, `photon/` 39 (Utkarsh's run).
+  - `photon-scaffold`'s `npm test` now runs `node --test test/*.test.js`, which works on Node 22 (thanks, Utkarsh).
 - **Teammates' code on `main`:** `frontend/` (Sandeep, the dashboard) was built against the earlier requirements, not this contract. See the next steps.
 - **Security sweep:**
   - no wildcard binds, tunnels or tokens in the repo;
@@ -137,7 +154,12 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
    - Tune `TH_*` on one recording and confirm on another; refit the touch `CONTACT_M`.
    - Re-run `bench_frame.py` on the venue machine.
 5. **Dashboard:** live data through the adapter (step 1); until then, the stub plus `tools/replay.py` give real feeds on `/v1/dashboard`.
-6. **Caretaker voice notes:** `photon/` already sends them as m4a. Server-side conversion is only needed for other clients that post `.caf`.
+6. **Proposed, waiting for a go-ahead:**
+   - two agreeing sightings before an item's first placement, so one false-alarm frame can't place it;
+   - "Marco, remember this as my wallet": registration from the vest camera's live frame (server, contract and app);
+   - OWLv2-large on a CUDA GPU (Vultr);
+   - half precision on the Mac.
+7. **Caretaker voice notes:** `photon/` already sends them as m4a. Server-side conversion is only needed for other clients that post `.caf`.
    - **Possible §5 additions (proposals, not built):** `label_request_seen` (the caretaker opened the photo: "Mom is looking at it") and `label_unknown` ("Mom isn't sure either"). `photon/` already detects both and only logs them.
    - **Today the server doesn't queue `label_request`** for a disconnected bridge. `photon/` reconnects with backoff and shows the socket state on `/health`.
 
