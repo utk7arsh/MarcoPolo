@@ -72,7 +72,9 @@ describe('room map reference shapes', () => {
     const shelf = { x: 2.2, z: -1.35, width: 0.5, depth: 2.2 }
     expect(fixtureLandmark(shelf, b).yawDeg).toBe(270)
     const table = { x: -0.05, z: 0.65, width: 1.7, depth: 1.15 }
-    expect(fixtureLandmark(table, b)).toMatchObject({ x: 0.8, yawDeg: 0 })
+    const placed = fixtureLandmark(table, b)
+    expect(placed.x).toBeCloseTo(0.8, 10)
+    expect(placed.yawDeg).toBe(0)
   })
 })
 
