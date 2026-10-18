@@ -351,3 +351,9 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
 
 - At the user's request, removed `ios/spatial/` from Git tracking while preserving its files locally. Root ignore rules cover both `/ios/spatial/` and the former `/spatial/` location; README links to the unpublished folder were removed. The iPhone's production audio remains in `ios/Marco/Audio/`.
 - Incorporated the latest team work through `8cbed3c` before this removal. This is a repository-tracking/documentation change; app sources and project configuration are unchanged. Verified local file preservation, ignore rules and whitespace; no audio was played and no new device result is claimed. Existing Git history is retained.
+
+## Architecture progress map (October 17, 2026)
+
+- `docs/architecture.html` now colours every box, module, wire and demo step by progress: green **End to end** (integration-tested on loopback, replayed real data or from the Mac), teal **Live** (also verified with the real device or service), blue **Built** (code + unit tests only) and red **Not built**. Each element carries a hover note with its evidence from this file, and a summary bar and a "next to turn green" list sit at the top.
+- Snapshot (rechecked at `c6eca2f`, which adds the built-only LiDAR view): parts 15/26 end to end (6 live); wires 6/9 end to end (2 live; the dashboard wire is not built); demo steps 6/14 end to end (1 live). The phone app has not run on the iPhone, so the on-body boxes stay Built.
+- To update, change the element's `data-status` (`live`, `e2e`, `built`, `todo`) or the wire list in the page's script. Documentation only; no code or contract changed.

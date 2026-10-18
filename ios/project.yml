@@ -28,6 +28,12 @@ targets:
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
         UIFileSharingEnabled: true   # Finder > iPhone > Files > Marco shows Documents/sessions (recordings)
+        # Privacy strings also live in the plist, so MarcoPolo.xcodeproj (which has no INFOPLIST_KEY_ settings) has them:
+        # without them iOS kills the app the moment it asks for the camera, mic, speech or motion.
+        NSCameraUsageDescription: Marco uses the camera and LiDAR to see where your things are.
+        NSMicrophoneUsageDescription: Marco listens for "Marco" and your questions.
+        NSSpeechRecognitionUsageDescription: Marco turns what you say into questions, on this iPhone.
+        NSMotionUsageDescription: Marco uses your AirPods' head tracking so sounds stay where things are.
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.utkarshlal.marco

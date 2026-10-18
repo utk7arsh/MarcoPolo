@@ -23,6 +23,8 @@
     --screen: #d4f2e7;
     --tailnet: #0f9d74;
     --shadow: 0 1px 2px rgba(20, 20, 30, .06), 0 6px 18px rgba(20, 20, 30, .06);
+    --s-live: #0f766e; --s-e2e: #16a34a; --s-built: #2563eb; --s-todo: #dc2626;
+    --wire: #4b5563;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
@@ -30,6 +32,7 @@
       --https: #6ea0ff; --ws: #37c99c; --bt: #f0a24a; --imsg: #e67ef0; --local: #9aa1ad;
       --body: #3a2c17; --brain: #1d2b47; --people: #3a1f3d; --screen: #163a2f; --tailnet: #37c99c;
       --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.35);
+      --s-live: #2dd4bf; --s-e2e: #4ade80; --s-built: #7aa7ff; --s-todo: #f87171; --wire: #9aa1ad;
     }
   }
   :root[data-theme="dark"] {
@@ -37,6 +40,7 @@
     --https: #6ea0ff; --ws: #37c99c; --bt: #f0a24a; --imsg: #e67ef0; --local: #9aa1ad;
     --body: #3a2c17; --brain: #1d2b47; --people: #3a1f3d; --screen: #163a2f; --tailnet: #37c99c;
     --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.35);
+      --s-live: #2dd4bf; --s-e2e: #4ade80; --s-built: #7aa7ff; --s-todo: #f87171; --wire: #9aa1ad;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--bg); color: var(--ink); }
@@ -106,6 +110,34 @@
   .note h3 { margin: 0 0 6px; font-size: 15px; }
   .note ul { margin: 0; padding-left: 18px; }
   .warn { border-left: 4px solid var(--bt); }
+  /* Progress status */
+  [data-status="live"] { --sc: var(--s-live); }
+  [data-status="e2e"] { --sc: var(--s-e2e); }
+  [data-status="built"] { --sc: var(--s-built); }
+  [data-status="todo"] { --sc: var(--s-todo); }
+  .card[data-status] { border-left: 6px solid var(--sc); }
+  .mod[data-status], .host[data-status] { box-shadow: inset 4px 0 0 var(--sc); padding-left: 11px; }
+  .pill { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--sc); white-space: nowrap; }
+  .pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--sc); }
+  .mod .pill, .host .pill { display: flex; margin-top: 4px; }
+  .tailnet[data-status] .cap .pill { margin-left: 6px; }
+  .flow li[data-status]::before { background: var(--sc); color: #fff; }
+  .flow li .pill { margin-left: 6px; }
+  .status-legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 6px 0 2px; font-size: 13px; }
+  .status-legend > span { display: inline-flex; align-items: center; gap: 7px; }
+  .status-legend i { width: 12px; height: 12px; border-radius: 50%; background: var(--sc); display: inline-block; }
+  .legend-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin: 14px 0 0; }
+  .progress { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 18px 0 6px; }
+  .pcard { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; box-shadow: var(--shadow); }
+  .pcard h3 { margin: 0 0 8px; font-size: 13px; color: var(--muted); font-weight: 700; }
+  .pcard .big { font-size: 22px; font-weight: 800; }
+  .bar { display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: var(--surface-2); margin: 8px 0 6px; }
+  .bar span { display: block; background: var(--sc); }
+  .pcard .counts { font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 12px; }
+  .next { margin-top: 16px; }
+  .next ol { margin: 6px 0 0; padding-left: 20px; font-size: 13.5px; }
+  [title] { cursor: help; }
+  @media (max-width: 1080px) { .progress { grid-template-columns: 1fr; } }
   footer { margin-top: 40px; color: var(--muted); font-size: 12.5px; }
 
   @media (max-width: 1080px) {
@@ -125,14 +157,34 @@
   <header>
     <h1>Marco: system architecture</h1>
     <p>Every piece of the product, who talks to whom, and how. Source of truth: <code>docs/INTERFACES.md</code> v0.2 and <code>STATUS.md</code> (2026-10-17). Numbers on the wires match the connection table below.</p>
+    <p class="legend-title">Progress (colour of every box, wire and step)</p>
+    <div class="status-legend" aria-label="Status legend">
+      <span data-status="e2e"><i></i><b>End to end</b>&nbsp;works across its connections in software (loopback, replayed real recordings, or from the Mac)</span>
+      <span data-status="live"><i></i><b>&#10003; Live</b>&nbsp;also verified with the real device or service</span>
+      <span data-status="built"><i></i><b>Built</b>&nbsp;code + unit tests; not yet integrated or run on hardware</span>
+      <span data-status="todo"><i></i><b>Not built</b>&nbsp;missing or blocked</span>
+    </div>
+    <p class="legend-title">Transport (line style)</p>
     <div class="legend" aria-label="Legend">
-      <span><svg width="36" height="10"><line x1="0" y1="5" x2="36" y2="5" stroke="var(--https)" stroke-width="3"/></svg>HTTPS request</span>
-      <span><svg width="36" height="10"><line x1="0" y1="5" x2="36" y2="5" stroke="var(--ws)" stroke-width="3" stroke-dasharray="6 4"/></svg>WebSocket stream (WSS)</span>
-      <span><svg width="36" height="10"><line x1="0" y1="5" x2="36" y2="5" stroke="var(--bt)" stroke-width="3" stroke-dasharray="2 4" stroke-linecap="round"/></svg>Bluetooth</span>
-      <span><svg width="36" height="10"><line x1="0" y1="5" x2="36" y2="5" stroke="var(--imsg)" stroke-width="3" stroke-dasharray="10 5"/></svg>iMessage / Photon cloud</span>
+      <span><svg width="36" height="10"><line x1="0" y1="5" x2="36" y2="5" stroke="var(--wire)" stroke-width="3"/></svg>HTTPS request</span>
+      <span><svg width="36" height="10"><line x1="0" y1="5" x2="36" y2="5" stroke="var(--wire)" stroke-width="3" stroke-dasharray="6 4"/></svg>WebSocket stream (WSS)</span>
+      <span><svg width="36" height="10"><line x1="0" y1="5" x2="36" y2="5" stroke="var(--wire)" stroke-width="3" stroke-dasharray="2 4" stroke-linecap="round"/></svg>Bluetooth</span>
+      <span><svg width="36" height="10"><line x1="0" y1="5" x2="36" y2="5" stroke="var(--wire)" stroke-width="3" stroke-dasharray="10 5"/></svg>iMessage / Photon cloud</span>
       <span><svg width="36" height="12"><rect x="1" y="1" width="34" height="10" rx="4" fill="none" stroke="var(--tailnet)" stroke-width="2" stroke-dasharray="4 3"/></svg>Private tailnet (Tailscale)</span>
     </div>
   </header>
+
+  <div class="progress" id="progress" aria-live="polite"></div>
+  <div class="note next warn">
+    <h3>Next to turn green</h3>
+    <ol>
+      <li><b>Run the app on the iPhone</b> against <code>marco-gpu</code>: every phone box and wires 1&ndash;4 are waiting on this (hour-one tests in <code>ios/README.md</code>).</li>
+      <li><b>Dashboard adapter</b> on the server (<code>/dashboard/snapshot</code>, <code>WS /events</code>, <code>/dashboard/commands</code>) and the per-socket queue so a stalled dashboard can't block the server.</li>
+      <li><b>Point the Photon bridge at Vultr</b> (<code>MARCO_SERVER_URL</code>, allow-list, <code>npm run doctor</code>).</li>
+      <li><b>Tune detection on our props</b> (recall was 4/9 passes on the first iPhone clips) and refit touch on real hands.</li>
+      <li><b>AirPods front/back</b> on the chest-mounted phone; set <code>ELEVENLABS_API_KEY</code> and test one real voice memo.</li>
+    </ol>
+  </div>
 
   <div class="diagram" id="diagram">
     <svg class="wires" id="wires" aria-hidden="true"></svg>
@@ -141,7 +193,7 @@
       <div class="col">
         <h2>On the body</h2>
         <div class="stack">
-          <div class="card body" id="airpods">
+          <div class="card body" id="airpods" data-status="built" title="Head motion (34-38 Hz) and 48 kHz stereo checked with the app's own classes on a Mac; left/right correct, front/back still unclear. Not yet run with the iPhone; high-quality AirPods mic mode unverified.">
             <div class="hd">AirPods Pro 3 <small>ears</small></div>
             <div class="bd"><ul>
               <li>Head motion via <code>CMHeadphoneMotionManager</code></li>
@@ -149,16 +201,17 @@
               <li>Mic via iOS 26 high-quality BT recording (iPhone mic fallback)</li>
             </ul></div>
           </div>
-          <div class="card body" id="iphone">
+          <div class="card body" id="iphone" data-status="built" title="Compiles for device in Xcode; 286 Swift checks; wire bytes contract-tested against the server. Not yet run on the iPhone.">
             <div class="hd">iPhone 16 Pro in chest vest <small>ios/ (Swift)</small></div>
             <div class="bd">
               <div class="mods">
-                <div class="mod"><b>Capture</b>ARKit world tracking, LiDAR smoothed depth, ARWorldMap save + relocalize</div>
-                <div class="mod"><b>Hands</b>Vision hand pose, 21 joints + 9x9 depth patches</div>
-                <div class="mod"><b>Voice</b>"Marco ..." wake + push-to-talk, on-device <code>SFSpeechRecognizer</code></div>
-                <div class="mod"><b>Guidance 60 Hz</b>HRTF beacon, head fusion (ARKit torso + AirPods), haptics</div>
-                <div class="mod"><b>Net</b>Uploader (latest frame wins, 5 s give-up) + phone WebSocket</div>
-                <div class="mod"><b>Labels + Recorder</b>Label audio cached locally; offline session recording</div>
+                <div class="mod" data-status="built" title="ARKit + LiDAR + world maps compile and pass audit regressions; not yet run on the phone."><b>Capture</b>ARKit world tracking, LiDAR smoothed depth, ARWorldMap save + relocalize</div>
+                <div class="mod" data-status="built" title="Hand patches byte-exact against the server reference; Vision not yet run on the phone."><b>Hands</b>Vision hand pose, 21 joints + 9x9 depth patches</div>
+                <div class="mod" data-status="built" title="Wake word, extraction and vocabulary matching: 60 tests. Not yet run on the phone."><b>Voice</b>"Marco ..." wake + push-to-talk, on-device <code>SFSpeechRecognizer</code></div>
+                <div class="mod" data-status="built" title="21 offline HRTF render checks; AirPods tests on a Mac: left/right right, front/back unclear. Not on the vest yet."><b>Guidance 60 Hz</b>HRTF beacon, head fusion (ARKit torso + AirPods), haptics</div>
+                <div class="mod" data-status="e2e" title="Swift-encoded frames to Vultr: 202 in 83-118 ms; WSS round trip 67 ms, measured from the Mac over the tailnet. App not yet run on the phone."><b>Net</b>Uploader (latest frame wins, 5 s give-up) + phone WebSocket</div>
+                <div class="mod" data-status="e2e" title="A Swift-recorded walk passes the server's check_recording; label caching built, phone playback unverified."><b>Labels + Recorder</b>Label audio cached locally; offline session recording</div>
+                <div class="mod" data-status="built" title="New (c6eca2f): Metal camera / depth heat map / point cloud with remembered items. Shaders checked on the Mac's GPU; 314 Swift checks. Not yet run on the iPhone."><b>LiDAR view</b>Camera, depth heat map, room point cloud, remembered items in 3D</div>
               </div>
             </div>
           </div>
@@ -168,24 +221,24 @@
       <!-- Column 2: the brain inside the tailnet -->
       <div class="col">
         <h2>Brain (private)</h2>
-        <div class="tailnet" id="tailnet">
+        <div class="tailnet" id="tailnet" data-status="live" title="Verified on the box: allow-list gate fails closed, forged login header is replaced, ports 80/443/8000 closed from the internet.">
           <p class="cap">Tailnet only &middot; <code>tailscale serve</code> HTTPS &rarr; 127.0.0.1 &middot; fail-closed allow-list (<code>auth.py</code>)</p>
-          <div class="card brain" id="server">
+          <div class="card brain" id="server" data-status="live" title="Running in real mode on marco-gpu behind tailscale serve; answering requests from the tailnet.">
             <div class="hd">Marco server <small>server/ (Python, FastAPI)</small></div>
             <div class="bd">
               <div class="mods">
-                <div class="mod"><b>Ingest + recorder</b>every session saved under <code>data/sessions/</code></div>
-                <div class="mod"><b>Detector</b>OWLv2 image-guided search + DINOv2 crop check, 1 frame/s</div>
-                <div class="mod"><b>Geometry</b>box &rarr; 3D with that frame's own pose + depth</div>
-                <div class="mod"><b>World model</b>items, user track, timeline: seen, moved, missing, left behind</div>
-                <div class="mod"><b>Room map</b>voxel cloud + named surfaces (table, shelf, counter)</div>
-                <div class="mod"><b>Touch</b>fingertip 3D vs items within 15 cm, 5-message vote</div>
-                <div class="mod"><b>Answers</b><code>find</code>, <code>what_is_this</code>, <code>set_place</code></div>
-                <div class="mod"><b>Feeds</b>phone, Photon and dashboard hubs; label audio store</div>
+                <div class="mod" data-status="live" title="Live on Vultr: frames accepted (202) and recorded per session."><b>Ingest + recorder</b>every session saved under <code>data/sessions/</code></div>
+                <div class="mod" data-status="e2e" title="Real OWLv2 + DINOv2 on real iPhone clips: placement fine, recall only 4/9 passes, look-alike false alarms. Thresholds need tuning on our props."><b>Detector</b>OWLv2 image-guided search + DINOv2 crop check, 1 frame/s</div>
+                <div class="mod" data-status="e2e" title="1.7-6.7 cm placement on real iPhone 16 Pro recordings; unit-tested rules."><b>Geometry</b>box &rarr; 3D with that frame's own pose + depth</div>
+                <div class="mod" data-status="e2e" title="Seen events and answers on a real recording replayed live into the server (loopback)."><b>World model</b>items, user track, timeline: seen, moved, missing, left behind</div>
+                <div class="mod" data-status="e2e" title="Built from real depth in offline runs (map.png); named surfaces now floor-relative."><b>Room map</b>voxel cloud + named surfaces (table, shelf, counter)</div>
+                <div class="mod" data-status="built" title="Synthetic only (touch 67 ms after contact). Not tested with a real hand stream; CONTACT_M to refit."><b>Touch</b>fingertip 3D vs items within 15 cm, 5-message vote</div>
+                <div class="mod" data-status="e2e" title="find answered on live replay (1.7 cm from truth); what_is_this exercised in the Photon end-to-end test."><b>Answers</b><code>find</code>, <code>what_is_this</code>, <code>set_place</code></div>
+                <div class="mod" data-status="built" title="Phone and Photon hubs tested; the dashboard hub can block the whole server (open bug), map_points sent every frame."><b>Feeds</b>phone, Photon and dashboard hubs; label audio store</div>
               </div>
               <div class="hosts">
-                <div class="host"><b>Vultr A16 GPU (primary)</b><code>marco-gpu.&hellip;ts.net</code>, 0.18&ndash;0.40 s/frame, no inbound ports, Tailscale SSH</div>
-                <div class="host"><b>Venue Mac (fallback)</b>Apple Silicon (MPS), 0.33&ndash;0.42 s/frame. Phone on a direct Tailscale link (hotspot)</div>
+                <div class="host" data-status="live" title="Deployed in real mode; 403 without login, 200 with; 0.18-0.40 s/frame measured on the box."><b>Vultr A16 GPU (primary)</b><code>marco-gpu.&hellip;ts.net</code>, 0.18&ndash;0.40 s/frame, no inbound ports, Tailscale SSH</div>
+                <div class="host" data-status="e2e" title="Same server; benchmarked 0.33-0.42 s/frame on MPS; live replay tested on loopback."><b>Venue Mac (fallback)</b>Apple Silicon (MPS), 0.33&ndash;0.42 s/frame. Phone on a direct Tailscale link (hotspot)</div>
               </div>
             </div>
           </div>
@@ -196,7 +249,7 @@
       <div class="col">
         <h2>Services we run</h2>
         <div class="stack">
-          <div class="card people" id="bridge">
+          <div class="card people" id="bridge" data-status="e2e" title="39 tests, including end to end against the real server (stub, loopback). Photon side is live. Not yet pointed at marco-gpu.">
             <div class="hd">Photon bridge <small>photon/ (Node, TS)</small></div>
             <div class="bd"><ul>
               <li>Photon 2.0 client <code>@photon-ai/api</code> + Socket.IO event stream with saved cursor</li>
@@ -205,7 +258,7 @@
               <li>The phone never talks to it directly</li>
             </ul></div>
           </div>
-          <div class="card screen" id="dashboard">
+          <div class="card screen" id="dashboard" data-status="built" title="52 unit + 22 browser tests; runs in Demo mode. Shows no live data: the server adapter is not built.">
             <div class="hd">Dashboard <small>frontend/ (React + Vite)</small></div>
             <div class="bd"><ul>
               <li>Live chest view with boxes, 3D map, sound radar, timeline, setup view</li>
@@ -220,15 +273,15 @@
       <div class="col">
         <h2>Cloud + people</h2>
         <div class="stack">
-          <div class="card ext" id="photoncloud">
+          <div class="card ext" id="photoncloud" data-status="live" title="Photon 2.0 key, line and event stream live and tested.">
             <div class="hd">Photon cloud <small>photon.codes</small></div>
             <div class="bd"><ul><li>Managed iMessage line</li><li>REST sends + attachments; event stream in</li></ul></div>
           </div>
-          <div class="card people" id="caretaker">
+          <div class="card people" id="caretaker" data-status="live" title="Real iMessage sends and replies through Photon 2.0 tested.">
             <div class="hd">Caretaker's iPhone <small>Messages app</small></div>
             <div class="bd"><ul><li>Gets a photo of the touched item</li><li>Replies with a name, words, or a voice memo</li><li>Can send setup photos with a caption</li></ul></div>
           </div>
-          <div class="card ext" id="eleven">
+          <div class="card ext" id="eleven" data-status="built" title="Scribe client + tests in photon/; needs ELEVENLABS_API_KEY; live transcription not yet verified.">
             <div class="hd">ElevenLabs Scribe <small>cloud STT</small></div>
             <div class="bd"><ul><li>Voice memo &rarr; text, any language</li></ul></div>
           </div>
@@ -244,25 +297,25 @@
       <div class="flow">
         <h3>"Marco, where are my keys?"</h3>
         <ol>
-          <li>The AirPods mic hears it; on-device speech turns it into a registered item name.<span class="via">Bluetooth &rarr; iPhone (on device)</span></li>
-          <li>The phone sends <code>{"type":"query","kind":"find","name":"keys"}</code>.<span class="via">WSS <code>/v1/phone</code> &#9314;</span></li>
-          <li>The server looks up the world model (filled by 1 frame/s detection) and answers with position, surface and how long ago it was seen.<span class="via">WSS <code>/v1/phone</code> &#9314;</span></li>
-          <li>The phone says "Polo! Behind you, two steps, on the table", spatialised at the keys.<span class="via">iPhone &rarr; AirPods &#9312;</span></li>
-          <li>The 60 Hz loop plays a beacon from the keys, relative to the head (AirPods yaw + ARKit torso). A double ding fires when facing, and beeps speed up as you walk.<span class="via">on device</span></li>
-          <li>Within 30 cm, <code>hand_proximity</code> drives a steady tone; on <code>touch</code> it goes quiet and plays the label.<span class="via">hand stream up 15/s, proximity down 15/s &#9314;</span></li>
-          <li>The phone mirrors guidance state; the dashboard radar shows what the user hears.<span class="via">WSS <code>/v1/dashboard</code> &#9316;</span></li>
+          <li data-status="built" title="Voice input not yet run on the phone.">The AirPods mic hears it; on-device speech turns it into a registered item name.<span class="via">Bluetooth &rarr; iPhone (on device)</span></li>
+          <li data-status="e2e" title="Query format contract-tested; WSS live from the Mac.">The phone sends <code>{"type":"query","kind":"find","name":"keys"}</code>.<span class="via">WSS <code>/v1/phone</code> &#9314;</span></li>
+          <li data-status="e2e" title="find answered on a live replay of a real recording.">The server looks up the world model (filled by 1 frame/s detection) and answers with position, surface and how long ago it was seen.<span class="via">WSS <code>/v1/phone</code> &#9314;</span></li>
+          <li data-status="built" title="Spatial speech works in Mac tests; not on the vest.">The phone says "Polo! Behind you, two steps, on the table", spatialised at the keys.<span class="via">iPhone &rarr; AirPods &#9312;</span></li>
+          <li data-status="built" title="Left/right correct, front/back unclear; not on the vest.">The 60 Hz loop plays a beacon from the keys, relative to the head (AirPods yaw + ARKit torso). A double ding fires when facing, and beeps speed up as you walk.<span class="via">on device</span></li>
+          <li data-status="built" title="Touch only tested on synthetic data.">Within 30 cm, <code>hand_proximity</code> drives a steady tone; on <code>touch</code> it goes quiet and plays the label.<span class="via">hand stream up 15/s, proximity down 15/s &#9314;</span></li>
+          <li data-status="todo" title="Dashboard adapter not built.">The phone mirrors guidance state; the dashboard radar shows what the user hears.<span class="via">WSS <code>/v1/dashboard</code> &#9316;</span></li>
         </ol>
       </div>
       <div class="flow">
         <h3>"Marco, what is this?" (an unknown jar)</h3>
         <ol>
-          <li>The fingertip touches the jar; the hand stream lets the server confirm contact.<span class="via">WSS <code>/v1/phone</code> &#9314;</span></li>
-          <li>The server answers <code>status: unknown</code> and pushes <code>label_request</code> with a crop URL to the bridge.<span class="via">WSS <code>/v1/photon</code> &#9317;</span></li>
-          <li>The bridge downloads the crop and texts it to the caretaker: "What is this?"<span class="via">HTTPS GET crop &#9317;, Photon REST &#9318;, iMessage &#9319;</span></li>
-          <li>The caretaker replies "cumin" and/or a voice memo; the reply arrives on the event stream.<span class="via">iMessage &#9319; &rarr; Socket.IO &#9318;</span></li>
-          <li>A voice memo is transcribed for the name.<span class="via">HTTPS ElevenLabs &#9320;</span></li>
-          <li>The bridge posts <code>POST /v1/labels</code> (name, text, m4a). The server registers the jar from the crop, anchored where it was touched.<span class="via">HTTPS &#9317;</span></li>
-          <li>The server sends <code>label_ready</code>; the phone caches the audio. The next touch says "cumin" in the caretaker's voice.<span class="via">WSS &#9314; + HTTPS <code>/v1/audio</code> &#9315;</span></li>
+          <li data-status="built" title="Touch not tested with a real hand.">The fingertip touches the jar; the hand stream lets the server confirm contact.<span class="via">WSS <code>/v1/phone</code> &#9314;</span></li>
+          <li data-status="e2e" title="Covered by the Photon end-to-end test.">The server answers <code>status: unknown</code> and pushes <code>label_request</code> with a crop URL to the bridge.<span class="via">WSS <code>/v1/photon</code> &#9317;</span></li>
+          <li data-status="e2e" title="Crop fetch + iMessage send in the end-to-end test; Photon live.">The bridge downloads the crop and texts it to the caretaker: "What is this?"<span class="via">HTTPS GET crop &#9317;, Photon REST &#9318;, iMessage &#9319;</span></li>
+          <li data-status="live" title="Real iMessage replies through Photon 2.0.">The caretaker replies "cumin" and/or a voice memo; the reply arrives on the event stream.<span class="via">iMessage &#9319; &rarr; Socket.IO &#9318;</span></li>
+          <li data-status="built" title="Scribe needs a key; live transcription unverified.">A voice memo is transcribed for the name.<span class="via">HTTPS ElevenLabs &#9320;</span></li>
+          <li data-status="e2e" title="POST /v1/labels in the end-to-end test.">The bridge posts <code>POST /v1/labels</code> (name, text, m4a). The server registers the jar from the crop, anchored where it was touched.<span class="via">HTTPS &#9317;</span></li>
+          <li data-status="built" title="label_ready delivered in tests; phone playback unverified.">The server sends <code>label_ready</code>; the phone caches the audio. The next touch says "cumin" in the caretaker's voice.<span class="via">WSS &#9314; + HTTPS <code>/v1/audio</code> &#9315;</span></li>
         </ol>
       </div>
     </div>
@@ -273,17 +326,17 @@
     <p class="sub">Endpoints, transport, rate and payload, from <code>docs/INTERFACES.md</code> v0.2. Everything that reaches the server goes through <code>tailscale serve</code> (HTTPS/WSS on the tailnet), and the server itself binds only 127.0.0.1.</p>
     <div class="tablewrap">
       <table>
-        <thead><tr><th>#</th><th>From &rarr; to</th><th>Transport</th><th>Endpoint / API</th><th>Rate</th><th>Payload</th></tr></thead>
+        <thead><tr><th>#</th><th>Status</th><th>From &rarr; to</th><th>Transport</th><th>Endpoint / API</th><th>Rate</th><th>Payload</th></tr></thead>
         <tbody>
-          <tr><td><span class="num">1</span></td><td>AirPods &harr; iPhone</td><td><span class="t bt">Bluetooth</span></td><td><code>CMHeadphoneMotionManager</code>; audio route with high-quality recording</td><td>motion ~25 Hz; audio continuous</td><td>head attitude up; mic audio up; stereo HRTF audio down</td></tr>
-          <tr><td><span class="num">2</span></td><td>iPhone &rarr; server</td><td><span class="t https">HTTPS POST</span></td><td><code>/v1/frames</code> (multipart)</td><td>~1/s, one in flight, latest wins</td><td>JPEG 960x720 (sensor orientation) + DEFLATE float16 depth 256x192 + DEFLATE confidence + meta (pose, intrinsics, ids). Reply 202 (422 with a reason)</td></tr>
-          <tr><td><span class="num">3</span></td><td>iPhone &harr; server</td><td><span class="t ws">WSS</span></td><td><code>/v1/phone</code></td><td>pose 10/s, hand 15/s, guidance 10/s; replies on events</td><td>Up: <code>pose</code>, <code>hand</code> (21 joints + 9x9 depth patches), <code>guidance</code>, <code>query</code> (find / what_is_this / set_place), <code>map</code>. Down: <code>answer</code>, <code>touch</code>/<code>touch_end</code>, <code>hand_proximity</code>, <code>event</code>, <code>label_ready</code>, <code>error</code></td></tr>
-          <tr><td><span class="num">4</span></td><td>iPhone &rarr; server</td><td><span class="t https">HTTPS</span></td><td><code>POST /v1/items</code>, <code>GET /v1/items</code>, <code>GET /v1/audio/{id}</code></td><td>on setup / launch / label</td><td>Registration photo + name &rarr; <code>{item_id, quality: ok|retake}</code>; item list on launch; label audio (cached on phone)</td></tr>
-          <tr><td><span class="num">5</span></td><td>server &rarr; dashboard</td><td><span class="t ws">WSS</span> + <span class="t https">HTTPS GET</span></td><td><code>/v1/dashboard</code>; <code>/v1/items</code>, <code>/v1/timeline</code></td><td>frame ~1/s, world 2/s, map 5 s, guidance 10/s</td><td><code>frame</code> (upright JPEG + boxes), <code>world</code>, <code>map_points</code> (voxels), <code>guidance</code>, <code>timeline</code>. Read-only</td></tr>
-          <tr><td><span class="num">6</span></td><td>Photon bridge &harr; server</td><td><span class="t ws">WSS</span> + <span class="t https">HTTPS</span></td><td><code>/v1/photon</code>; <code>GET /v1/touch/&hellip;/crop.jpg</code>; <code>POST /v1/labels</code>; <code>POST /v1/items</code></td><td>per unknown item</td><td>Down: <code>label_request {touch_id, crop_url}</code>. Up: name + text + optional m4a voice memo (then by <code>item_id</code>); caretaker setup photos</td></tr>
-          <tr><td><span class="num">7</span></td><td>Photon bridge &harr; Photon cloud</td><td><span class="t https">HTTPS REST</span> + <span class="t ws">Socket.IO</span></td><td><code>@photon-ai/api</code> 0.5 (Photon 2.0)</td><td>per message</td><td>Outbound texts + photo attachments; inbound replies, voice memos, photos (cursor replay, at-least-once)</td></tr>
-          <tr><td><span class="num">8</span></td><td>Photon cloud &harr; caretaker</td><td><span class="t imsg">iMessage</span></td><td>Photon-managed line</td><td>per message</td><td>Photo + "What is this?"; reply text, voice memo (CAF), or setup photo + caption</td></tr>
-          <tr><td><span class="num">9</span></td><td>Photon bridge &rarr; ElevenLabs</td><td><span class="t https">HTTPS POST</span></td><td><code>api.elevenlabs.io/v1/speech-to-text</code> (Scribe)</td><td>per voice memo</td><td>Audio in; transcript out (language auto-detected)</td></tr>
+          <tr><td><span class="num">1</span></td><td><span class="pill" data-status="built" title="Checked AirPods to a Mac only."></span></td><td>AirPods &harr; iPhone</td><td><span class="t bt">Bluetooth</span></td><td><code>CMHeadphoneMotionManager</code>; audio route with high-quality recording</td><td>motion ~25 Hz; audio continuous</td><td>head attitude up; mic audio up; stereo HRTF audio down</td></tr>
+          <tr><td><span class="num">2</span></td><td><span class="pill" data-status="e2e" title="From the Mac to Vultr with Swift-encoded bytes; app not run on the phone."></span></td><td>iPhone &rarr; server</td><td><span class="t https">HTTPS POST</span></td><td><code>/v1/frames</code> (multipart)</td><td>~1/s, one in flight, latest wins</td><td>JPEG 960x720 (sensor orientation) + DEFLATE float16 depth 256x192 + DEFLATE confidence + meta (pose, intrinsics, ids). Reply 202 (422 with a reason)</td></tr>
+          <tr><td><span class="num">3</span></td><td><span class="pill" data-status="e2e" title="Opened and round-tripped from the Mac; live replay on loopback."></span></td><td>iPhone &harr; server</td><td><span class="t ws">WSS</span></td><td><code>/v1/phone</code></td><td>pose 10/s, hand 15/s, guidance 10/s; replies on events</td><td>Up: <code>pose</code>, <code>hand</code> (21 joints + 9x9 depth patches), <code>guidance</code>, <code>query</code> (find / what_is_this / set_place), <code>map</code>. Down: <code>answer</code>, <code>touch</code>/<code>touch_end</code>, <code>hand_proximity</code>, <code>event</code>, <code>label_ready</code>, <code>error</code></td></tr>
+          <tr><td><span class="num">4</span></td><td><span class="pill" data-status="e2e" title="iPhone Safari reached GET /v1/items on Vultr; app path not run."></span></td><td>iPhone &rarr; server</td><td><span class="t https">HTTPS</span></td><td><code>POST /v1/items</code>, <code>GET /v1/items</code>, <code>GET /v1/audio/{id}</code></td><td>on setup / launch / label</td><td>Registration photo + name &rarr; <code>{item_id, quality: ok|retake}</code>; item list on launch; label audio (cached on phone)</td></tr>
+          <tr><td><span class="num">5</span></td><td><span class="pill" data-status="todo" title="Frontend calls routes the server does not serve."></span></td><td>server &rarr; dashboard</td><td><span class="t ws">WSS</span> + <span class="t https">HTTPS GET</span></td><td><code>/v1/dashboard</code>; <code>/v1/items</code>, <code>/v1/timeline</code></td><td>frame ~1/s, world 2/s, map 5 s, guidance 10/s</td><td><code>frame</code> (upright JPEG + boxes), <code>world</code>, <code>map_points</code> (voxels), <code>guidance</code>, <code>timeline</code>. Read-only</td></tr>
+          <tr><td><span class="num">6</span></td><td><span class="pill" data-status="e2e" title="End to end on loopback stub; not yet pointed at Vultr."></span></td><td>Photon bridge &harr; server</td><td><span class="t ws">WSS</span> + <span class="t https">HTTPS</span></td><td><code>/v1/photon</code>; <code>GET /v1/touch/&hellip;/crop.jpg</code>; <code>POST /v1/labels</code>; <code>POST /v1/items</code></td><td>per unknown item</td><td>Down: <code>label_request {touch_id, crop_url}</code>. Up: name + text + optional m4a voice memo (then by <code>item_id</code>); caretaker setup photos</td></tr>
+          <tr><td><span class="num">7</span></td><td><span class="pill" data-status="live" title="Photon 2.0 live and tested."></span></td><td>Photon bridge &harr; Photon cloud</td><td><span class="t https">HTTPS REST</span> + <span class="t ws">Socket.IO</span></td><td><code>@photon-ai/api</code> 0.5 (Photon 2.0)</td><td>per message</td><td>Outbound texts + photo attachments; inbound replies, voice memos, photos (cursor replay, at-least-once)</td></tr>
+          <tr><td><span class="num">8</span></td><td><span class="pill" data-status="live" title="Real iMessage."></span></td><td>Photon cloud &harr; caretaker</td><td><span class="t imsg">iMessage</span></td><td>Photon-managed line</td><td>per message</td><td>Photo + "What is this?"; reply text, voice memo (CAF), or setup photo + caption</td></tr>
+          <tr><td><span class="num">9</span></td><td><span class="pill" data-status="built" title="Needs a key; not verified live."></span></td><td>Photon bridge &rarr; ElevenLabs</td><td><span class="t https">HTTPS POST</span></td><td><code>api.elevenlabs.io/v1/speech-to-text</code> (Scribe)</td><td>per voice memo</td><td>Audio in; transcript out (language auto-detected)</td></tr>
         </tbody>
       </table>
     </div>
@@ -322,7 +375,7 @@
     </div>
   </section>
 
-  <footer>Generated from the repo on 2026-10-17. Diagram wires are drawn live from the card positions; below 1080 px wide, use the numbered table instead.</footer>
+  <footer>Progress colours reflect <code>STATUS.md</code> and the code as of commit <code>c6eca2f</code> (2026-10-17) (hover any box for the evidence). To update, change a <code>data-status</code> attribute (live / e2e / built / todo) or the wire list in the script. Diagram wires are drawn live from the card positions; below 1080 px wide, use the numbered table instead.</footer>
 </div>
 
 <script>
@@ -332,24 +385,54 @@
   const NS = 'http://www.w3.org/2000/svg';
   const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 
-  // [id, from, fromSide, fromFrac, to, toSide, toFrac, kind, label]
+  // [id, from, fromSide, fromFrac, to, toSide, toFrac, transport, progress status]
   const EDGES = [
-    [1, 'airpods', 'bottom', 0.5, 'iphone', 'top', 0.5, 'bt'],
-    [2, 'iphone', 'right', 0.22, 'server', 'left', 0.2, 'https'],
-    [3, 'iphone', 'right', 0.5, 'server', 'left', 0.45, 'ws'],
-    [4, 'iphone', 'right', 0.78, 'server', 'left', 0.7, 'https'],
-    [5, 'server', 'right', 0.78, 'dashboard', 'left', 0.5, 'ws'],
-    [6, 'server', 'right', 0.25, 'bridge', 'left', 0.45, 'ws'],
-    [7, 'bridge', 'right', 0.3, 'photoncloud', 'left', 0.5, 'https'],
-    [8, 'photoncloud', 'bottom', 0.5, 'caretaker', 'top', 0.5, 'imsg'],
-    [9, 'bridge', 'right', 0.75, 'eleven', 'left', 0.5, 'https'],
+    [1, 'airpods', 'bottom', 0.5, 'iphone', 'top', 0.5, 'bt', 'built'],
+    [2, 'iphone', 'right', 0.22, 'server', 'left', 0.2, 'https', 'e2e'],
+    [3, 'iphone', 'right', 0.5, 'server', 'left', 0.45, 'ws', 'e2e'],
+    [4, 'iphone', 'right', 0.78, 'server', 'left', 0.7, 'https', 'e2e'],
+    [5, 'server', 'right', 0.78, 'dashboard', 'left', 0.5, 'ws', 'todo'],
+    [6, 'server', 'right', 0.25, 'bridge', 'left', 0.45, 'ws', 'e2e'],
+    [7, 'bridge', 'right', 0.3, 'photoncloud', 'left', 0.5, 'https', 'live'],
+    [8, 'photoncloud', 'bottom', 0.5, 'caretaker', 'top', 0.5, 'imsg', 'live'],
+    [9, 'bridge', 'right', 0.75, 'eleven', 'left', 0.5, 'https', 'built'],
   ];
+  const STATUS_COLOR = { live: '--s-live', e2e: '--s-e2e', built: '--s-built', todo: '--s-todo' };
+  const STATUS_LABEL = { live: '\u2713 Live', e2e: 'End to end', built: 'Built', todo: 'Not built' };
   const STYLE = {
-    https: { color: '--https', dash: null, width: 2.5, stream: false },
-    ws: { color: '--ws', dash: '6 4', width: 3, stream: true },
-    bt: { color: '--bt', dash: '2 5', width: 3, stream: false, cap: 'round' },
-    imsg: { color: '--imsg', dash: '10 5', width: 2.5, stream: false },
+    https: { dash: null, width: 2.5, stream: false },
+    ws: { dash: '6 4', width: 3, stream: true },
+    bt: { dash: '2 5', width: 3, stream: false, cap: 'round' },
+    imsg: { dash: '10 5', width: 2.5, stream: false },
   };
+
+  // Status pills on every tagged element.
+  for (const el of document.querySelectorAll('[data-status]')) {
+    const st = el.dataset.status;
+    if (el.classList.contains('pill')) { el.textContent = STATUS_LABEL[st]; continue; }
+    if (el.closest('.status-legend')) continue;
+    const pill = document.createElement('span');
+    pill.className = 'pill'; pill.dataset.status = st; pill.textContent = STATUS_LABEL[st];
+    if (el.classList.contains('card')) el.querySelector('.hd small')?.before(pill);
+    else if (el.classList.contains('tailnet')) el.querySelector('.cap').appendChild(pill);
+    else if (el.tagName === 'LI') el.insertBefore(pill, el.querySelector('.via'));
+    else el.appendChild(pill);
+  }
+
+  // Progress summary.
+  function summary(title, statuses) {
+    const order = ['live', 'e2e', 'built', 'todo'];
+    const n = statuses.length;
+    const c = Object.fromEntries(order.map((k) => [k, statuses.filter((x) => x === k).length]));
+    const done = c.live + c.e2e;
+    const bar = order.map((k) => c[k] ? `<span data-status="${k}" style="width:${(100 * c[k] / n).toFixed(1)}%" title="${STATUS_LABEL[k]}: ${c[k]}"></span>` : '').join('');
+    const counts = order.map((k) => `<span><b style="color:var(${STATUS_COLOR[k]})">${c[k]}</b> ${STATUS_LABEL[k].replace('\u2713 ', '').toLowerCase()}</span>`).join('');
+    return `<div class="pcard"><h3>${title}</h3><div class="big">${done}/${n} end to end &middot; ${c.live} live</div><div class="bar">${bar}</div><div class="counts">${counts}</div></div>`;
+  }
+  const parts = [...document.querySelectorAll('.card[data-status], .mod[data-status], .host[data-status], .tailnet[data-status]')].map((e) => e.dataset.status);
+  const steps = [...document.querySelectorAll('.flow li[data-status]')].map((e) => e.dataset.status);
+  document.getElementById('progress').innerHTML =
+    summary('Parts (boxes + modules)', parts) + summary('Connections (wires)', EDGES.map((e) => e[8])) + summary('Demo steps (both journeys)', steps);
 
   function point(el, side, frac, base) {
     const r = el.getBoundingClientRect();
@@ -365,13 +448,13 @@
     if (getComputedStyle(svg).display === 'none') return;
     const base = host.getBoundingClientRect();
     svg.setAttribute('viewBox', `0 0 ${base.width} ${base.height}`);
-    for (const [n, a, as, af, b, bs, bf, kind] of EDGES) {
+    for (const [n, a, as, af, b, bs, bf, kind, st] of EDGES) {
       const A = point(document.getElementById(a), as, af, base);
       const B = point(document.getElementById(b), bs, bf, base);
       const k = Math.max(30, Math.hypot(B.x - A.x, B.y - A.y) * 0.4);
       const c1 = { x: A.x + A.dx * k, y: A.y + A.dy * k };
       const c2 = { x: B.x + B.dx * k, y: B.y + B.dy * k };
-      const s = STYLE[kind];
+      const s = { ...STYLE[kind], color: STATUS_COLOR[st] };
       const path = document.createElementNS(NS, 'path');
       path.setAttribute('d', `M${A.x},${A.y} C${c1.x},${c1.y} ${c2.x},${c2.y} ${B.x},${B.y}`);
       path.setAttribute('fill', 'none');
@@ -380,6 +463,7 @@
       if (s.dash) path.setAttribute('stroke-dasharray', s.dash);
       if (s.cap) path.setAttribute('stroke-linecap', s.cap);
       if (s.stream) path.setAttribute('class', 'stream');
+      if (st === 'todo') path.setAttribute('opacity', '0.75');
       svg.appendChild(path);
       for (const P of [A, B]) {
         const dot = document.createElementNS(NS, 'circle');

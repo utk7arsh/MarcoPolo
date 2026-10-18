@@ -25,8 +25,16 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Marco uses the camera and LiDAR to see where your things are.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Marco connects to your server to send camera and depth observations.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Marco listens for "Marco" and your questions.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>Marco uses your AirPods' head tracking so sounds stay where things are.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Marco turns what you say into questions, on this iPhone.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>InstrumentSans-Regular.ttf</string>
