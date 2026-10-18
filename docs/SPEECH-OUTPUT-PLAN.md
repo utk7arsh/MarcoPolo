@@ -54,6 +54,14 @@ remains. See [the deployment and integration audit](PHOTON-INTEGRATION-AUDIT.md)
 
 ## Verification (October 18, 2026)
 
+Latest deployed check: real caretaker reply → `label_ready` → exact Marco line
+→ private Vultr `/v1/speech` → ElevenLabs WAV passed (0.792 s generation/request).
+The actual Swift client fetched and silently spatially rendered that same line.
+Fourteen local HTTP/rendering assertions also rechecked Stop, delayed responses,
+offline cache and actual Apple fallback. See the current
+[integration audit](PHOTON-INTEGRATION-AUDIT.md) for evidence and limits.
+The earlier measurements below describe previous runs.
+
 - 12 server speech tests: authentication, exact provider request, valid WAV,
   failures/timeouts, cache bounds, coalescing, cancellation and safe errors.
 - 387 Swift checks, including request shape, cancellation, stale callbacks,

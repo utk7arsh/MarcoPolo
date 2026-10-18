@@ -4,6 +4,47 @@
 unavailable for a live retest. The fixes were subsequently deployed with the
 user's authorization; the deployment evidence is recorded below.
 
+## Latest: live pre-mobile verification
+
+- Found and fixed a real outgoing-photo failure in `photon/src/photon.ts`:
+  Photon rejects the `type="application/json"` parameter on the multipart
+  `Content-Type` with 400 `INVALID_ATTACHMENT_REQUEST`. Only `boundary` is now
+  sent; the JSON metadata part remains. The stricter transport regression failed
+  before the fix and all 52 Photon tests passed afterward. Deployed and pushed
+  as `761e1ed`; [GitHub integration checks pass](https://github.com/utk7arsh/LAHacks-2026/actions/runs/39116085128).
+- Real caretaker setup photo/name saved successfully. An older bridge on a
+  teammate's machine caused duplicate readiness mug registrations and an obsolete
+  voice-memo prompt; the user confirmed that copy is stopped. Test records remain.
+- Synthetic camera/depth/hand messages entered the production real brain. It
+  produced unknown touch `7de63c4a9766`; after the bridge restart, the server
+  replayed it and Photon delivered the photo and typed-name question. The actual
+  caretaker replied `Readiness beacon`; the bridge posted `/v1/labels`, and the
+  phone socket received `label_ready` for item `86da7aaa1cb7`. The confirmation
+  message was delivered too. ElevenLabs produced its exact spoken response in
+  **0.792 s**; the production Swift client fetched and silently spatially rendered
+  that response, including a successful Stop check.
+- Photon supplied **no parent message ID** on this live answer. It matched the
+  single open question. Explicit reply threading with multiple open questions
+  is unit-tested but still lacks a live check; use one pending question at a time
+  for the demo. Threaded confirmations/reactions get provider 409 on this line;
+  the existing plain-text confirmation fallback delivered successfully.
+- A controlled server restart preserved **all 12 IDs, names and labels**, cleared
+  synthetic positions and allowed the bridge to reconnect automatically. Health
+  is OK with no open/pending questions. All **93** compared source, dashboard
+  build and service files match the tested checkout; Python/Node dependencies
+  are consistent. Live dashboard HTTP/WS messages pass the actual frontend schema.
+- Fresh suites: server 120 passed, one dataset skip; Photon 52 passed; frontend
+  53 unit + 22 browser tests passed. Linux Photon: 51 passed, one fixture-generation
+  skip; actual HEIC conversion was separately verified. Speech cancellation,
+  offline cache and real Apple fallback passed 14 local integration assertions.
+  The complete unsigned iOS Release build for a generic physical iPhone passes.
+  Keys remain outside Git and in root-owned 0600 environment files.
+
+Evidence: `/private/tmp/marco-readiness-20261018/`. These are real backend,
+iMessage and ElevenLabs checks with **synthetic sensor input and silent Mac
+rendering**. Actual camera/LiDAR, physical touch, iPhone/AirPods head tracking,
+perceived spatial directions and VoiceOver remain device checks.
+
 **Environment follow-up:** the user subsequently authorized direct environment
 files on Vultr. ElevenLabs TTS settings are in `/etc/marco/local.env`;
 Photon settings are in `/etc/marco/photon.env`. Both are root-owned `0600`,
@@ -53,8 +94,8 @@ The audit-time findings and test scope below describe the original failure.
 | Flow | Path | Evidence and limit |
 |---|---|---|
 | Caretaker teaches an item | iMessage photo + typed name → bridge → `POST /v1/items` with `source=photon` | Local actual-server integration passes; earlier live registrations exist in bridge state. |
-| Wearer asks about an unknown item | iOS query → real brain's recent fingertip + camera crop → `WS /v1/photon` → bridge → caretaker photo + prompt | Synthetic real-brain inputs and isolated server/bridge integration pass. Fresh physical unknown-object/iMessage delivery is not verified. |
-| Caretaker answers | Typed reply → bridge → `POST /v1/labels` with `touch_id` → phone `label_ready` | Local integration passes; reply must be matched to the outgoing photo/question. |
+| Wearer asks about an unknown item | iOS query → real brain's recent fingertip + camera crop → `WS /v1/photon` → bridge → caretaker photo + prompt | Live production delivery passed with synthetic sensors; actual physical camera/touch remains unverified. |
+| Caretaker answers | Typed reply → bridge → `POST /v1/labels` with `touch_id` → phone `label_ready` | Live typed reply and phone socket event passed with one open question; explicit multi-question threading remains unverified. |
 | Marco speaks | Phone selects text → private `POST /v1/speech` → ElevenLabs TTS → iOS audio graph, with Apple fallback | Separate output-only implementation. No ElevenLabs credential is needed in the bridge. Deployment/device checks are in `SPEECH-OUTPUT-PLAN.md`. |
 
 The `MarcoAgent` class is conversation routing code, not a conversational LLM.

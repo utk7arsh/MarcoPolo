@@ -8,7 +8,8 @@ Read `../STATUS.md` for implementation evidence and `INTERFACES.md` for wire for
 **Revised speech scope:** the user dropped caretaker voice labelling and Scribe
 from the demo. Photos and typed names remain; ElevenLabs is intended for Marco's
 spoken responses (TTS). The output route and iOS spatial playback are implemented
-and locally tested; shared deployment and physical playback checks remain. See [`SPEECH-OUTPUT-PLAN.md`](SPEECH-OUTPUT-PLAN.md). This supersedes
+and deployed, with live backend and silent Swift-rendering checks passed; physical
+playback checks remain. See [`SPEECH-OUTPUT-PLAN.md`](SPEECH-OUTPUT-PLAN.md). This supersedes
 the corresponding part of the original diagram.
 
 ## Demo outcome
@@ -28,7 +29,7 @@ through iMessage. The dashboard lets the team observe and explain this flow.
 | Photon bridge, `photon/` | Node/TypeScript Photon 2.0 `@photon-ai/api`, Socket.IO events with saved cursor; caretaker allow-list; idempotent posting; HEIC/PNG→JPEG conversion; typed labels only; loopback health endpoint and doctor checks. Phone never calls the bridge directly. |
 | Dashboard, `frontend/` | React/Vite observer and setup view: live chest video with boxes, map, sound radar and timeline. Use `VITE_DATA_SOURCE=api` and the Vite `API_PROXY_TARGET`. The server now implements the snapshot/event/command adapter, with phone acknowledgements for Find/Stop. Live snapshot, events and camera were verified in Chrome; physical command execution is not proved by this read-only check. |
 | Photon cloud and caretaker Messages | Managed iMessage line; REST sends and attachments plus incoming events. Revised demo uses typed names and captioned registration photos. Recordings are not used as labels. |
-| ElevenLabs speech output | Generate Marco's spoken responses server-side, then play them through the existing iOS spatial graph. Cache common phrases; retain Apple speech as fallback. No caretaker transcription is required by the revised demo. The authenticated `/v1/speech` route returns WAV for the existing iOS voice node. Live generation and local tests pass; deployment and hardware checks remain. |
+| ElevenLabs speech output | Generate Marco's spoken responses server-side, then play them through the existing iOS spatial graph. Cache common phrases; retain Apple speech as fallback. No caretaker transcription is required by the revised demo. The authenticated `/v1/speech` route returns WAV for the existing iOS voice node. Deployed live generation, caretaker-reply integration and silent Swift rendering pass; physical playback checks remain. |
 
 ## Connections and deployment
 

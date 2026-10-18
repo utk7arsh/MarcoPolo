@@ -25,9 +25,27 @@ Last updated: 2026-10-18. Keep this file current: update it whenever a decision 
   also pass. Private speech invalid requests return 422; unauthenticated HTTP/WS
   return 403/1008. Live server generation: 0.406 s, cached 0.002 s, valid mono
   24 kHz WAV. Keys remain server-only and absent from tracked files.
-- Live unknown-object test uses synthetic sensor data, not physical camera or
-  touch proof. Awaiting caretaker's typed reply before recording the final
-  `label_ready` → spoken response result. Physical iPhone/AirPods checks remain.
+- **Live unknown-object round trip passed:** synthetic frame/depth/hand → real
+  production brain → retained Photon request → delivered test crop/question →
+  caretaker's typed `Readiness beacon` reply → `/v1/labels` → phone `label_ready`
+  → valid ElevenLabs WAV (0.792 s). The actual Swift client also fetched that
+  exact response and rendered it silently through HRTF, with Stop verified.
+  Provider confirmed delivery of the photo, question and confirmation. The reply
+  had no thread ID, so this live test proves the single-open-question fallback;
+  explicit reply threading with multiple open questions remains unverified.
+- Controlled real server restart preserved all **12 item IDs, names and labels**,
+  including the new caregiver label. Photon automatically reconnected; health is
+  OK with zero pending/open questions. Synthetic positions cleared on restart.
+  **93 deployed source/assets/service files** match the tested checkout exactly;
+  all 85 installed Python distributions have compatible dependencies. Node's
+  dependency tree is valid. Final deployed Linux Photon tests: 51 pass, one
+  macOS-only HEIC fixture-generation skip (conversion separately verified).
+- Fix `761e1ed` is pushed and [GitHub integration checks pass](https://github.com/utk7arsh/LAHacks-2026/actions/runs/39116085128).
+  The complete unsigned iOS Release build for a generic physical iPhone passes.
+  Evidence is under `/private/tmp/marco-readiness-20261018/`. The test used
+  synthetic sensors and silent Mac rendering; physical iPhone capture, actual
+  fingertip contact, AirPods routing/head tracking and VoiceOver still need the
+  device. For the demo, handle one unknown-item question at a time.
 
 ## Vultr server and Photon activated (October 18, 2026)
 
