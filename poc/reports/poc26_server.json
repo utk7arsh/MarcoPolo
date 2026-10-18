@@ -43,23 +43,23 @@
   },
   "5_latency_m3pro_mps": {
     "18 items registered": {
-      "request_ms_median": 457.8,
-      "server_ms_last": 450.5
+      "request_ms_median": 399.4,
+      "server_ms_last": 397.9
     },
     "1 items registered": {
-      "request_ms_median": 376.0,
-      "server_ms_last": 372.8
+      "request_ms_median": 321.2,
+      "server_ms_last": 320.2
     }
   },
   "6_latest_frame_wins": {
     "processed": [
       1,
-      4,
+      3,
       6
     ],
     "skipped": [
       2,
-      3,
+      4,
       5
     ]
   }

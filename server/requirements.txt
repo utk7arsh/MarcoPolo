@@ -1,0 +1,18 @@
+# Marco server, Python 3.11+ (developed on 3.12). Versions tested are in server/README.md.
+# Stub mode (no models) needs only the first block.
+fastapi>=0.115
+uvicorn>=0.30
+python-multipart>=0.0.9
+numpy>=1.26
+pillow>=10.0
+httpx>=0.27
+websockets>=12.0
+
+# The real pipeline: OWLv2 + DINOv2 (weights download from Hugging Face on first use, about 1 GB).
+torch>=2.3
+transformers>=4.45
+
+# Tools (sample sessions, offline reports) and tests.
+matplotlib>=3.8
+opencv-python>=4.9
+pytest>=8.0

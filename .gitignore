@@ -43,3 +43,18 @@ poc/research/repos_psychoacoustics/
 poc/research/orbit_readme.md
 poc/research/landscape/research_raw/
 poc/research/.scratch/
+
+# Server recordings and downloaded sample data: camera images of people's homes, and third-party datasets.
+server/data/
+
+# iOS: build output, the XcodeGen-generated project (ios/project.yml is the source), personal Xcode state
+ios/build/
+ios/xcode/
+ios/Marco.xcodeproj/
+xcuserdata/
+*.xcuserstate
+DerivedData/
+
+# Photon (the team's bridge has its own photon/.gitignore)
+photon/node_modules/
+photon-scaffold/node_modules/

@@ -14,7 +14,7 @@ a DINOv2 check of the crop against the registration crop, and, with two or more 
 the box looks more like this item than the user's other items. Thresholds come from calibrate().
 
 Security: every route sits behind require_caller(), which fails closed (403) until a real verifier is wired.
-Tests opt in with AUTH_TEST_BYPASS=1. The listener binds 127.0.0.1 unless HOST says otherwise; see the
+Tests opt in with AUTH_TEST_BYPASS=1. The listener binds 127.0.0.1 only (main refuses anything else); see the
 checklist at the end of POC 26's report before exposing it to any other machine.
 """
 import io
@@ -201,7 +201,10 @@ def post_frame(device_id: str = Form(...), frame_id: int = Form(...), frame: Upl
 
 def main():
     import uvicorn  # not needed for the in-process tests
-    uvicorn.run(app, host=os.environ.get("HOST", "127.0.0.1"), port=int(os.environ.get("PORT", "8000")))
+    host = os.environ.get("HOST", "127.0.0.1")
+    if host not in ("127.0.0.1", "localhost", "::1"):
+        raise SystemExit(f"refusing to bind {host}: loopback only; reach it through `tailscale serve` (see server/README.md)")
+    uvicorn.run(app, host=host, port=int(os.environ.get("PORT", "8000")))
 
 
 if __name__ == "__main__":
