@@ -2,6 +2,8 @@
 
 Status: **frontend implemented against v0.1; FastAPI API pending**, 2026-10-17. See [the short backend handoff](fastapi-handoff.md) and [frontend run instructions](../README.md). The existing prototype does not implement the dashboard endpoints yet.
 
+**Architecture update:** the current `server/` owns 3D placement and world memory under [the team interfaces](../../docs/INTERFACES.md). The POC inventory and ownership diagram below predate that implementation. Use [the backend integration plan](backend-integration-plan.md) for current ownership and access points, and [the browser schema](../src/lib/schema.ts) for implemented payloads.
+
 ## 1. Build against a shared contract
 
 Neither the frontend nor the backend should dictate the other's internals. Agree on the messages below, then work in parallel:

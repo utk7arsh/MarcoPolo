@@ -7,8 +7,10 @@ import Foundation
 final class ARSessionManager: NSObject, ARSessionDelegate {
     let session = ARSession()
     let queue = DispatchQueue(label: "marco.arkit")
-    private(set) var mapId = UUID().uuidString
+    private var lifecycle = WorldMapLifecycle()
+    var mapId: String { lifecycle.mapId } // Read on the AR queue, like relocalizing.
     private(set) var relocalizing = false
+    private var running = false
     private var relocalizeStarted: TimeInterval = 0
     private var lastSave: TimeInterval = 0
     private var mapping: ARFrame.WorldMappingStatus = .notAvailable
@@ -17,6 +19,8 @@ final class ARSessionManager: NSObject, ARSessionDelegate {
     var onMapEvent: ((String, String) -> Void)?   // (relocalized | new_map | saved, map_id)
     var onTracking: ((String) -> Void)?
     var onLost: (() -> Void)?                     // the saved map wasn't found again; a fresh one started
+    var onFailure: ((String) -> Void)?
+    var onInterrupted: (() -> Void)?
 
     static var supported: Bool {
         ARWorldTrackingConfiguration.isSupported && ARWorldTrackingConfiguration.supportsFrameSemantics(.smoothedSceneDepth)
@@ -26,19 +30,19 @@ final class ARSessionManager: NSObject, ARSessionDelegate {
         session.delegate = self
         session.delegateQueue = queue
         queue.async {
-            if let (map, id) = WorldMapStore.load() {
-                self.mapId = id
-                self.relocalizing = true
-                self.relocalizeStarted = ProcessInfo.processInfo.systemUptime
-                self.run(initialMap: map)
-            } else {
-                self.run(initialMap: nil)
-                self.onMapEvent?("new_map", self.mapId)
-            }
+            let saved = WorldMapStore.load()
+            self.lifecycle.begin(restoredMapId: saved?.1)
+            self.running = true
+            self.mapping = .notAvailable
+            self.lastSave = 0
+            self.relocalizing = saved != nil
+            self.relocalizeStarted = saved == nil ? 0 : ProcessInfo.processInfo.systemUptime
+            self.run(initialMap: saved?.0)
+            if saved == nil { self.onMapEvent?("new_map", self.mapId) }
         }
     }
 
-    func pause() { session.pause() }
+    func pause() { queue.async { self.running = false; self.session.pause() } }
 
     private func run(initialMap: ARWorldMap?) {
         let c = ARWorldTrackingConfiguration()
@@ -53,14 +57,19 @@ final class ARSessionManager: NSObject, ARSessionDelegate {
 
     /// Saved map couldn't be found again: new coordinates, so the server marks item positions stale.
     func startFreshMap() {
-        queue.async {
-            self.relocalizing = false
-            self.mapId = UUID().uuidString
-            WorldMapStore.clear()
-            self.run(initialMap: nil)
-            self.onMapEvent?("new_map", self.mapId)
-            self.onLost?()
-        }
+        queue.async { self.startFreshMapNow() }
+    }
+
+    private func startFreshMapNow() {
+        lifecycle.begin()
+        relocalizing = false
+        relocalizeStarted = 0
+        mapping = .notAvailable
+        lastSave = 0
+        WorldMapStore.clear()
+        if running { run(initialMap: nil) }
+        onMapEvent?("new_map", mapId)
+        onLost?()
     }
 
     /// Safe from any thread (the app calls it when going to the background).
@@ -69,20 +78,25 @@ final class ARSessionManager: NSObject, ARSessionDelegate {
     }
 
     private func saveNow() {
-        guard !relocalizing, mapping == .mapped || mapping == .extending else { return }
-        let id = mapId
+        guard running, !relocalizing, mapping == .mapped || mapping == .extending else { return }
+        let ticket = lifecycle.prepareSave()
         session.getCurrentWorldMap { [weak self] map, _ in
-            guard let map, (try? WorldMapStore.save(map, mapId: id)) != nil else { return }
-            self?.onMapEvent?("saved", id)
+            guard let self else { return }
+            self.queue.async {
+                guard let map, self.lifecycle.accepts(ticket),
+                      (try? WorldMapStore.save(map, mapId: ticket.mapId)) != nil else { return }
+                self.onMapEvent?("saved", ticket.mapId)
+            }
         }
     }
 
     // MARK: ARSessionDelegate (on `queue`)
 
     func session(_ session: ARSession, didUpdate frame: ARFrame) {
+        guard running else { return }
         mapping = frame.worldMappingStatus
         if relocalizing && frame.timestamp - relocalizeStarted > Config.relocalizeTimeoutS {
-            startFreshMap()
+            startFreshMapNow()
             return
         }
         if !relocalizing && frame.timestamp - lastSave > Config.mapSaveIntervalS && (mapping == .mapped || mapping == .extending) {
@@ -93,6 +107,7 @@ final class ARSessionManager: NSObject, ARSessionDelegate {
     }
 
     func session(_ session: ARSession, cameraDidChangeTrackingState camera: ARCamera) {
+        guard running else { return }
         if relocalizing, case .normal = camera.trackingState {
             relocalizing = false
             onMapEvent?("relocalized", mapId)
@@ -102,7 +117,10 @@ final class ARSessionManager: NSObject, ARSessionDelegate {
 
     func session(_ session: ARSession, didFailWithError error: Error) {
         onTracking?("failed: \(error.localizedDescription)")
+        onFailure?(error.localizedDescription)
     }
+
+    func sessionWasInterrupted(_ session: ARSession) { onInterrupted?() }
 
     static func describe(_ s: ARCamera.TrackingState) -> String {
         switch s {

@@ -7,6 +7,7 @@ import simd
 /// -z ahead; Geo.listenerRelative with the fused head yaw), so the listener node itself never turns and there is no
 /// AVAudio yaw-sign convention to get wrong.
 final class SpatialAudio {
+    enum PlaybackError: Error { case unreadableAudio }
     let engine = AVAudioEngine()
     private let environment = AVAudioEnvironmentNode()
     private let beacon = AVAudioPlayerNode()     // beeps and dings
@@ -55,6 +56,15 @@ final class SpatialAudio {
         engine.prepare()
         try engine.start()
         for n in [beacon, tone, voice] { n.play() }
+    }
+
+    func stop() {
+        synth.stopSpeaking(at: .immediate)
+        for node in [beacon, tone, voice] { node.stop() }
+        engine.stop()
+        #if os(iOS)
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        #endif
     }
 
     /// Where the guided item is now, listener-relative. Call every tick while guiding.
@@ -109,10 +119,14 @@ final class SpatialAudio {
     /// A label voice memo (any format AVAudioFile reads, such as the server's m4a), at the item or ahead.
     func playFile(_ url: URL, atItem: Bool) throws {
         let file = try AVAudioFile(forReading: url)
-        guard let pcm = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: AVAudioFrameCount(file.length)) else { return }
+        guard let pcm = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: AVAudioFrameCount(file.length)) else {
+            throw PlaybackError.unreadableAudio
+        }
         try file.read(into: pcm)
         guard let conv = AVAudioConverter(from: pcm.format, to: format),
-              let mono = Self.convert(pcm, with: conv, to: format, endOfStream: true) else { return }
+              let mono = Self.convert(pcm, with: conv, to: format, endOfStream: true) else {
+            throw PlaybackError.unreadableAudio
+        }
         voiceAtItem = atItem
         if !atItem { voice.position = Self.ahead }
         voice.scheduleBuffer(mono, at: nil, options: [.interrupts], completionHandler: nil)

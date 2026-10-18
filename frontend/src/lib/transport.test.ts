@@ -10,9 +10,9 @@ class Socket {
   constructor(readonly url: string) {
     Socket.instances.push(this)
   }
-  close() {
+  close = vi.fn(() => {
     this.onclose?.()
-  }
+  })
   receive(value: unknown) {
     this.onmessage?.({ data: JSON.stringify(value) })
   }
@@ -123,5 +123,113 @@ describe('FastAPI transport', () => {
     await expect(
       transport.send({ commandId: 'cmd-2', deviceId: 'phone', type: 'stop' }),
     ).rejects.toThrow('iPhone is disconnected.')
+  })
+  it('recovers a silent open socket, refetches and ignores messages from the detached socket', async () => {
+    vi.setSystemTime(0)
+    const receive = vi.fn(),
+      connection = vi.fn()
+    const stop = createApiTransport('/api').start(receive, connection)
+    await vi.advanceTimersByTimeAsync(15000)
+    expect(fetch).toHaveBeenCalledTimes(2)
+    expect(Socket.instances).toHaveLength(2)
+    expect(Socket.instances[0].close).toHaveBeenCalledTimes(1)
+    const old = demoSnapshot()
+    old.sequence = 99
+    Socket.instances[0].receive(old)
+    expect(receive).toHaveBeenCalledTimes(1)
+    const fresh = demoSnapshot()
+    fresh.sequence = 2
+    Socket.instances[1].receive(fresh)
+    expect(receive).toHaveBeenLastCalledWith(fresh)
+    expect(connection).toHaveBeenLastCalledWith('live')
+    stop()
+  })
+  it('bounds a socket that never supplies a first valid snapshot', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(new Response('{}', { status: 503 }))
+    const receive = vi.fn()
+    const stop = createApiTransport('/api').start(receive, vi.fn())
+    await vi.advanceTimersByTimeAsync(10000)
+    expect(receive).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(1500)
+    expect(Socket.instances[0].close).toHaveBeenCalledTimes(1)
+    expect(fetch).toHaveBeenCalledTimes(2)
+    expect(receive).toHaveBeenCalledTimes(1)
+    stop()
+  })
+  it('schedules only one reconnect when error, close and heartbeat coincide', async () => {
+    const stop = createApiTransport('/api').start(vi.fn(), vi.fn())
+    await vi.advanceTimersByTimeAsync(0)
+    const socket = Socket.instances[0]
+    socket.onerror?.()
+    socket.onclose?.()
+    socket.onerror?.()
+    await vi.advanceTimersByTimeAsync(500)
+    expect(socket.close).toHaveBeenCalledTimes(1)
+    expect(fetch).toHaveBeenCalledTimes(2)
+    expect(Socket.instances).toHaveLength(2)
+    stop()
+  })
+  it('cancels a watchdog reconnect on disposal', async () => {
+    const stop = createApiTransport('/api').start(vi.fn(), vi.fn())
+    await vi.advanceTimersByTimeAsync(10500)
+    expect(Socket.instances[0].close).toHaveBeenCalledTimes(1)
+    stop()
+    await vi.advanceTimersByTimeAsync(30000)
+    expect(fetch).toHaveBeenCalledTimes(1)
+    expect(Socket.instances).toHaveLength(1)
+  })
+  it('does not deliver a snapshot whose response body finishes after disposal', async () => {
+    let finish!: (value: unknown) => void
+    const response = new Response('{}')
+    vi.spyOn(response, 'json').mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve
+        }),
+    )
+    vi.mocked(fetch).mockResolvedValueOnce(response)
+    const receive = vi.fn()
+    const stop = createApiTransport('/api').start(receive, vi.fn())
+    await vi.advanceTimersByTimeAsync(0)
+    stop()
+    finish(demoSnapshot())
+    await vi.advanceTimersByTimeAsync(0)
+    expect(receive).not.toHaveBeenCalled()
+    expect(Socket.instances).toHaveLength(0)
+  })
+  it('stops watchdog recovery when a refetch denies authorization', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(new Response(JSON.stringify(demoSnapshot())))
+      .mockResolvedValueOnce(new Response('{}', { status: 401 }))
+    const connection = vi.fn()
+    const stop = createApiTransport('/api').start(vi.fn(), connection)
+    await vi.advanceTimersByTimeAsync(30000)
+    expect(fetch).toHaveBeenCalledTimes(2)
+    expect(Socket.instances).toHaveLength(1)
+    expect(connection).toHaveBeenLastCalledWith(
+      'offline',
+      expect.stringContaining('access denied'),
+    )
+    stop()
+  })
+  it('retries a websocket construction failure through the same backoff', async () => {
+    let first = true
+    vi.stubGlobal(
+      'WebSocket',
+      class extends Socket {
+        constructor(url: string) {
+          if (first) {
+            first = false
+            throw new Error('Socket unavailable')
+          }
+          super(url)
+        }
+      },
+    )
+    const stop = createApiTransport('/api').start(vi.fn(), vi.fn())
+    await vi.advanceTimersByTimeAsync(500)
+    expect(fetch).toHaveBeenCalledTimes(2)
+    expect(Socket.instances).toHaveLength(1)
+    stop()
   })
 })

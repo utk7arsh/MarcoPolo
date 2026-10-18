@@ -106,4 +106,78 @@ describe('dashboard state and commands', () => {
     await vi.advanceTimersByTimeAsync(15000)
     expect(store.getSnapshot().error).toBeNull()
   })
+  it.each(['deviceId', 'id'] as const)(
+    'invalidates a failed request when session.%s changes',
+    async (field) => {
+      const { store, transport, receive, snapshot, stop } = harness()
+      vi.mocked(transport.send).mockRejectedValueOnce(
+        new Error('Network error'),
+      )
+      await store.command('find', 'keys')
+      const original = store.getSnapshot().failed!
+      snapshot.sequence++
+      snapshot.data.session[field] = 'replacement'
+      receive(structuredClone(snapshot))
+      expect(store.getSnapshot().failed).toBeNull()
+      expect(store.getSnapshot().error).toBeNull()
+      await store.retry()
+      expect(transport.send).toHaveBeenCalledTimes(1)
+      await store.command('find', 'keys')
+      const replacement = store.getSnapshot().pending!
+      expect(replacement.deviceId).toBe(snapshot.data.session.deviceId)
+      expect(replacement.commandId).not.toBe(original.commandId)
+      stop()
+    },
+  )
+  it.each(['deviceId', 'id'] as const)(
+    'invalidates pending requests and ignores late results when session.%s changes',
+    async (field) => {
+      const { store, transport, receive, snapshot, stop } = harness()
+      let rejectOriginal!: (error: Error) => void
+      vi.mocked(transport.send).mockImplementationOnce(
+        () =>
+          new Promise((_, reject) => {
+            rejectOriginal = reject
+          }),
+      )
+      const originalSend = store.command('find', 'keys')
+      const original = store.getSnapshot().pending!
+      await vi.advanceTimersByTimeAsync(5000)
+      snapshot.sequence++
+      snapshot.data.session[field] = 'replacement'
+      receive(structuredClone(snapshot))
+      expect(store.getSnapshot().pending).toBeNull()
+      expect(vi.getTimerCount()).toBe(0)
+      await store.command('find', 'keys')
+      const replacement = store.getSnapshot().pending!
+      snapshot.sequence++
+      snapshot.data.lastCommand = {
+        commandId: original.commandId,
+        status: 'accepted',
+        reason: null,
+      }
+      receive(structuredClone(snapshot))
+      rejectOriginal(new Error('Late error from old phone'))
+      await originalSend
+      await vi.advanceTimersByTimeAsync(5000)
+      expect(store.getSnapshot().pending?.commandId).toBe(replacement.commandId)
+      expect(store.getSnapshot().failed).toBeNull()
+      expect(store.getSnapshot().error).toBeNull()
+      stop()
+    },
+  )
+  it('reuses an uncertain command for the same action within the same device/session, including stream reconnects', async () => {
+    const { store, transport, receive, snapshot, stop } = harness()
+    vi.mocked(transport.send).mockRejectedValueOnce(new Error('Network error'))
+    await store.command('find', 'keys')
+    const original = store.getSnapshot().failed!
+    snapshot.streamId = 'reconnected-server'
+    snapshot.sequence = 0
+    receive(structuredClone(snapshot))
+    await store.command('find', 'keys')
+    expect(vi.mocked(transport.send).mock.calls[1][0].commandId).toBe(
+      original.commandId,
+    )
+    stop()
+  })
 })

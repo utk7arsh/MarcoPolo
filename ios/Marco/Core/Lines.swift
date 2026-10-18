@@ -6,6 +6,7 @@ enum Lines {
     static let doorSet = "Got it, this is the door."
     static let notUnderstood = "Sorry, I didn't catch that."
     static let noServer = "I can't reach the server."
+    static let positionUnavailable = "Position unavailable. Wait for tracking to recover, then ask me again."
 
     static func number(_ n: Int) -> String {
         let words = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"]

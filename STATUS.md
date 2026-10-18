@@ -107,12 +107,12 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
   - AirPods head fusion;
   - "Marco" wake word and push-to-talk;
   - labels primed from `GET /v1/items`, with audio cached;
-  - a debug screen.
+  - the Paper V3 control panel, with the original diagnostics available in Debug builds.
 
   Verification:
-  - `sh ios/check.sh` type-checks every file that builds on macOS and runs 102 Swift unit tests.
+  - `sh ios/check.sh` type-checks every file that builds on macOS and runs 204 Swift checks (102 original, 24 control-panel, 44 accessibility and 34 audit regression checks).
   - `server/tests/test_ios_contract.py` builds the Swift core and feeds the exact bytes it sends to the server: the frame multipart, the poses, the hand patches (byte-exact against the server's reference) and the queries. It also checks the geometry angle for angle against `marco/geometry.py`.
-  - **Not compiled here:** the ARKit/UIKit glue (`App/`, `Capture/ARSessionManager.swift`), because this Mac has no iOS SDK. Build it in Xcode first.
+  - **Xcode compiled:** the complete app, including ARKit/UIKit glue, builds for an iOS device (Debug and Release) and Simulator (Debug). Device/runtime checks remain; see `ios/VERIFICATION.md`.
   - Setup: `ios/README.md`; project generation: `ios/project.yml` (XcodeGen).
 - **`photon-scaffold/` (JavaScript ESM with JSDoc types, reference for Utkarsh):** an iMessage caretaker bridge on `@photon-ai/imessage-kit` 3.x that speaks §5 exactly. Utkarsh's `photon/` is the team's bridge; this one shows the server wiring.
   - It handles label requests, text replies (name plus spoken words), voice notes before or after the name, setup photos with or without a caption, a caretaker allow-list, and expiry.
@@ -131,7 +131,7 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
   - **Status port:** 127.0.0.1 only (`/health`, plus `/dev/*` in sim mode). The phone never talks to `photon/`.
   - **Checks:** `npm run doctor` checks the Photon 2.0 key, line and event stream, plus `MARCO_SERVER_URL` (`GET /v1/items`, the `/v1/photon` socket and the allow-list), read-only.
   - **Verification:** `cd photon && npm test` runs 39 tests. One of them is end to end against the real `server/` (stub, loopback): `what_is_this` → `label_request` → iMessage → text then voice memo → `label_ready` with m4a audio → `what_is_this` known → setup photo → `GET /v1/items`. It runs when `server/.venv` (or `MARCO_SERVER_PYTHON`) has the stub dependencies.
-- **Totals (all passing):** server 77 tests (including both client contract tests and the real-video tools), Swift 102, Photon scaffold 8, `photon/` 39 (Utkarsh's run).
+- **Verification totals:** server 76 passed, 1 skipped (the optional ARKitScenes sample is absent locally; includes 4 Swift/server contract checks), Swift 204, Photon scaffold 8 (current local runs); `photon/` 39 (Utkarsh's preceding run).
   - `photon-scaffold`'s `npm test` now runs `node --test test/*.test.js`, which works on Node 22 (thanks, Utkarsh).
 - **Teammates' code on `main`:** `frontend/` (Sandeep, the dashboard) was built against the earlier requirements, not this contract. See the next steps.
 - **Security sweep:**
@@ -145,7 +145,7 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
    - **Dashboard:** `frontend/` expects `GET /dashboard/snapshot`, `WS /events` and `POST /dashboard/commands` (`frontend/docs/fastapi-handoff.md`). Likely a server adapter, plus a phone message for dashboard Find/Stop.
 2. **Security fix for `photon/`: applied.** Its HTTP port binds 127.0.0.1 and serves only `/health` (and `/dev/*` in sim mode). The phone-facing routes and `BRIDGE_TOKEN` are gone; caretaker media is never served.
 3. **Utkarsh:**
-   - build `ios/` in Xcode;
+   - run the compiled `ios/` app on the actual iPhone;
    - run the hour-one tests in `ios/README.md`;
    - point `photon/` at the server: set `MARCO_SERVER_URL` to its tailscale serve URL, add the bridge machine's login to `TAILSCALE_ALLOWED_LOGINS`, then `npm run doctor`. Photon 2.0 itself is live and was tested.
 4. **Vedant:** the real-video test in `docs/TESTING.md`.
@@ -164,7 +164,7 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
    - **Today the server doesn't queue `label_request`** for a disconnected bridge. `photon/` reconnects with backoff and shows the socket state on `/health`.
 
 ## Open questions / hour-one tests (need the real phone)
-- **Xcode build** of `App/` and `ARSessionManager.swift`: the first compile of the ARKit glue.
+- **iPhone runtime checks** of the compiled ARKit/UIKit app; no installed simulator runtime is available on this Mac yet.
 - **Relocalization** after an app relaunch: time and anchor error.
 - **AirPods motion:** rate, drift, latency, and the yaw sign (there's a toggle on the debug screen).
 - **Vision fingertip confidence** when the fingertip is hidden (on low tables and behind objects).
@@ -172,3 +172,46 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
 - **Vision orientation** `.up` versus `.right` for the hand pose.
 - **Caretaker voice notes** (`.caf`) playing on the phone through `AVAudioFile`.
 - **Remote teammate eligibility** for prizes. Ask the organisers.
+
+## Frontend and iOS V3 integration (October 17, 2026)
+
+- Pulled main through `755ee6b` before implementation. The uncommitted standalone iOS panel was backed up and its design/project assets reconciled into the canonical `ios/Marco/` app. There is one compiled sensor pipeline and one app entry point.
+- Implemented approved Paper V3 in React and native SwiftUI: bundled Instrument Sans, shared palette, open status/guidance layouts, underlined web navigation, larger distance and direction, larger selected-object image, circular native Start/Stop. The iOS gear retains connection settings; original diagnostics stay available in Debug builds.
+- Added explicit camera permission and first-frame state, Stop/background cleanup, stale-callback invalidation, and live route/spatial-audio status. Kept the existing ARKit capture, world maps, uploads, speech, and HRTF guidance. The phone's Server row follows its actual `/v1/phone` socket.
+- Build setup: checked-in `ios/MarcoPolo.xcodeproj` compiles `Marco/`, using Swift 5 / iOS 17 like `project.yml`. The generator remains optional. Font registration is in both configurations.
+- Verification: web formatting/lint/schema/build passed, 22 unit tests and 19 browser tests passed (accessibility and 1440/768/390 widths). Swift 126 checks passed; Debug/Release device and Debug Simulator builds passed. No installed simulator runtime; physical camera/LiDAR/audio and runtime UI checks still require an iPhone.
+- Existing integration gap remains explicit: the web snapshot/command contract is not implemented by the new `/v1` server. The API mode needs the adapter and phone command forwarding described above; the dashboard remains runnable in Demo mode. This UI change modifies no wire formats or server authentication.
+
+## iOS VoiceOver support (October 17, 2026)
+
+- Researched Apple's native VoiceOver guidance; the system screen reader supplies panel speech and gestures without a separate in-app accessibility mode, speech service, package or new permission. References and rationale are in `ios/ACCESSIBILITY.md`.
+- The panel exposes current hardware values, specific camera failure reasons and recovery actions. Added Voice commands status and visible microphone/speech/audio startup failures; these had previously appeared only in diagnostics. Speech-recognition startup now rejects an unavailable recognizer and cleans up its tap if its audio engine cannot start.
+- With VoiceOver on, Read status replays the current summary. Magic Tap shares Start/Stop behavior, including unsupported/pending-permission guards. Native sheet escape/close actions remain available; decorative camera preview content is hidden from the accessibility tree.
+- Important camera, server, headphone, voice/audio failure and tracking changes use system announcements. Updates coalesce for 400 ms, identical updates stay quiet, automatic messages queue behind VoiceOver speech, and no focus movement is forced. A disconnected server gets a reminder after 12 seconds on the visible panel. A spatial-audio flag change alone is informational, not an HRTF failure.
+- Verification: 170 Swift checks passed (44 new accessibility checks); Xcode device and Simulator builds passed. No installed Simulator runtime; actual VoiceOver speech, gestures, modal focus, permission recovery, AirPods routing and coexistence with guidance still require the real iPhone. No wire formats or backend code changed.
+
+## Frontend audit fixes (October 17, 2026)
+
+- Fixed all four actionable findings from the supplied frontend audit. Existing V3 styling and iOS changes were preserved.
+- Live map position now requires matching session/map/wearer coordinate IDs in addition to connection, tracking and freshness; stale or mismatched data cannot enable the wearer marker, target line, live badge or Recenter. Remembered descriptions remain available.
+- Find/Stop command state and its timer are invalidated on phone/session replacement. Same-scope uncertain retries keep their ID; new-scope actions get a new ID. Late old errors/acknowledgements are ignored.
+- Silent WebSockets now close and reconnect/refetch through the existing backoff after more than 10 seconds without valid snapshot progress, including no first snapshot. Duplicate recovery, old socket messages, disposal and authorization failures are guarded.
+- A missing camera now shows Waiting for camera; actual image failure and disconnection remain distinct, and a new frame recovers normally.
+- Verification: complete `npm run check` passed formatting, lint, schema consistency, TypeScript/production build, **52 unit tests and 22 browser tests** (including automatic silent-stream recovery, reset maps and camera failure/recovery). `git diff --check` passed. Details: `frontend/docs/audit-fixes.md`.
+- The separate server dashboard adapter and phone command forwarding remain open integration work; these fixes change no backend wire format or authentication. Browser API tests use mocked endpoints.
+
+## Dashboard API preparation (October 17, 2026)
+
+- Added `frontend/docs/backend-integration-plan.md` for potentially taking on the API layer after the backend team's core is ready. Ownership remains undecided; no API implementation started.
+- Grounded the plan in the current FastAPI/core, browser schema and Swift decoder. It covers the three browser routes, media, world/map identity, health, Photon results, targeted Find/Stop delivery, phone acknowledgements, uncertain retries, rollout and live integration checks.
+- Flagged the older frontend contract's superseded ownership diagram. Proposed session IDs on browser commands and new phone command/health messages require a coordinated team-interface/code/test update when implemented; no existing wire format changed here.
+- Documentation-only change; implementation tests are specified in the plan and are not evidence that live integration already works.
+- Verification: Prettier passed for the four touched frontend documentation files; all 28 local links resolved; `git diff --check` passed. No application tests were rerun for this documentation-only change.
+
+## iOS audit fixes and main integration (October 17, 2026)
+
+- Fixed all six reproducible iOS audit findings: fresh normal pose/coordinate scope gates guidance; Stop and supersession invalidate pending Find replies; unsaved capture starts allocate new map IDs; queued save completion checks lifecycle before disk writes; movement updates spoken surfaces; new labels update active touch feedback with text fallback.
+- Tracking loss or a pose older than 0.5 seconds cancels guidance and gives a non-positional recovery message. A fresh Find is required after recovery. No device/server message formats changed. Details: `ios/AUDIT-FIXES.md`.
+- Verification: 204 portable Swift checks passed, plus 23 AppModel and 11 ARSessionManager controlled regressions using current code and deterministic doubles. Xcode Debug Simulator build passed. AirPods route interruption, physical LiDAR and VoiceOver runtime checks remain open.
+- Pulled the team's Photon 2.0 changes at `71268c6` and rebased onto the newer backend findings at `8aa0ae1`. The only conflicts were verification totals in this status file; preserved the newer backend/Photon work and our frontend/iOS progress.
+- Pre-push checks in this checkout: frontend formatting/lint/schema/build, **52 unit tests and 22 browser tests**, **204 Swift checks**, unsigned Xcode Debug Simulator and Release device builds, and **8 Photon scaffold tests** passed. A temporary backend test environment ran **4 Swift/server contract tests plus 72 remaining server tests** successfully; one optional ARKitScenes-sample test was skipped because its dataset is absent. Hardware and live dashboard-adapter integration remain open.

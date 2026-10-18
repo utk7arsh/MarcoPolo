@@ -18,7 +18,7 @@ enum Cue: Equatable {
     case haptic
     case steadyTone(Bool)
     case say(String)
-    case playLabel(String)           // label audio URL (cached on the phone)
+    case playLabel(String, fallback: String) // cached audio, or current label text if unavailable
     case silence                     // stop everything that is playing
 }
 
@@ -70,10 +70,26 @@ struct Guidance {
     }
 
     /// An `event moved` for the target (§7): head for its new position.
-    mutating func retarget(itemId: String, position: SIMD3<Float>) {
+    mutating func retarget(itemId: String, position: SIMD3<Float>, surface: String?) {
         guard target?.itemId == itemId else { return }
+        let moved = target?.position != position
+        let changed = moved || target?.surface != surface
         target?.position = position
+        target?.surface = surface
+        guard changed else { return }
         saidWithinReach = false
+        if moved {
+            proximity = nil
+            locked = false
+            lockedAt = -Double.infinity
+        }
+    }
+
+    mutating func updateLabel(itemId: String, name: String?, text: String?, audioURL: String?) {
+        guard target?.itemId == itemId else { return }
+        if let name { target?.name = name }
+        target?.labelText = text
+        target?.labelAudioURL = audioURL
     }
 
     mutating func stop() -> [Cue] {
@@ -96,7 +112,7 @@ struct Guidance {
         var cues: [Cue] = wasReach ? [.steadyTone(false)] : []
         cues += [.silence, .haptic]
         if let url = tg.labelAudioURL {
-            cues.append(.playLabel(url))
+            cues.append(.playLabel(url, fallback: tg.labelText ?? "Got it."))
         } else {
             cues.append(.say(tg.labelText ?? "Got it."))
         }

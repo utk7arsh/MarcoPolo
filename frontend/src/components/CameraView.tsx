@@ -24,7 +24,8 @@ export function CameraView({
     ? `${data.session.id}-${camera.frameId}-${camera.widthPx}-${camera.heightPx}-${src}`
     : null
   const fresh = camera && (demo || now - Date.parse(camera.capturedAt) < 10000)
-  if (!camera || !src || !online || !fresh || failed === id)
+  const frameFailed = id !== null && failed === id
+  if (!camera || !src || !online || !fresh || frameFailed)
     return (
       <div className="camera-absent">
         <EmptyState
@@ -32,7 +33,7 @@ export function CameraView({
           title={
             !online
               ? 'Camera disconnected'
-              : failed === id
+              : frameFailed
                 ? 'Frame unavailable'
                 : 'Waiting for camera'
           }
@@ -98,7 +99,7 @@ export function CameraView({
                     width={name.length * 17 + 32}
                     height="44"
                     rx="8"
-                    fill="#0066cc"
+                    fill="#1559d6"
                   />
                   <text
                     x={x1 + 16}

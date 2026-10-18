@@ -39,8 +39,11 @@ final class PhoneSocket: NSObject, URLSessionWebSocketDelegate {
     func close() {
         queue.async {
             self.stopped = true
+            self.open = false
+            self.held.removeAll()
             self.task?.cancel(with: .goingAway, reason: nil)
             self.task = nil
+            self.session.invalidateAndCancel()
         }
     }
 

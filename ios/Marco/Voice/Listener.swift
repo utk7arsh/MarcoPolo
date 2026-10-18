@@ -20,6 +20,8 @@ final class Listener {
     static let pauseS = 0.9                      // silence after the last word that ends a command
     static let restartS = 50.0                   // server-side recognition stops after about a minute
 
+    private enum StartError: Error { case recognitionUnavailable }
+
     static func requestPermissions(_ done: @escaping (Bool) -> Void) {
         SFSpeechRecognizer.requestAuthorization { status in
             guard status == .authorized else { return done(false) }
@@ -28,6 +30,7 @@ final class Listener {
     }
 
     func start() throws {
+        guard recognizer?.isAvailable == true else { throw StartError.recognitionUnavailable }
         let input = engine.inputNode
         let fmt = input.outputFormat(forBus: 0)
         input.removeTap(onBus: 0)
@@ -39,7 +42,10 @@ final class Listener {
             r?.append(buf)
         }
         engine.prepare()
-        try engine.start()
+        do { try engine.start() } catch {
+            input.removeTap(onBus: 0)
+            throw error
+        }
         queue.async { self.restart() }
     }
 
@@ -47,8 +53,15 @@ final class Listener {
         engine.stop()
         engine.inputNode.removeTap(onBus: 0)
         queue.async {
+            self.generation += 1
+            self.debounce?.cancel()
+            self.debounce = nil
+            self.pushToTalk = false
             self.task?.cancel()
             self.task = nil
+            self.lock.lock()
+            self.request = nil
+            self.lock.unlock()
         }
     }
 

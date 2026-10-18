@@ -12,6 +12,7 @@ export type IconName =
   | 'speaker'
   | 'play'
   | 'pause'
+  | 'stop'
   | 'check'
   | 'close'
   | 'recenter'
@@ -65,6 +66,7 @@ const paths: Record<IconName, React.ReactNode> = {
     </>
   ),
   play: <path d="m9 5 11 7L9 19V5Z" />,
+  stop: <rect x="7" y="7" width="10" height="10" rx="1" fill="currentColor" />,
   pause: (
     <>
       <path d="M8 5v14m8-14v14" />
