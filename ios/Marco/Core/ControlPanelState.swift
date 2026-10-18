@@ -79,9 +79,9 @@ struct AudioRouteState: Hashable {
     var spatial: Bool?
     var spatialLabel: String {
         switch spatial {
-        case true: return "Spatial audio available"
-        case false: return "Spatial audio off"
-        case nil: return "Spatial audio unknown"
+        case .some(true): return "Spatial audio available"
+        case .some(false): return "Spatial audio off"
+        case .none: return "Spatial audio unknown"
         }
     }
 }

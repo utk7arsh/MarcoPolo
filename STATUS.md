@@ -31,7 +31,14 @@ Last updated: 2026-10-18. Keep this file current: update it whenever a decision 
   formatting, builds, shell syntax and actionlint pass.
 - Added active root GitHub workflows for frontend and server/Photon/Swift
   integration. CI uses isolated data and no production keys or SSH credentials;
-  it does not deploy automatically. GitHub run verification follows publication.
+  it does not deploy automatically. Frontend CI passed for `7389d7c`. The first
+  integration run exposed an older Swift compiler's exhaustiveness check for
+  `Bool?`; made its cases explicit, preserving all three existing status tests.
+  The corrected integration run must pass before the handoff is complete.
+- Isolated tests on Vultr's actual Node/Linux runtime: **51 pass, 1 skipped**.
+  The skipped HEIC fixture generator needs macOS `sips`; separately generated a
+  synthetic HEIC on the Mac and verified JPEG conversion on Vultr. The bundled
+  PNG converter and actual server/bridge contract test also pass on Linux.
 - Remaining: fresh physical wearer → caretaker photo → typed answer → spoken
   label retest. No manual caretaker test messages or synthetic shared items were
   created during deployment. The earlier local-only notes below are historical.

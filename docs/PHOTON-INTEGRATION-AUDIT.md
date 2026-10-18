@@ -35,6 +35,10 @@ preserved. The running Photon service loads its file explicitly with
 - Active GitHub workflows are under repository-root `.github/workflows/`.
   They run frontend and server/Photon/Swift contract checks with isolated data,
   without production credentials or automatic deployment.
+- Isolated tests on the deployed Node/Linux runtime: 51 passed, one skipped
+  because its HEIC fixture generator requires macOS `sips`. Generated that
+  synthetic fixture on the Mac and separately verified HEIC-to-JPEG conversion
+  using the deployed bridge on Vultr. No backend item or message was created.
 
 The audit-time findings and test scope below describe the original failure.
 
