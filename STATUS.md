@@ -39,11 +39,14 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
 - **Head tracking:** ARKit torso + AirPods fusion (POC 4, ported to `ios/Marco/Core/Guidance.swift` `HeadFusion`); phone-only fallback ("turn your body").
 - **Guidance sequence (POC 5; `docs/INTERFACES.md` §7):** spoken direction, then a beacon (muffled when behind you), a double ding when facing, faster beeps, a steady tone in the last 30 cm, silence and "Got it" at touch.
   - Spoken directions are relative to the body (chest); sound placement and the beacon phases are relative to the head.
-- **Audio route:** AirPods stay in A2DP (stereo, so HRTF spatial audio works); the iPhone's own mic does speech. Bluetooth HFP would make the AirPods a mono headset.
-- **Where it runs:** a teammate's Mac at the venue for the demo, and/or a Vultr GPU (sponsor prize).
+- **Audio route (changed 2026-10-17):** output to the AirPods stays full-bandwidth stereo, which HRTF needs. Speech now comes from the **AirPods' mic** through iOS 26's `.bluetoothHighQualityRecording`. The SDK header says this mode enables "full-bandwidth audio in both input & output directions" on supported AirPods, unlike Bluetooth HFP, which would make them a mono 16 kHz headset (never used).
+  - **Fallback:** the iPhone mic, when the route doesn't support the mode or the debug screen's "Use the iPhone mic" switch is on.
+  - **Unverified on hardware:** that the output stays 2 channels in this mode (hour-one test 7).
+- **Where it runs (decided 2026-10-17, Utkarsh): the Vultr GPU box `marco-gpu` is the primary server.** The phone streams LiDAR frames, poses and hands to it over the tailnet, and all processing (detection, box to 3D, world model, touch, answers, dashboard feeds) happens there. The venue Mac is the fallback: same server, and only the app's Server field changes.
   - **1 frame/s inference holds:** the full per-frame pipeline on this Apple Silicon Mac (MPS), on real iPad frames, takes 0.33 s with 1 item, 0.37 s with 10 and 0.42 s with 20 (p95 0.43 s). That is `tools/bench_frame.py`; run it on the venue machine too.
   - Slower frames are dropped (latest frame wins), never queued. Touch uses the 15/s hand stream and no model, so it is independent of this.
   - Everything is reached through **Tailscale**; the server binds 127.0.0.1 only, behind a fail-closed auth gate.
+  - **Vultr (`deploy/vultr/`):** the only GPU plan deployable in `lax` today is the A40 48 GB at $1.71/h (~$41/day); the A16 16 GB in `sjc` is $0.47/h. Either is far more than the ~1.5 GB the models need. Billing stops only when the box is destroyed.
 - **Wire details:**
   - depth and confidence may be zlib or raw DEFLATE (Apple's `.zlib` is raw DEFLATE; the server accepts both);
   - every phone message carries `session_id`, so the server files it into the same recording.
@@ -110,9 +113,15 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
   - a debug screen.
 
   Verification:
-  - `sh ios/check.sh` type-checks every file that builds on macOS and runs 102 Swift unit tests.
+  - `sh ios/check.sh` type-checks every file that builds on macOS and runs 178 Swift unit tests.
   - `server/tests/test_ios_contract.py` builds the Swift core and feeds the exact bytes it sends to the server: the frame multipart, the poses, the hand patches (byte-exact against the server's reference) and the queries. It also checks the geometry angle for angle against `marco/geometry.py`.
-  - **Not compiled here:** the ARKit/UIKit glue (`App/`, `Capture/ARSessionManager.swift`), because this Mac has no iOS SDK. Build it in Xcode first.
+  - **The whole app now builds in Xcode** (2026-10-17, Xcode 26.6, iOS 26.5 SDK): `xcodebuild ... -destination 'generic/platform=iOS' build` succeeds with no errors or warnings, ARKit/UIKit glue included. Not yet run on the phone.
+  - **Merged in from Utkarsh's parallel ingestion build** (the rest of that build duplicated the scaffold and was dropped; it is archived outside the repo):
+    - **Recording on the phone** (`Core/Recorder.swift`) in the server's own layout, so a vest walk needs no server or network and goes into `server/tools` as is. Start with an empty server URL to record only; Export zips it for AirDrop, and Finder shows it under Files (`UIFileSharingEnabled`). Contract-tested: `test_ios_contract.py` reads a Swift-recorded walk with `Session` and passes `check_recording.py`.
+    - **Sturdier head fusion** (`HeadFusion`): keeps its alignment through Bluetooth gaps under 2 s (it used to re-align on any gap over 0.5 s, wrong whenever the head was turned), re-aligns at once on an AirPods re-zero, and re-aligns after 8 s if it was set while the head was turned. Plus an AirPods sign check from whole-body turns.
+    - **Debug screen:** upload round trip, frames/poses/hands per second, AirPods rate, jitter, latency and raw yaw (hour-one test 2), the sign check, Record and Export.
+    - **Uploads give up after 5 s** (was URLSession's 60 s), so a stuck request can't hold the latest-wins slot.
+    - Signed with Utkarsh's Personal Team as `com.utkarshlal.marco`; `NSLocalNetworkUsageDescription` added for a server on the local network.
   - Setup: `ios/README.md`; project generation: `ios/project.yml` (XcodeGen).
 - **`photon-scaffold/` (JavaScript ESM with JSDoc types, reference for Utkarsh):** an iMessage caretaker bridge on `@photon-ai/imessage-kit` 3.x that speaks §5 exactly. Utkarsh's `photon/` is the team's bridge; this one shows the server wiring.
   - It handles label requests, text replies (name plus spoken words), voice notes before or after the name, setup photos with or without a caption, a caretaker allow-list, and expiry.
@@ -131,13 +140,44 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
   - **Status port:** 127.0.0.1 only (`/health`, plus `/dev/*` in sim mode). The phone never talks to `photon/`.
   - **Checks:** `npm run doctor` checks the Photon 2.0 key, line and event stream, plus `MARCO_SERVER_URL` (`GET /v1/items`, the `/v1/photon` socket and the allow-list), read-only.
   - **Verification:** `cd photon && npm test` runs 39 tests. One of them is end to end against the real `server/` (stub, loopback): `what_is_this` → `label_request` → iMessage → text then voice memo → `label_ready` with m4a audio → `what_is_this` known → setup photo → `GET /v1/items`. It runs when `server/.venv` (or `MARCO_SERVER_PYTHON`) has the stub dependencies.
-- **Totals (all passing):** server 77 tests (including both client contract tests and the real-video tools), Swift 102, Photon scaffold 8, `photon/` 39 (Utkarsh's run).
+- **Totals (all passing):** server 78 tests (77 run here; 1 skips without the ARKitScenes download; including both client contract tests and the real-video tools), Swift 184, Photon scaffold 8, `photon/` 39 (Utkarsh's run).
   - `photon-scaffold`'s `npm test` now runs `node --test test/*.test.js`, which works on Node 22 (thanks, Utkarsh).
 - **Teammates' code on `main`:** `frontend/` (Sandeep, the dashboard) was built against the earlier requirements, not this contract. See the next steps.
+- **`deploy/vultr/` (Utkarsh): the Vultr GPU deployment kit.**
+  - `marco-vultr.sh` has `plans`, `up`, `deploy`, `status`, `logs`, `bench`, `ssh` and `down`.
+  - The box has no inbound ports. It joins the tailnet at first boot (cloud-init) and is reached by Tailscale SSH.
+  - The server runs as a hardened systemd unit with `MARCO_MODE=real` and `MARCO_AUTH=tailscale`. `tailscale serve` publishes it only after the gate is checked to return 403.
+  - PyTorch is a CUDA build matched to the driver.
+  - **Live since 2026-10-18:** `marco-gpu` (A16 16 GB, `sjc`, driver 580 / CUDA 13.0, torch `cu130`) at `https://marco-gpu.taild6d426.ts.net`, with `TAILSCALE_ALLOWED_LOGINS=utk7arsh@github`.
+    - **Checked with `status`:** an unauthenticated local call gets 403; an allowed tailnet call gets 200.
+    - **`bench` on the box (full per-frame pipeline):**
+
+      | Items | Mean | p95 |
+      |---|---|---|
+      | 1 | 0.18 s | 0.19 s |
+      | 10 | 0.28 s | 0.32 s |
+      | 20 | 0.40 s | 0.49 s |
+
+      That is about 2x faster than this Mac.
+  - **Fixed on the way:** a YAML quoting bug in `cloud-init.yaml` kept the first box from installing Tailscale. That box was finished by hand from the Vultr console. The check now asserts that every `runcmd` entry is a string.
+- **`server/requirements.txt` gains `scipy`.** A fresh install (what Vultr runs) couldn't load the detector without it: transformers 5's default OWLv2 image processor needs it.
+  - With it, a clean venv from `requirements.txt` runs `bench_frame.py` with real OWLv2 on MPS: 0.41 s/frame with 1 item, 0.56 s with 10.
 - **Security sweep:**
   - no wildcard binds, tunnels or tokens in the repo;
   - POC 26's server now refuses non-loopback binds too.
   - The GitHub token from the first push sits in `.git/credentials`: never committed, and it goes when the folder is deleted. Revoke it after the hackathon.
+
+- **Voice input, end to end on the phone (2026-10-17, Utkarsh):** "Marco, where are my X?" from the AirPods' mic to a `find` query that names a registered item.
+  - **Mic:** `SpatialAudio.applyRoute` (above). Route changes are handled: AirPods put in later are picked up, and both audio engines restart. Before, a route change that changed the audio format (AirPods in or out) stopped both engines, and nothing restarted them.
+  - **Wake:** "Marco ..." in one breath, or "Marco", a soft blip, then the request within 5 s; hold-to-talk as before.
+  - **Extraction (`Core/Lines.swift` `Speech`):** about 40 ways of asking ("have you seen my ...", "do you know where my ... are", "where my ... at", "I can't find ..."), lead-ins ("hey", "polo", "could you"), and "my keys and my wallet" (one thing at a time, the first). Just "Marco, keys?" works when it's all of a registered name.
+  - **Matching (`Core/Vocabulary.swift`):** the spoken words become the registered item's own name, matched on plurals, a small synonym table (specs, clicker, billfold, cup...), one-letter recognizer slips and the shared last noun.
+    - Ties ("jar" with two jars) and unknown things go to the server as said, so the server's `not_registered` answer still speaks.
+    - The names come from `GET /v1/items` at start and on every reconnect, plus the names on server messages. They are also the recognizer's `contextualStrings`, so "cumin" isn't heard as "human".
+  - **Faster answer:** the listener ends a command 0.45 s after a whole registered name, 0.9 s otherwise.
+  - **No contract change:** `query find` still carries a `name`; it is now usually the server's own spelling.
+  - **Not used:** ElevenLabs and any cloud recognizer. Apple's on-device recognizer is offline and free and takes the hints.
+  - **Verified:** 60 new Swift tests (178 in all); the full app builds for iOS with no errors or warnings. Nothing has run on the phone yet.
 
 ## In progress / next
 1. **Reconcile the routes** (`docs/INTERFACES.md` §10) with Sandeep:
@@ -145,7 +185,7 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
    - **Dashboard:** `frontend/` expects `GET /dashboard/snapshot`, `WS /events` and `POST /dashboard/commands` (`frontend/docs/fastapi-handoff.md`). Likely a server adapter, plus a phone message for dashboard Find/Stop.
 2. **Security fix for `photon/`: applied.** Its HTTP port binds 127.0.0.1 and serves only `/health` (and `/dev/*` in sim mode). The phone-facing routes and `BRIDGE_TOKEN` are gone; caretaker media is never served.
 3. **Utkarsh:**
-   - build `ios/` in Xcode;
+   - run `ios/` on the phone (it builds; Xcode > Run with the phone plugged in);
    - run the hour-one tests in `ios/README.md`;
    - point `photon/` at the server: set `MARCO_SERVER_URL` to its tailscale serve URL, add the bridge machine's login to `TAILSCALE_ALLOWED_LOGINS`, then `npm run doctor`. Photon 2.0 itself is live and was tested.
 4. **Vedant:** the real-video test in `docs/TESTING.md`.
@@ -162,9 +202,37 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
 7. **Caretaker voice notes:** `photon/` already sends them as m4a. Server-side conversion is only needed for other clients that post `.caf`.
    - **Possible §5 additions (proposals, not built):** `label_request_seen` (the caretaker opened the photo: "Mom is looking at it") and `label_unknown` ("Mom isn't sure either"). `photon/` already detects both and only logs them.
    - **Today the server doesn't queue `label_request`** for a disconnected bridge. `photon/` reconnects with backoff and shows the socket state on `/health`.
+7. **Vultr (Utkarsh): the box is up** (see "Built and verified"). Left to do:
+   - point the phone's Server field and `photon/`'s `MARCO_SERVER_URL` at `https://marco-gpu.taild6d426.ts.net`;
+   - invite teammates to the `utk7arsh` tailnet, add their logins to `TAILSCALE_ALLOWED_LOGINS`, and re-run `deploy`;
+   - measure the phone-to-Vultr round trip on venue Wi-Fi (`tailscale ping marco-gpu`).
+
+   It bills $0.47/h until `marco-vultr.sh down`; stopping it doesn't stop billing.
+
+8. **Phone to Vultr, and Vultr to the dashboard (decided: Vultr is primary; measured 2026-10-17):**
+   - **Phone → `marco-gpu`, connected and tested from this Mac over the tailnet** (the same path the phone takes):
+     - Tailscale path **direct** to the box (`via 45.32.136.225:41641`, no relay), 49–65 ms;
+     - `GET /v1/items` → 200 through the allow-list (login `utk7arsh@github`);
+     - `POST /v1/frames` with the Swift-encoded bytes → 202 in 83–118 ms per frame on a kept-alive connection (40 KB synthetic frame, no items registered);
+     - `WSS /v1/phone` opens in about 0.4 s; message round trip median 67 ms.
+   - **Expected on the phone:** about 60–100 ms network plus the A16's 0.18–0.40 s pipeline per frame, well inside 1 s. Touch: hand messages up, about a 5-message vote, `touch` down, so about 0.4 s.
+   - **To connect the phone:** install the Tailscale app, sign in with the same login (`utk7arsh@github`, already on the allow-list; any other login must be added to `TAILSCALE_ALLOWED_LOGINS` and redeployed), set Server to `https://marco-gpu.<tailnet>.ts.net`, press Start. The app's log then says "Server OK", or what to fix (`ios/Marco/Net/ServerCheck.swift`).
+   - **Is the phone's path direct?** `marco-vultr.sh ssh`, then `tailscale status` on the box: the iPhone's line should not say `relay`. If it does, venue Wi-Fi is blocking UDP; try the phone's cellular data.
+   - **Dashboard on the Mac:** it reads `marco-gpu` over the tailnet (`API_PROXY_TARGET=https://marco-gpu.<tailnet>.ts.net`; this Mac's login is allowed).
+   - **Fallback (server on the venue Mac), measured on this M2 Pro:** upload start to dashboard `frame` median 428 ms with real OWLv2 (408 ms of it detection), 16 ms in stub mode; pose to `world` 1.2 ms. Put the Mac on the iPhone's Personal Hotspot so the link stays direct.
+   - **Test data on `marco-gpu`:** the connection test posted 6 copies of the Swift contract fixture frame (session `ios-contract`, map `ios-map`) on 2026-10-17. No items were registered, so item memory is untouched. Clear it before the demo by deleting that recording on the box and restarting `marco`.
+   - **Phone straight to the dashboard** (no server): not useful. Boxes, positions and events come from the server, and the server-to-dashboard hop is 3 ms.
+   - **Server issues found (not fixed; Vedant's code):**
+     - one stalled dashboard socket blocks the whole server. `hub.send` awaits each socket in turn, inside the frame handler and the phone loop; in a test only 3 of 38 frames got through and a `find` answer never arrived. Fix: a per-socket queue that drops the oldest, and send to the phone first;
+     - the frame `202` is returned after detection, not straight away as §3.1 says, so the phone's single upload slot is held for about 0.43 s;
+     - OWLv2 runs in fp32 on MPS (POC measured 392 ms fp32 vs 276 ms fp16);
+     - `map_points` goes every frame, not every 5 s as §6 says;
+     - stub: guidance at 10/s starts overlapping fake guidance sequences (25 fake touches in 5 s).
+   - **Dashboard (Sandeep):** `frontend/` still calls `/dashboard/snapshot`, `WS /events` and `/dashboard/commands`, so it shows nothing today. The adapter should push on every event, not on a 1 s timer, which would add 0.5 s on average. Over loopback the gate returns 403 with `MARCO_AUTH=tailscale`, so point `API_PROXY_TARGET` at the `ts.net` URL.
 
 ## Open questions / hour-one tests (need the real phone)
-- **Xcode build** of `App/` and `ARSessionManager.swift`: the first compile of the ARKit glue.
+- **First run on the phone:** the app builds in Xcode, but nothing ARKit, LiDAR, Vision or AirPods has run on hardware yet.
+- **AirPods mic (hour-one test 7):** does high-quality recording turn on with the AirPods Pro 3, does the output stay 2 channels, and how much input latency does it add from the vest?
 - **Relocalization** after an app relaunch: time and anchor error.
 - **AirPods motion:** rate, drift, latency, and the yaw sign (there's a toggle on the debug screen).
 - **Vision fingertip confidence** when the fingertip is hidden (on low tables and behind objects).

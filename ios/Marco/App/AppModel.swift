@@ -23,7 +23,14 @@ final class AppModel: ObservableObject {
     @Published var relAzimuth = 0.0
     @Published var distance = 0.0
     @Published var heard = ""
+    @Published var micInfo = ""
     @Published var log: [String] = []
+    @Published var recording = false
+    @Published var recordInfo = "off"
+    @Published var linkInfo = ""
+    @Published var airpodsInfo = "not connected"
+    @Published var signInfo = ""
+    @Published var shareFile: ShareFile?
 
     let sessionId = UUID().uuidString
 
@@ -31,6 +38,8 @@ final class AppModel: ObservableObject {
         var T: simd_float4x4?
         var headYaw = 0.0
         var headSource = "phone"
+        var signEvidence = 0.0
+        var realignments = 0
     }
 
     private let ar = ARSessionManager()
@@ -43,7 +52,11 @@ final class AppModel: ObservableObject {
     private let live = Locked(Live())
     private let encodeQueue = DispatchQueue(label: "marco.encode")
     private let handQueue = DispatchQueue(label: "marco.hands")
-    private var uploader: Uploader?
+    private let recorder = Recorder(root: Recorder.documents)
+    private let poseRate = Locked(RateMeter())
+    private let handRate = Locked(RateMeter())
+    private var frameRate = RateMeter()                                // main thread
+    private var uploader: Uploader?                                    // set once in start(), before ARKit runs
     private var socket: PhoneSocket?
 
     // ARKit queue only.
@@ -62,47 +75,66 @@ final class AppModel: ObservableObject {
     private var asked: [String: String] = [:]                          // find query_id -> the name asked for
     private var labels: [String: (text: String?, url: String?)] = [:]  // item_id -> its label
     private var audioCache: [String: URL] = [:]                        // label_audio_url -> local file
+    private var vocabulary = ItemVocabulary()                          // registered item names, for the listener
 
     /// The clock of ARFrame.timestamp and CMDeviceMotion.timestamp.
     private var now: Double { ProcessInfo.processInfo.systemUptime }
 
     // MARK: - Start
 
+    /// With a server URL: stream to it. With the field empty: record only (Record, then Export or Finder), for a
+    /// walk with no server or network; the recording is in the server's own layout (Core/Recorder.swift).
     func start() {
         guard !running else { return }
-        guard let url = URL(string: serverText.trimmingCharacters(in: .whitespaces)), let scheme = url.scheme,
-              ["https", "http"].contains(scheme) else {
-            return note("Set the server URL first: https://<server-mac>.<tailnet>.ts.net")
+        let text = serverText.trimmingCharacters(in: .whitespaces)
+        var url: URL?
+        if !text.isEmpty {
+            guard let u = URL(string: text), let scheme = u.scheme, ["https", "http"].contains(scheme) else {
+                return note("Server URL: https://<server-mac>.<tailnet>.ts.net, or leave it empty to record only.")
+            }
+            url = u
         }
         guard ARSessionManager.supported else { return note("This device has no LiDAR scene depth.") }
-        Config.serverURL = url
+        if let url { Config.serverURL = url }
         running = true
         UIApplication.shared.isIdleTimerDisabled = true          // ARKit stops when the screen locks
 
+        audio.onRoute = { [weak self] route in DispatchQueue.main.async { self?.micInfo = route } }
         do { try audio.start() } catch { note("audio: \(error.localizedDescription)") }
+        micInfo = SpatialAudio.routeDescription()
 
-        let up = Uploader(base: url)
-        up.onResult = { [weak self] code, body in DispatchQueue.main.async { self?.uploaded(code, body) } }
-        uploader = up
-        up.items { [weak self] items in                      // labels made before this launch, audio cached now
-            DispatchQueue.main.async {
-                for it in items ?? [] where it.label_text != nil || it.label_audio_url != nil {
-                    self?.labels[it.item_id] = (Lines.spokenLabel(name: it.name, labelText: it.label_text), it.label_audio_url)
-                    self?.cache(it.label_audio_url)
+        if let url {
+            let up = Uploader(base: url)
+            up.onResult = { [weak self] code, body, ms in DispatchQueue.main.async { self?.uploaded(code, body, ms) } }
+            uploader = up
+            refreshItems()
+
+            let sock = PhoneSocket(base: url)
+            sock.onMessage = { [weak self] m in DispatchQueue.main.async { self?.handle(m) } }
+            sock.onState = { [weak self] isUp in
+                DispatchQueue.main.async {
+                    if isUp && self?.socketUp == false { self?.refreshItems() }   // items added while we were away
+                    self?.socketUp = isUp
                 }
             }
+            sock.onUndecodable = { [weak self] s in DispatchQueue.main.async { self?.note("undecodable: \(s)") } }
+            sock.connect()
+            socket = sock
+            ServerCheck.run(base: url) { [weak self] line in self?.note(line) }   // Tailscale off? not on the allow-list?
+        } else {
+            note("No server: recording only. Press Record, walk, then Export.")
         }
-
-        let sock = PhoneSocket(base: url)
-        sock.onMessage = { [weak self] m in DispatchQueue.main.async { self?.handle(m) } }
-        sock.onState = { [weak self] isUp in DispatchQueue.main.async { self?.socketUp = isUp } }
-        sock.onUndecodable = { [weak self] s in DispatchQueue.main.async { self?.note("undecodable: \(s)") } }
-        sock.connect()
-        socket = sock
 
         head.start()
         listener.onIntent = { [weak self] intent, text in DispatchQueue.main.async { self?.act(intent, text) } }
         listener.onTranscript = { [weak self] text in DispatchQueue.main.async { self?.heard = text } }
+        listener.onWake = { [weak self] in
+            DispatchQueue.main.async {
+                self?.heard = "Marco... (listening)"
+                self?.audio.listening()
+            }
+        }
+        listener.onError = { [weak self] e in DispatchQueue.main.async { self?.note("listener: \(e)") } }
         Listener.requestPermissions { [weak self] ok in
             DispatchQueue.main.async {
                 guard let self else { return }
@@ -128,6 +160,33 @@ final class AppModel: ObservableObject {
 
     func pushToTalk(_ down: Bool) { down ? listener.beginPushToTalk() : listener.endPushToTalk() }
 
+    /// The debug screen's mic switch changed (Config.useIPhoneMic): re-route; both audio engines restart themselves.
+    func micChanged() {
+        do { try audio.applyRoute() } catch { note("mic route: \(error.localizedDescription)") }
+        micInfo = SpatialAudio.routeDescription()
+    }
+
+    /// The registered items: their labels (audio cached now) and their names, which the listener matches speech to.
+    private func refreshItems() {
+        uploader?.items { [weak self] items in
+            DispatchQueue.main.async {
+                guard let self, let items else { return }
+                for it in items where it.label_text != nil || it.label_audio_url != nil {
+                    self.labels[it.item_id] = (Lines.spokenLabel(name: it.name, labelText: it.label_text), it.label_audio_url)
+                    self.cache(it.label_audio_url)
+                }
+                self.learn(items.map(\.name))
+            }
+        }
+    }
+
+    /// Item names also arrive on server messages (an item registered over Photon after launch): no refetch needed.
+    private func learn(_ names: [String?]) {
+        var added = false
+        for case let n? in names { added = vocabulary.add(n) || added }
+        if added { listener.setItems(vocabulary.names) }
+    }
+
     // MARK: - ARKit queue
 
     private func onFrame(_ frame: ARFrame) {
@@ -141,17 +200,21 @@ final class AppModel: ObservableObject {
             yaw = fusion.update(t: t, torsoDeg: torso, airpodsDeg: nil)
         }
         let source = fusion.source
+        let evidence = fusion.signEvidence, realigned = fusion.realignments
         live.write {
             $0.T = T
             $0.headYaw = yaw
             $0.headSource = source
+            $0.signEvidence = evidence
+            $0.realignments = realigned
         }
         // §3.1: nothing goes out while tracking is limited or before relocalization finishes.
-        guard case .normal = frame.camera.trackingState, !ar.relocalizing, let socket else { return }
+        guard case .normal = frame.camera.trackingState, !ar.relocalizing, socket != nil || recorder.isRecording else { return }
         let mapId = ar.mapId
         if poseGate.ready(t) {
-            socket.send(PoseMsg(session_id: sessionId, map_id: mapId, t_device: t, camera_transform: Geo.flat(T),
-                                head_yaw_deg: (yaw * 100).rounded() / 100, head_source: source))
+            emit(PoseMsg(session_id: sessionId, map_id: mapId, t_device: t, camera_transform: Geo.flat(T),
+                         head_yaw_deg: (yaw * 100).rounded() / 100, head_source: source))
+            poseRate.write { $0.tick(t) }
         }
         if frameGate.ready(t) { upload(frame, mapId: mapId) }
         if handGate.ready(t) && !handBusy {
@@ -165,7 +228,7 @@ final class AppModel: ObservableObject {
 
     private func upload(_ frame: ARFrame, mapId: String) {
         guard let depth = frame.smoothedSceneDepth ?? frame.sceneDepth, let confMap = depth.confidenceMap,
-              let up = uploader else { return }
+              uploader != nil || recorder.isRecording else { return }
         frameId += 1
         let res = frame.camera.imageResolution
         let meta = FrameMeta(session_id: sessionId, map_id: mapId, frame_id: frameId, t_device: frame.timestamp,
@@ -179,8 +242,19 @@ final class AppModel: ObservableObject {
             let d = FrameEncoder.plane(depthMap, as: Float32.self)
             let c = FrameEncoder.plane(confMap, as: UInt8.self)
             guard let dz = try? Wire.depthPayload(d.values), let cz = try? Wire.confidencePayload(c.values) else { return }
-            up.submit(Uploader.Frame(meta: meta, jpeg: jpeg, depth: dz, confidence: cz))
+            if let m = try? JSONEncoder().encode(meta) {
+                self.recorder.frame(meta: m, frameId: meta.frame_id, jpeg: jpeg, depth: dz, confidence: cz)
+            }
+            self.uploader?.submit(Uploader.Frame(meta: meta, jpeg: jpeg, depth: dz, confidence: cz))
         }
+    }
+
+    /// Every phone-to-server WebSocket message goes through here: encoded once, recorded if recording, sent if
+    /// connected. hold: keep it until the socket is open (map events, queries) instead of dropping it.
+    private func emit<T: Encodable>(_ msg: T, hold: Bool = false) {
+        guard let data = try? JSONEncoder().encode(msg) else { return }
+        recorder.message(data)
+        if hold { socket?.sendWhenOpen(json: data) } else { socket?.send(json: data) }
     }
 
     /// Hand queue.
@@ -189,13 +263,14 @@ final class AppModel: ObservableObject {
               let found = try? hands.detect(frame.capturedImage) else { return }      // nil: no hand in view
         let d = FrameEncoder.plane(depth.depthMap, as: Float32.self)
         let c = FrameEncoder.plane(confMap, as: UInt8.self)
-        socket?.send(HandMsg.make(sessionId: sessionId, mapId: mapId, t: frame.timestamp, transform: frame.camera.transform,
-                                  joints: found.joints, chirality: found.chirality, depth: d.values, conf: c.values,
-                                  width: d.width, height: d.height))
+        emit(HandMsg.make(sessionId: sessionId, mapId: mapId, t: frame.timestamp, transform: frame.camera.transform,
+                          joints: found.joints, chirality: found.chirality, depth: d.values, conf: c.values,
+                          width: d.width, height: d.height))
+        handRate.write { $0.tick(frame.timestamp) }
     }
 
     private func mapEvent(_ event: String, _ id: String) {
-        socket?.sendWhenOpen(MapMsg(session_id: sessionId, event: event, map_id: id))
+        emit(MapMsg(session_id: sessionId, event: event, map_id: id), hold: true)
         DispatchQueue.main.async {
             self.mapId = id
             if event != "saved" { self.note("map \(event) \(id.prefix(8))") }
@@ -222,16 +297,45 @@ final class AppModel: ObservableObject {
             phase = guidance.phase
             relAzimuth = guidance.relAzimuthDeg
             distance = guidance.distanceM
+            refreshHealth(t, l)
+        }
+    }
+
+    /// The debug screen's health rows (10/s): link, AirPods, recording.
+    private func refreshHealth(_ t: Double, _ l: Live) {
+        let poses = poseRate.read { m -> Double in var c = m; return c.rate(t) }
+        let hands = handRate.read { m -> Double in var c = m; return c.rate(t) }
+        linkInfo = String(format: "frames %.1f/s · poses %.0f/s · hands %.0f/s", frameRate.rate(t), poses, hands)
+        let a = head.health
+        airpodsInfo = a.samples == 0 ? "no samples (AirPods in? motion allowed?)"
+            : String(format: "%.0f Hz · jitter %.0f ms · latency %.0f ms · raw yaw %.0f°", a.rateHz, a.jitterMs, a.latencyMs, a.yawDeg)
+        if abs(l.signEvidence) < 50 {
+            signInfo = "turn your whole body a few times to check · realigned \(l.realignments)×"
+        } else {
+            signInfo = (l.signEvidence > 0 ? "AirPods sign agrees with ARKit ✓" : "AirPods sign INVERTED: flip it")
+                + " · realigned \(l.realignments)×"
+        }
+        if recording {
+            let p = recorder.progress
+            recordInfo = "● \(p.frames) frames · \(p.messages) messages · \(p.bytes / 1_000_000) MB"
         }
     }
 
     private func sendGuidance() {
-        socket?.send(GuidanceMsg(session_id: sessionId, item_id: guidance.target?.itemId, phase: guidance.phase.rawValue,
-                                 rel_azimuth_deg: (guidance.relAzimuthDeg * 10).rounded() / 10,
-                                 distance_m: (guidance.distanceM * 100).rounded() / 100))
+        emit(GuidanceMsg(session_id: sessionId, item_id: guidance.target?.itemId, phase: guidance.phase.rawValue,
+                         rel_azimuth_deg: (guidance.relAzimuthDeg * 10).rounded() / 10,
+                         distance_m: (guidance.distanceM * 100).rounded() / 100))
     }
 
     private func handle(_ m: ServerMessage) {
+        switch m {
+        case .find(let a) where a.reason != "not_registered": learn([a.name])
+        case .whatIsThis(let a): learn([a.name])
+        case .touch(let tm): learn([tm.name])
+        case .event(let e): learn([e.name])
+        case .labelReady(let l): learn([l.name])
+        default: break
+        }
         switch m {
         case .find(let a): found(a)
         case .whatIsThis(let a): whatIsThis(a)
@@ -313,6 +417,7 @@ final class AppModel: ObservableObject {
     /// Voice and the debug buttons both end up here.
     func act(_ intent: Intent?, _ text: String) {
         heard = text
+        note("heard \"\(text)\" -> \(intent.map { String(describing: $0) } ?? "not understood")")
         guard let intent else { return speak(Lines.notUnderstood) }
         switch intent {
         case .find(let name): query("find", name: name)
@@ -330,11 +435,47 @@ final class AppModel: ObservableObject {
     }
 
     private func query(_ kind: String, name: String? = nil) {
-        guard let socket, socketUp else { return speak(Lines.noServer) }
+        guard socket != nil, socketUp else { return speak(Lines.noServer) }
         let qid = UUID().uuidString
         if let name { asked[qid] = name }
-        socket.sendWhenOpen(QueryMsg(session_id: sessionId, query_id: qid, kind: kind, name: name))
+        emit(QueryMsg(session_id: sessionId, query_id: qid, kind: kind, name: name), hold: true)
         note("-> \(kind) \(name ?? "")")
+    }
+
+    // MARK: - Recording (Core/Recorder.swift: the server's own layout, so server/tools read it as is)
+
+    func toggleRecording() {
+        if recorder.isRecording {
+            recorder.stop()
+            recording = false
+            recordInfo = "stopped: Documents/sessions/\(Recorder.folderName(sessionId))"
+        } else {
+            let d = recorder.start(sessionId: sessionId)
+            recording = true
+            note("recording to Documents/sessions/\(d.lastPathComponent)")
+        }
+    }
+
+    /// Zips this launch's recording for AirDrop (the Mac's Finder also shows Documents/sessions under Files).
+    func exportRecording() {
+        let dir = recorder.root.appendingPathComponent(Recorder.folderName(sessionId))
+        guard FileManager.default.fileExists(atPath: dir.appendingPathComponent("frames.jsonl").path) else {
+            return note("Nothing recorded in this launch yet.")
+        }
+        let rec = recorder
+        DispatchQueue.global(qos: .userInitiated).async {
+            rec.flush()
+            var zipped: URL?
+            var err: NSError?
+            NSFileCoordinator().coordinate(readingItemAt: dir, options: [.forUploading], error: &err) { zip in
+                let dest = FileManager.default.temporaryDirectory.appendingPathComponent("marco-\(dir.lastPathComponent).zip")
+                try? FileManager.default.removeItem(at: dest)
+                if (try? FileManager.default.copyItem(at: zip, to: dest)) != nil { zipped = dest }
+            }
+            DispatchQueue.main.async {
+                if let zipped { self.shareFile = ShareFile(url: zipped) } else { self.note("export failed: \(err?.localizedDescription ?? "zip")") }
+            }
+        }
     }
 
     func register(name: String, photo: Data) {
@@ -343,6 +484,7 @@ final class AppModel: ObservableObject {
             DispatchQueue.main.async {
                 switch result {
                 case .success(let r):
+                    if r.quality == "ok" { self?.learn([name]) }
                     self?.speak(Lines.registration(r, name: name))
                     self?.note("registered \(name): \(r.quality) \(r.reason ?? "")")
                 case .failure(let e):
@@ -364,10 +506,11 @@ final class AppModel: ObservableObject {
         }
     }
 
-    private func uploaded(_ code: Int, _ body: String) {
+    private func uploaded(_ code: Int, _ body: String, _ ms: Double) {
         if code == 202 {
             framesAccepted += 1
-            lastUpload = "202"
+            frameRate.tick(now)
+            lastUpload = String(format: "202 · %.0f ms round trip", ms)
         } else {
             lastUpload = "\(code): \(body.prefix(160))"
             note("frame upload \(code): \(body.prefix(240))")
@@ -383,4 +526,10 @@ final class AppModel: ObservableObject {
         log.insert(s, at: 0)
         if log.count > 60 { log.removeLast(log.count - 60) }
     }
+}
+
+/// A file for the share sheet (the zipped recording).
+struct ShareFile: Identifiable {
+    let url: URL
+    var id: String { url.path }
 }

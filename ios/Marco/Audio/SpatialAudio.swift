@@ -19,8 +19,13 @@ final class SpatialAudio {
     private lazy var steady = Tones.loop(format, freq: 660)
     private let synth = AVSpeechSynthesizer()
     private var speechConverter: AVAudioConverter?
+    private lazy var blip = Tones.blip(format)
     private var voiceAtItem = false
+    private var observers: [NSObjectProtocol] = []
     private static let ahead = AVAudio3DPoint(x: 0, y: 0, z: -1)
+
+    /// The route changed (AirPods in or out, the mic switched): its description, for the debug screen. Any thread.
+    var onRoute: ((String) -> Void)?
 
     init() {
         engine.attach(environment)
@@ -44,17 +49,73 @@ final class SpatialAudio {
         environment.reverbParameters.enable = false
     }
 
-    /// Call once, before Listener.start(): the session keeps the AirPods in A2DP (stereo, so spatial audio works)
-    /// and records from the iPhone's own mic. Bluetooth HFP would turn the AirPods into a mono headset.
+    /// Call once, before Listener.start().
     func start() throws {
         #if os(iOS)
-        let s = AVAudioSession.sharedInstance()
-        try s.setCategory(.playAndRecord, mode: .default, options: [.allowBluetoothA2DP, .defaultToSpeaker])
-        try s.setActive(true)
+        try applyRoute()
+        try AVAudioSession.sharedInstance().setActive(true)
+        observers.append(NotificationCenter.default.addObserver(forName: AVAudioSession.routeChangeNotification,
+                                                                object: nil, queue: nil) { [weak self] n in
+            // AirPods put in after Start: route again so their mic is picked up, not just their speakers.
+            let raw = n.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt
+            if raw.flatMap(AVAudioSession.RouteChangeReason.init) == .newDeviceAvailable { try? self?.applyRoute() }
+            self?.onRoute?(Self.routeDescription())
+        })
         #endif
+        // A route change stops the engine; start it again so the beacon and Marco's voice don't go quiet for good.
+        observers.append(NotificationCenter.default.addObserver(forName: .AVAudioEngineConfigurationChange, object: engine,
+                                                                queue: .main) { [weak self] _ in
+            guard let self else { return }
+            self.engine.prepare()
+            try? self.engine.start()
+            for n in [self.beacon, self.tone, self.voice] { n.play() }
+        })
         engine.prepare()
         try engine.start()
         for n in [beacon, tone, voice] { n.play() }
+    }
+
+    #if os(iOS)
+    /// Output to the AirPods stays full-bandwidth stereo (A2DP), which HRTF needs. Speech in comes from the AirPods'
+    /// own mic when the route supports Bluetooth high-quality recording (iOS 26; AirPods Pro 3): that mode keeps the
+    /// output full-bandwidth too. Otherwise, or with the debug screen's switch, from the iPhone's mic. Never HFP: it
+    /// would make the AirPods a mono 16 kHz headset. Call again after changing Config.useIPhoneMic.
+    func applyRoute() throws {
+        let s = AVAudioSession.sharedInstance()
+        let base: AVAudioSession.CategoryOptions = [.allowBluetoothA2DP, .defaultToSpeaker]
+        try? s.setPrefersNoInterruptionsFromSystemAlerts(true)     // no ringtone cutting into guidance
+        if #available(iOS 26.0, *), !Config.useIPhoneMic {
+            if (try? s.setCategory(.playAndRecord, mode: .default, options: base.union(.bluetoothHighQualityRecording))) != nil {
+                let airpods = s.availableInputs?.first { $0.bluetoothMicrophoneExtension?.highQualityRecording.isSupported == true }
+                try? s.setPreferredInput(airpods)                      // nil: the system's choice
+                return
+            }
+        }
+        try s.setCategory(.playAndRecord, mode: .default, options: base)
+        try? s.setPreferredInput(s.availableInputs?.first { $0.portType == .builtInMic })
+    }
+
+    /// "mic AirPods Pro (BluetoothHFP, high quality), 48 kHz · out AirPods Pro, 2 ch". Hour-one: the AirPods mic
+    /// with "high quality", and the output still 2 channels.
+    static func routeDescription() -> String {
+        let s = AVAudioSession.sharedInstance()
+        let mic = s.currentRoute.inputs.first.map { p -> String in
+            var hq = ""
+            if #available(iOS 26.0, *), let ext = p.bluetoothMicrophoneExtension {
+                hq = ext.highQualityRecording.isEnabled ? ", high quality" : ext.highQualityRecording.isSupported ? ", HQ off" : ", no HQ"
+            }
+            return "\(p.portName) (\(p.portType.rawValue)\(hq)), \(Int(s.sampleRate / 1000)) kHz"
+        } ?? "none"
+        let out = s.currentRoute.outputs.first.map { "\($0.portName), \(s.outputNumberOfChannels) ch" } ?? "none"
+        return "mic \(mic) · out \(out)"
+    }
+    #endif
+
+    /// "Marco" alone was heard: a soft blip ahead, then say the rest.
+    func listening() {
+        voice.position = Self.ahead
+        voiceAtItem = false
+        voice.scheduleBuffer(blip, at: nil, options: [], completionHandler: nil)
     }
 
     /// Where the guided item is now, listener-relative. Call every tick while guiding.
@@ -170,6 +231,15 @@ enum Tones {
             guard u >= 0 else { return 0 }
             let env = min(1, u / 0.003) * exp(-u / 0.06)
             return Float(0.4 * env * (sin(2 * .pi * f * u) + 0.3 * sin(2 * .pi * 2.76 * f * u)))
+        }
+    }
+
+    /// Listening: one short, quiet rising note, unlike any guidance sound.
+    static func blip(_ format: AVAudioFormat) -> AVAudioPCMBuffer {
+        buffer(format, seconds: 0.12) { t in
+            let f = 520 + 1400 * t                  // a glide up
+            let env = min(1, t / 0.01) * exp(-t / 0.05)
+            return Float(0.25 * env * (sin(2 * .pi * f * t) + 0.3 * sin(4 * .pi * f * t)))
         }
     }
 

@@ -85,9 +85,11 @@ enum Intent: Equatable {
     case stop
 }
 
-/// Turns what the user said into an intent. "Marco, where are my keys?" -> .find("keys").
+/// Turns what the user said into an intent. "Marco, where are my keys?" -> .find("keys"). With the registered items
+/// (ItemVocabulary), the name is the item's own: "Marco, have you seen my car keys?" -> .find("keys").
 enum Speech {
-    static let wakeWords = ["marco", "marko", "mark o"]
+    /// "Marco" and the ways speech recognition writes it (the recognizer is also given "Marco" as a hint).
+    static let wakeWords = ["marco", "marko", "mark o", "marc o", "mark oh"]
 
     static func normalize(_ s: String) -> String {
         let t = s.lowercased().replacingOccurrences(of: "\u{2019}", with: "'")
@@ -95,7 +97,7 @@ enum Speech {
         return String(kept).split(separator: " ").joined(separator: " ")
     }
 
-    /// The words after the last wake word, or nil if no wake word was said.
+    /// The words after the last wake word, or nil if no wake word was said. "" is the wake word alone.
     static func command(after transcript: String) -> String? {
         let t = " " + normalize(transcript) + " "
         var best: Range<String.Index>?
@@ -108,26 +110,92 @@ enum Speech {
         return String(t[r.upperBound...]).trimmingCharacters(in: .whitespaces)
     }
 
-    private static let findPattern = try! NSRegularExpression(
-        pattern: "^(?:where(?:'s| is| are| did i (?:put|leave)| have i (?:put|left))|find|locate|look for)\\s+(?:my |the |a |an )?(.+?)(?: please)?$")
+    /// Said before the request itself: "Marco Polo, ...", "Marco, hey, could you ...".
+    private static let leadIns = ["hey", "hi", "ok", "okay", "um", "uh", "so", "oh", "and", "polo", "please",
+                                  "can you", "could you", "would you", "will you", "can u"]
+    /// How people ask for a thing, longest first so "where did i put" wins over "where".
+    private static let findOpeners = [
+        "where did i put", "where did i leave", "where have i put", "where have i left", "where'd i put", "where'd i leave",
+        "where can i find", "do you know where", "you know where", "where did", "where'd",
+        "where are", "where is", "where's", "wheres", "where", "have you seen", "did you see", "you seen",
+        "help me find", "find", "locate", "look for", "looking for", "i'm looking for", "im looking for", "i am looking for",
+        "i can't find", "i cant find", "i cannot find", "can't find", "cant find", "i lost", "i've lost", "ive lost",
+        "i misplaced", "take me to", "guide me to", "lead me to", "show me", "get me",
+    ].sorted { $0.count > $1.count }
+    /// Said after the thing: "where my keys at", "do you know where my wallet is", "where did my keys go".
+    private static let tails: Set<String> = ["please", "at", "now", "again", "go", "went", "gone", "is", "are", "for", "me",
+                                             "then", "today", "right"]
+    private static let determiners: Set<String> = ["my", "the", "a", "an", "our", "your", "his", "her", "their", "some"]
+    private static let pronouns: Set<String> = ["it", "them", "that", "this", "those", "these", "they", "thing", "something", "stuff"]
 
-    static func intent(_ command: String) -> Intent? {
-        let t = normalize(command)
-        guard !t.isEmpty else { return nil }
-        if ["stop", "cancel", "never mind", "nevermind", "quiet", "be quiet"].contains(where: { t == $0 || t.hasPrefix($0 + " ") }) {
-            return .stop
+    struct Parsed: Equatable {
+        let intent: Intent?
+        let match: ItemMatch?        // the registered item a find resolved to, if any
+    }
+
+    static func intent(_ command: String, items: ItemVocabulary = ItemVocabulary()) -> Intent? {
+        parse(command, items: items).intent
+    }
+
+    /// Nothing more is needed to act on it: a stop, a what-is-this, or a find that names all of a registered item.
+    /// The listener then answers after a shorter pause.
+    static func isComplete(_ command: String, items: ItemVocabulary) -> Bool {
+        let p = parse(command, items: items)
+        switch p.intent {
+        case .find?: return p.match?.complete == true
+        case nil: return false
+        default: return true
+        }
+    }
+
+    static func parse(_ command: String, items: ItemVocabulary = ItemVocabulary()) -> Parsed {
+        let t = strip(normalize(command), leading: leadIns)
+        guard !t.isEmpty else { return Parsed(intent: nil, match: nil) }
+        if ["stop", "cancel", "never mind", "nevermind", "quiet", "be quiet", "shut up"].contains(where: { t == $0 || t.hasPrefix($0 + " ") }) {
+            return Parsed(intent: .stop, match: nil)
         }
         if ["what is this", "what's this", "whats this", "what is it", "what am i touching", "what am i holding"].contains(where: { t.contains($0) }) {
-            return .whatIsThis
+            return Parsed(intent: .whatIsThis, match: nil)
         }
         if ["this is the door", "mark the door", "set the door", "here is the door", "this is the front door"].contains(where: { t.contains($0) }) {
-            return .setDoor
+            return Parsed(intent: .setDoor, match: nil)
         }
-        let ns = t as NSString
-        if let m = findPattern.firstMatch(in: t, range: NSRange(location: 0, length: ns.length)) {
-            let name = ns.substring(with: m.range(at: 1)).trimmingCharacters(in: .whitespaces)
-            return name.isEmpty ? nil : .find(name)
+        if let opener = findOpeners.first(where: { t == $0 || t.hasPrefix($0 + " ") }) {
+            return find(thing(String(t.dropFirst(opener.count))), items: items)
         }
-        return nil
+        // Just the thing ("Marco, keys?"), only when it is all of a registered item's name.
+        if let m = items.resolve(t), m.complete { return Parsed(intent: .find(m.name), match: m) }
+        return Parsed(intent: nil, match: nil)
+    }
+
+    /// "my keys are" -> "keys".
+    private static func thing(_ s: String) -> String {
+        var w = s.split(separator: " ").map(String.init)
+        while let last = w.last, tails.contains(last) { w.removeLast() }
+        while let first = w.first, determiners.contains(first) { w.removeFirst() }
+        return w.joined(separator: " ")
+    }
+
+    private static func find(_ said: String, items: ItemVocabulary) -> Parsed {
+        guard !said.isEmpty, !pronouns.contains(said) else { return Parsed(intent: nil, match: nil) }
+        if let m = items.resolve(said) { return Parsed(intent: .find(m.name), match: m) }
+        // "my keys and my wallet": one thing at a time, the first.
+        if let r = said.range(of: " and "), let m = items.resolve(String(said[..<r.lowerBound])) {
+            return Parsed(intent: .find(m.name), match: m)
+        }
+        return Parsed(intent: .find(said), match: nil)        // not registered here: the server decides
+    }
+
+    private static func strip(_ t: String, leading: [String]) -> String {
+        var s = t
+        var changed = true
+        while changed {
+            changed = false
+            for w in leading where s == w || s.hasPrefix(w + " ") {
+                s = String(s.dropFirst(w.count)).trimmingCharacters(in: .whitespaces)
+                changed = true
+            }
+        }
+        return s
     }
 }

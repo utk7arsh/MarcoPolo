@@ -13,10 +13,21 @@ final class Uploader {
     private let session: URLSession
     private var gate = LatestWins<Frame>()
     private let lock = NSLock()
-    /// HTTP status and body (or the error) of each frame upload. A 422 body says what is wrong with the frame.
-    var onResult: ((Int, String) -> Void)?
+    /// HTTP status, body (or the error) and round trip in ms of each frame upload. A 422 body says what is wrong.
+    var onResult: ((Int, String, Double) -> Void)?
 
-    init(base: URL, session: URLSession = .shared) {
+    /// Frames are worth nothing after a second or two, so a stuck upload must not hold the latest-wins slot for
+    /// URLSession's default 60 s: give up after 5 s and send the newest frame instead.
+    static func makeSession() -> URLSession {
+        let c = URLSessionConfiguration.default
+        c.timeoutIntervalForRequest = 5
+        c.timeoutIntervalForResource = 10
+        c.waitsForConnectivity = false
+        c.httpMaximumConnectionsPerHost = 2
+        return URLSession(configuration: c)
+    }
+
+    init(base: URL, session: URLSession = Uploader.makeSession()) {
         self.base = base
         self.session = session
     }
@@ -42,10 +53,12 @@ final class Uploader {
 
     private func post(_ f: Frame) {
         guard let (req, body) = try? Self.frameRequest(base: base, f) else { return finish() }
+        let t0 = ProcessInfo.processInfo.systemUptime
         session.uploadTask(with: req, from: body) { [weak self] data, resp, err in
             guard let self else { return }
             let code = (resp as? HTTPURLResponse)?.statusCode ?? -1
-            self.onResult?(code, err?.localizedDescription ?? String(decoding: data ?? Data(), as: UTF8.self))
+            let ms = (ProcessInfo.processInfo.systemUptime - t0) * 1000
+            self.onResult?(code, err?.localizedDescription ?? String(decoding: data ?? Data(), as: UTF8.self), ms)
             self.finish()
         }.resume()
     }

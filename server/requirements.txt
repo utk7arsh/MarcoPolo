@@ -11,6 +11,8 @@ websockets>=12.0
 # The real pipeline: OWLv2 + DINOv2 (weights download from Hugging Face on first use, about 1 GB).
 torch>=2.3
 transformers>=4.45
+# transformers 5's default OWLv2 image processor needs scipy; without it a fresh install can't load the detector.
+scipy>=1.11
 
 # Tools (sample sessions, offline reports) and tests.
 matplotlib>=3.8

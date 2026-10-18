@@ -51,6 +51,7 @@ server/data/
 ios/build/
 ios/xcode/
 ios/Marco.xcodeproj/
+ios/Marco/Info.plist
 xcuserdata/
 *.xcuserstate
 DerivedData/
@@ -58,3 +59,6 @@ DerivedData/
 # Photon (the team's bridge has its own photon/.gitignore)
 photon/node_modules/
 photon-scaffold/node_modules/
+
+# Local Python environments
+server/.venv/

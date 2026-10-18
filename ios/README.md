@@ -9,17 +9,16 @@ Everything the contract needs is wired. What's left is the hour-one tuning on th
 
 ## Set up (once)
 You need:
-- a Mac with Xcode 16 or later;
+- a Mac with Xcode 26 and its iOS platform (Xcode > Settings > Components);
 - the **iPhone 16 Pro** (LiDAR), with Developer Mode on (Settings > Privacy & Security);
 - AirPods Pro 3;
 - the Tailscale app on the phone, signed in to the team tailnet.
 
 A free Apple ID works. Apps signed with a free Personal Team expire after 7 days: just run again from Xcode.
 
-**Option A (one command):** `brew install xcodegen && cd ios && xcodegen && open Marco.xcodeproj`. Then:
-1. In `project.yml` (and in Xcode's Signing tab), change the bundle id to something unique to you.
-2. Pick your Personal Team under Signing & Capabilities.
-3. Plug in the phone and Run.
+**Option A (one command):** `brew install xcodegen && cd ios && xcodegen && open Marco.xcodeproj`. Then plug in the phone and Run.
+- `project.yml` already signs with Utkarsh's Personal Team (`7764XWK2G5`) as `com.utkarshlal.marco`. Anyone else: change both there and run `xcodegen` again.
+- `xcodegen` also writes `Marco/Info.plist` (generated, git-ignored) for the one key Xcode can't generate: file sharing, so Finder shows the app's recordings.
 
 **Option B (by hand):**
 1. Xcode > New > Project > iOS App. Name it `MarcoApp`, interface SwiftUI, language Swift. Save it in `ios/xcode/` (that folder is ignored by git).
@@ -38,14 +37,17 @@ A free Apple ID works. Apps signed with a free Personal Team expire after 7 days
 
 **Then:**
 1. Keep **Spatialize Stereo off** for the AirPods (Control Center > hold volume). The app renders HRTF itself, and system spatialisation would apply it twice.
-2. On the server Mac, start the server:
-   ```
-   cd server
-   MARCO_AUTH=tailscale TAILSCALE_ALLOWED_LOGINS=<your tailnet login> ../poc/.venv/bin/python -m marco.app
-   tailscale serve --bg 8000
-   ```
-   The stub needs no models. See [server/README.md](../server/README.md).
-3. In the app, enter `https://<server-mac>.<tailnet>.ts.net` and press Start.
+2. **Put the phone on the tailnet:** install the Tailscale app and sign in with a login that's on the server's allow-list (`TAILSCALE_ALLOWED_LOGINS`). Keep it connected while Marco runs.
+3. **Point the app at the server and press Start.** All processing runs on the server; the phone only captures, sends and plays sound.
+   - **Primary: the Vultr GPU box** (`deploy/vultr/`): `https://marco-gpu.<tailnet>.ts.net`.
+   - **Fallback: a Mac at the venue.** Start the server there, then publish it on the tailnet:
+     ```
+     cd server
+     MARCO_AUTH=tailscale TAILSCALE_ALLOWED_LOGINS=<your tailnet login> ../poc/.venv/bin/python -m marco.app
+     tailscale serve --bg 8000
+     ```
+     and enter `https://<server-mac>.<tailnet>.ts.net`. The stub needs no models. See [server/README.md](../server/README.md).
+   - Right after Start, the log says "Server OK: n items, ms", or what to fix (Tailscale off, refused by the allow-list, unreachable), from `Net/ServerCheck.swift`.
 
 ## Files
 | File | What it does | Builds on macOS? |
@@ -56,14 +58,18 @@ A free Apple ID works. Apps signed with a free Personal Team expire after 7 days
 | `Capture/FrameEncoder.swift` | sensor JPEG 960x720 (no rotation, no EXIF tag), depth/confidence maps as arrays (handles padded rows) | yes, tested |
 | `Capture/HandTracker.swift` | Vision hand pose (orientation `.up`), 21 joints in the server's order, the 9x9 depth patches | yes, contract-tested |
 | `Net/Uploader.swift` | `POST /v1/frames` multipart, latest frame wins; `POST /v1/items`; label audio fetch | yes, contract-tested |
+| `Net/ServerCheck.swift` | one `GET /v1/items` at Start, turned into a sentence that says what to fix | yes, unit-tested |
 | `Net/PhoneSocket.swift` | `/v1/phone` WebSocket: JSON both ways, reconnect with backoff, pings, holds map/query messages until connected | yes |
-| `Audio/SpatialAudio.swift` | `AVAudioEnvironmentNode` HRTF: beeps, ding, steady tone, spatial speech, label playback; AirPods stay in A2DP | yes |
-| `Audio/HeadTracker.swift` | `CMHeadphoneMotionManager` (AirPods yaw) | yes |
-| `Voice/Listener.swift` | on-device speech: always listening for "Marco ...", plus hold-to-talk | yes |
+| `Audio/SpatialAudio.swift` | `AVAudioEnvironmentNode` HRTF: beeps, ding, steady tone, spatial speech, label playback. The audio route: stereo out to the AirPods, speech in from the AirPods' mic (iOS 26 Bluetooth high-quality recording) or the iPhone's | yes |
+| `Audio/HeadTracker.swift` | `CMHeadphoneMotionManager` (AirPods yaw), plus its rate, jitter and latency for the debug screen | yes |
+| `Voice/Listener.swift` | on-device speech: always listening for "Marco ..." (or "Marco", a blip, then the request), plus hold-to-talk; registered item names as recognizer hints; restarts on route changes | yes |
+| `Core/Vocabulary.swift` | what was said to a registered item: "car keys" to keys, "specs" to glasses case, "walet" to wallet; ambiguous ("jar") goes to the server as said | yes, unit-tested |
 | `Core/Guidance.swift` | the §7 sequence as pure logic (`Guidance`) and the POC 4 head fusion (`HeadFusion`) | yes, unit-tested |
 | `Core/Messages.swift`, `Wire.swift`, `Geometry.swift` | every message of the contract, the byte formats, the server's angle conventions | yes, contract-tested |
 | `Core/Lines.swift` | everything Marco says, and voice-to-intent parsing | yes, unit-tested |
 | `Core/Config.swift` | rates and tunables | yes |
+| `Core/Recorder.swift` | records what the phone sends, on the phone, in the server's own layout (`server/marco/recorder.py`) | yes, contract-tested |
+| `Core/Health.swift` | AirPods stream stats and the rate meters on the debug screen | yes, unit-tested |
 
 Threads:
 - **ARKit queue (60 Hz):** poses at 10/s, frames at 1/s and hands at 15/s are picked here.
@@ -76,7 +82,7 @@ ARFrames are only held while their data is copied out; ARKit stalls if they pile
 
 ## Test
 ```
-sh ios/check.sh                                     # type-checks the macOS-buildable files, runs 98 unit tests
+sh ios/check.sh                                     # type-checks the macOS-buildable files, runs 178 unit tests
 cd server && ../poc/.venv/bin/python -m pytest -q tests/test_ios_contract.py
 ```
 The second command builds the Swift core and feeds the exact bytes it produces to the real server:
@@ -86,7 +92,13 @@ The second command builds the Swift core and feeds the exact bytes it produces t
 
 It also checks the angles against the server's geometry.
 
-The ARKit/UIKit files don't build without the iOS SDK. **Build in Xcode before changing them**, and add tests in `Tests/main.swift` for any logic you add to `Core/`.
+The contract test also records a short walk with `Core/Recorder.swift` and checks it with the server's own `Session` reader and `tools/check_recording.py`.
+
+The ARKit/UIKit files need the iOS SDK. The whole app builds with no errors or warnings:
+```
+cd ios && xcodegen && xcodebuild -project Marco.xcodeproj -scheme Marco -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build
+```
+Add tests in `Tests/main.swift` for any logic you add to `Core/`.
 
 ## Hour-one tests on the phone (record what you find in STATUS.md)
 1. **Start.** Expect socket connected, tracking normal, and "frames accepted" going up once a second. A 422 in the log says exactly what the server didn't like.
@@ -94,9 +106,22 @@ The ARKit/UIKit files don't build without the iOS SDK. **Build in Xcode before c
    - muffled beeps;
    - a ding when you face it;
    - the stub's fake hand counts down and "touches" after about 8 s.
-3. **AirPods yaw sign.** Turn your head right: "head yaw" must go up. If it goes down, flip the toggle. Then check that the beacon stays put in the room while you turn your head.
+3. **AirPods.** Put them in and watch the `airpods` row: expect about 25 Hz; note the jitter, the latency, and how far the raw yaw drifts in 10 minutes with your head still.
+   - **Yaw sign:** turn your head right: "head yaw" must go up. Or turn your whole body a few times and read `sign check`. If it's inverted, flip the toggle.
+   - Then check that the beacon stays put in the room while you turn your head.
+   - The fusion keeps its alignment through Bluetooth gaps under 2 s, re-aligns at once when the AirPods re-zero (a jump faster than any head turn), and re-aligns after 8 s if it was set while your head was turned. `sign check` also shows how often it re-aligned.
 4. **Hand stream.** Point at a counter-height jar lid and watch `hand` messages arrive (server log or dashboard). Vision orientation `.up` is the default; if fingertips are poor, try `.right` and tell Vedant.
 5. **Relaunch.** Kill the app and start it in the same room. The log should show "map relocalized" within 30 s; otherwise "Getting my bearings" and a new map.
-6. **Record 5 minutes from the vest.** The server records everything under `server/data/sessions/<session_id>/`. Check it with `python tools/check_recording.py server/data/sessions/<id>` and hand it to Vedant.
+6. **Record 5 minutes from the vest.** Either way gives the same files:
+   - **With the server:** it records everything under `server/data/sessions/<session_id>/`.
+   - **On the phone, no server or network needed:** leave the server URL empty (or keep it), press Start, then Record. Stop, then Export (AirDrop a zip) or Finder > iPhone > Files > Marco > `sessions/<session_id>/`. The layout is the server's own, so every server tool reads it.
+
+   Check it with `python tools/check_recording.py <session folder>` (in `server/`) and hand it to Vedant.
+7. **AirPods mic.** With the AirPods in, read the `mic` row under Ask. Expect `mic AirPods Pro (..., high quality)` and `out AirPods Pro, 2 ch`.
+   - **2 ch is the one that matters:** if the output drops to 1 channel in this mode, the beacon loses its direction. Flip "Use the iPhone mic" and tell the team.
+   - "HQ off" or "no HQ": the route didn't take the mode (check iOS 26 and the AirPods firmware). The iPhone mic is used instead.
+   - Say "Marco, where are my keys?" from 3 m away with the phone in the vest. Note how long it takes from your last word to "Polo!". The mode can add input latency; the listener answers 0.45 s after a whole registered name, 0.9 s otherwise.
+   - Say "Marco", wait for the blip, then "where's my wallet". The window is 5 s.
+   - Put the AirPods in after Start: the `mic` row should switch to them within a second or two.
 
 Without the app, you can still feed the pipeline real iPhone data: record with the free Stray Scanner app and convert it with `server/tools/stray_session.py`.

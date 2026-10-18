@@ -1,0 +1,24 @@
+[Unit]
+Description=Marco server (perception and world model, docs/INTERFACES.md)
+After=network-online.target tailscaled.service
+Wants=network-online.target
+
+[Service]
+User=marco
+Group=marco
+WorkingDirectory=/opt/marco/server
+# Managed by remote-setup.sh; put your own overrides (TH_* thresholds, MARCO_DETECTOR, ...) in local.env.
+EnvironmentFile=/etc/marco/marco.env
+EnvironmentFile=-/etc/marco/local.env
+ExecStart=/opt/marco/server/.venv/bin/python -m marco.app
+Restart=always
+RestartSec=2
+# The code is read-only to the service; it writes only recordings and model weights under /var/lib/marco.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/lib/marco
+
+[Install]
+WantedBy=multi-user.target

@@ -47,6 +47,20 @@ final class PhoneSocket: NSObject, URLSessionWebSocketDelegate {
     /// Fire and forget (poses, hands, guidance): dropped while disconnected, because stale ones are useless.
     func send<T: Encodable>(_ msg: T) {
         guard let s = encode(msg) else { return }
+        send(text: s)
+    }
+
+    /// Held until the socket is open (map lifecycle, queries).
+    func sendWhenOpen<T: Encodable>(_ msg: T) {
+        guard let s = encode(msg) else { return }
+        sendWhenOpen(text: s)
+    }
+
+    /// Already-encoded JSON, so a caller that also records it encodes once and records exactly what was sent.
+    func send(json: Data) { send(text: String(decoding: json, as: UTF8.self)) }
+    func sendWhenOpen(json: Data) { sendWhenOpen(text: String(decoding: json, as: UTF8.self)) }
+
+    private func send(text s: String) {
         queue.async {
             guard self.open, let task = self.task else { return }
             task.send(.string(s)) { err in
@@ -55,9 +69,7 @@ final class PhoneSocket: NSObject, URLSessionWebSocketDelegate {
         }
     }
 
-    /// Held until the socket is open (map lifecycle, queries).
-    func sendWhenOpen<T: Encodable>(_ msg: T) {
-        guard let s = encode(msg) else { return }
+    private func sendWhenOpen(text s: String) {
         queue.async {
             if self.open, let task = self.task {
                 task.send(.string(s)) { _ in }

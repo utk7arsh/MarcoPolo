@@ -156,33 +156,79 @@ struct Guidance {
 /// offset that is pulled toward the torso heading while the head is roughly forward and not turning fast. The
 /// AirPods have no compass and drift; ARKit's torso heading doesn't. Without AirPods it is the torso heading
 /// ("turn your body" mode).
+///
+/// Three additions for real AirPods, which the simulation didn't have:
+/// - a Bluetooth gap shorter than `keepOffsetS` keeps the alignment (a longer one, e.g. a reconnect, starts over);
+/// - a yaw jump faster than any head turn means the AirPods re-zeroed (they do on reconnect and when another app
+///   starts spatial audio): re-align at once;
+/// - a still head held more than the gate off the torso for `stuckS` means the alignment is wrong (it was made
+///   while the head was turned), because nobody holds a turned head that long: re-align. If the user really was
+///   looking sideways, the same rule heals it `stuckS` after they face forward again.
 struct HeadFusion {
     var tau = 5.0                    // s; tuned in POC 4
     var gateRateDegS = 30.0
     var gateHeadOnTorsoDeg = 15.0
+    var keepOffsetS = 2.0
+    var jumpRateDegS = 1000.0
+    var stuckS = 8.0
     private var offset: Double?
-    private var prev: (yaw: Double, t: Double)?
+    private var prev: (yaw: Double, t: Double, torso: Double)?
+    private var stuckSince: Double?
     private(set) var source = "phone"
+    private(set) var realignments = 0
+    /// Grows positive while AirPods and torso turn the same way during whole-body turns; negative means the AirPods
+    /// yaw sign is flipped (use the debug screen's toggle).
+    private(set) var signEvidence = 0.0
 
-    /// airpodsDeg: the AirPods yaw already in heading convention (+ = right), nil when they aren't connected.
+    /// airpodsDeg: the AirPods yaw already in heading convention (+ = right), nil when no fresh sample. t: the
+    /// sample's time (or the frame's, when there is none), on the uptime clock.
     mutating func update(t: Double, torsoDeg: Double, airpodsDeg: Double?) -> Double {
         guard let ap = airpodsDeg else {
-            offset = nil
-            prev = nil
+            if let p = prev, t - p.t > keepOffsetS {
+                offset = nil
+                prev = nil
+                stuckSince = nil
+            }
             source = "phone"
             return Geo.wrap180(torsoDeg)
         }
-        var off = offset ?? Geo.wrap180(torsoDeg - ap)
+        var off: Double
+        if let o = offset {
+            off = o
+        } else {
+            off = Geo.wrap180(torsoDeg - ap)
+            realignments += 1
+        }
         if let p = prev, t > p.t {
             let dt = t - p.t
-            let rate = abs(Geo.wrap180(ap - p.yaw)) / dt
-            let headOnTorso = Geo.wrap180(ap + off - torsoDeg)
-            if rate < gateRateDegS && abs(headOnTorso) < gateHeadOnTorsoDeg {
-                off += min(1, dt / tau) * Geo.wrap180(torsoDeg - (ap + off))
+            let rate = Geo.wrap180(ap - p.yaw) / dt
+            if abs(rate) > jumpRateDegS && dt < keepOffsetS {
+                off = Geo.wrap180(torsoDeg - ap)
+                realignments += 1
+                stuckSince = nil
+            } else {
+                let dTorso = Geo.wrap180(torsoDeg - p.torso)
+                if abs(dTorso) / dt > 20 { signEvidence += dTorso * Geo.wrap180(ap - p.yaw) }
+                let headOnTorso = Geo.wrap180(ap + off - torsoDeg)
+                let still = abs(rate) < gateRateDegS
+                if still && abs(headOnTorso) < gateHeadOnTorsoDeg {
+                    off += min(1, dt / tau) * Geo.wrap180(torsoDeg - (ap + off))
+                    stuckSince = nil
+                } else if still {
+                    let since = stuckSince ?? t
+                    stuckSince = since
+                    if t - since > stuckS {
+                        off = Geo.wrap180(torsoDeg - ap)
+                        realignments += 1
+                        stuckSince = nil
+                    }
+                } else {
+                    stuckSince = nil
+                }
             }
         }
-        offset = off
-        prev = (ap, t)
+        offset = Geo.wrap180(off)
+        if prev == nil || t > prev!.t { prev = (ap, t, torsoDeg) }
         source = "fusion"
         return Geo.wrap180(ap + off)
     }

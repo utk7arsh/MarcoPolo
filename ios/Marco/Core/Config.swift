@@ -24,4 +24,12 @@ enum Config {
     static var airpodsYawSign: Double {
         UserDefaults.standard.bool(forKey: "flipAirpodsYaw") ? 1 : -1
     }
+
+    /// Speech comes from the AirPods' mic when the route supports Bluetooth high-quality recording (iOS 26, AirPods
+    /// Pro 3). The debug screen can force the iPhone's mic instead, e.g. if that mode turns out to cost the output
+    /// its stereo (the "mic" row shows both).
+    static var useIPhoneMic: Bool {
+        get { UserDefaults.standard.bool(forKey: "useIPhoneMic") }
+        set { UserDefaults.standard.set(newValue, forKey: "useIPhoneMic") }
+    }
 }

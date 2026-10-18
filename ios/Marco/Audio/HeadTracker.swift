@@ -12,18 +12,26 @@ final class HeadTracker: NSObject, CMHeadphoneMotionManagerDelegate {
     }()
     private let lock = NSLock()
     private var latest: (t: Double, yawDeg: Double)?
+    private var stats = MotionStats()
     private(set) var connected = false
 
     var available: Bool { manager.isDeviceMotionAvailable }
+
+    /// Hour-one test 2 (REQUIREMENTS §9): rate (expect 25 Hz), jitter, sensor-to-app latency, raw yaw.
+    var health: MotionStats { lock.lock(); defer { lock.unlock() }; return stats }
 
     func start() {
         guard manager.isDeviceMotionAvailable else { return }
         manager.delegate = self
         manager.startDeviceMotionUpdates(to: queue) { [weak self] motion, _ in
             guard let self, let m = motion else { return }
-            let yaw = Config.airpodsYawSign * m.attitude.yaw * 180 / .pi
+            let arrival = ProcessInfo.processInfo.systemUptime
+            // Both should be the uptime clock; if they ever disagree, arrival time keeps the fusion working.
+            let t = abs(arrival - m.timestamp) < 1 ? m.timestamp : arrival
+            let raw = m.attitude.yaw * 180 / .pi
             self.lock.lock()
-            self.latest = (m.timestamp, yaw)
+            self.latest = (t, Config.airpodsYawSign * raw)
+            self.stats.add(t: t, arrival: arrival, yawDeg: raw)
             self.lock.unlock()
         }
     }

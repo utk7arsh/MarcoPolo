@@ -135,3 +135,27 @@ def test_swift_phone_messages_are_accepted_by_the_server(fx, stub):
     rec = data_dir / "sessions" / "ios-contract" / "phone.jsonl"           # every message carried session_id
     kinds = [json.loads(l)["type"] for l in rec.read_text().splitlines()]
     assert kinds.count("hand") == 1 and kinds.count("pose") == 1 and kinds.count("guidance") == 2
+
+
+def test_a_recording_made_on_the_phone_reads_like_a_server_recording(fx):
+    """ios/Marco/Core/Recorder.swift records on the phone in the server's own layout (marco/recorder.py), so a walk
+    recorded with no server or network goes into server/tools as is."""
+    import importlib.util
+    from marco.session import Session
+    path = fx / "recorded" / "ios-contract"
+    ses = Session(path)
+    assert [m["frame_id"] for m in ses.frames] == [1, 2, 3]
+    assert all("received_wall" in m for m in ses.frames + ses.phone)
+    kinds = [m["type"] for m in ses.phone]
+    assert kinds[0] == "map" and kinds.count("pose") == 21 and kinds.count("hand") == 1
+    _, depth, conf = ses.frame_bytes(ses.frames[0])
+    d, c = truth(fx)
+    assert np.array_equal(codec.decode_conf(conf), c)
+    assert np.allclose(codec.decode_depth(depth), d.astype(np.float16).astype(np.float32), equal_nan=True)
+    spec = importlib.util.spec_from_file_location("check_recording", Path(__file__).resolve().parents[1] / "tools" / "check_recording.py")
+    check_recording = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(check_recording)
+    problems, notes = check_recording.check(path)
+    assert problems == [], problems
+    stream = [kind for kind, _ in ses.stream()]                              # what replay.py and run_offline.py walk
+    assert stream.count("frame") == 3 and stream.count("phone") == len(ses.phone)

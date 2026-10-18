@@ -6,6 +6,7 @@ import UIKit
 struct ContentView: View {
     @EnvironmentObject var model: AppModel
     @AppStorage("flipAirpodsYaw") private var flipYaw = false
+    @AppStorage("useIPhoneMic") private var iPhoneMic = false
     @State private var itemName = ""
     @State private var photo: PhotosPickerItem?
     @State private var talking = false
@@ -25,6 +26,14 @@ struct ContentView: View {
                     row("map", String(model.mapId.prefix(8)))
                     row("frames accepted", "\(model.framesAccepted)")
                     row("last upload", model.lastUpload)
+                    row("rates", model.linkInfo)
+                }
+
+                Section("Record (empty server URL = record only)") {
+                    Button(model.recording ? "Stop recording" : "Record") { model.toggleRecording() }
+                    row("recording", model.recordInfo)
+                    Button("Export (zip, AirDrop)") { model.exportRecording() }
+                        .disabled(model.recording)
                 }
 
                 Section("Ask") {
@@ -37,6 +46,9 @@ struct ContentView: View {
                             model.pushToTalk(down)
                         })
                     row("heard", model.heard)
+                    row("mic", model.micInfo)
+                    Toggle("Use the iPhone mic, not the AirPods", isOn: $iPhoneMic)
+                        .onChange(of: iPhoneMic) { _, _ in model.micChanged() }
                     ForEach(Config.demoItems, id: \.self) { name in
                         Button("Where are my \(name)?") { model.act(.find(name), "where are my \(name)") }
                     }
@@ -54,6 +66,8 @@ struct ContentView: View {
                 Section("Head tracking") {
                     row("source", model.headSource)
                     row("head yaw", String(format: "%.0f deg", model.headYaw))
+                    row("airpods", model.airpodsInfo)
+                    row("sign check", model.signInfo)
                     Toggle("Flip AirPods yaw sign", isOn: $flipYaw)
                 }
 
@@ -76,6 +90,7 @@ struct ContentView: View {
             }
             .navigationTitle("Marco")
         }
+        .sheet(item: $model.shareFile) { file in ShareSheet(items: [file.url]) }
         .onChange(of: photo) { _, item in
             guard let item else { return }
             let name = itemName.trimmingCharacters(in: .whitespaces)
@@ -97,4 +112,15 @@ struct ContentView: View {
             Text(value).multilineTextAlignment(.trailing)
         }
     }
+}
+
+/// The system share sheet (AirDrop the zipped recording to the Mac).
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ vc: UIActivityViewController, context: Context) {}
 }

@@ -250,7 +250,7 @@ If an `event moved` (or `put_down`) arrives for the target, retarget to its new 
 
 ## 10. Open questions (decide together)
 - **Vision orientation:** `.up` versus `.right` for the hand pose. Test in hour one.
-- **Where the server runs:** a teammate's laptop at the venue (lowest latency, best for touch) or Vultr (the sponsor prize). Possibly both: laptop for the demo, Vultr as backup.
+- **Where the server runs: decided (2026-10-17).** The Vultr GPU box (`deploy/vultr/`, `marco-gpu`) is the primary server; a laptop at the venue is the fallback. Nothing in this contract changes: clients only change the base URL.
 - **Who names places** ("entry table"): the server names them by height, or the user names them during setup.
 - **Photon and dashboard routes.** `photon/` and `frontend/` were built against the earlier requirements and POC 26 paths. Decide which side changes, then update this file:
   - **Photon: decided (2026-10-17).** `photon/` adopted §5 as written, on Photon 2.0, with no format changes. The phone never talks to `photon/`. Two optional additions are proposed in `STATUS.md` (`label_request_seen`, `label_unknown`); they are not part of this contract.

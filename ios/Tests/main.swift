@@ -141,6 +141,93 @@ do {
     check(near(y, 60, 1.0), "fused yaw follows the head turn: \(y)")
 }
 
+// MARK: - Head fusion on real AirPods: Bluetooth gaps, re-zeroing, a bad start, the sign check
+
+do {
+    func aligned() -> HeadFusion {                        // torso 10, AirPods -70: offset 80
+        var f = HeadFusion()
+        for i in 0..<50 { _ = f.update(t: Double(i) / 25, torsoDeg: 10, airpodsDeg: -70) }
+        return f
+    }
+    // A 1 s gap (frames pass nil) keeps the alignment: the head turned 30 deg right meanwhile and reads 40.
+    var f = aligned()
+    for i in 0..<25 { _ = f.update(t: 2 + Double(i) / 25, torsoDeg: 10, airpodsDeg: nil) }
+    let y = f.update(t: 3.0, torsoDeg: 10, airpodsDeg: -40)
+    check(near(y, 40, 0.5) && f.realignments == 1, "a 1 s Bluetooth gap keeps the alignment: \(y), \(f.realignments)")
+    // A 3 s gap is a reconnect: the AirPods restart from a new zero, so re-align to the torso.
+    var g = aligned()
+    for i in 0..<75 { _ = g.update(t: 2 + Double(i) / 25, torsoDeg: 10, airpodsDeg: nil) }
+    let z = g.update(t: 5.0, torsoDeg: 10, airpodsDeg: 123)
+    check(near(z, 10, 0.01) && g.realignments == 2, "a 3 s gap re-aligns: \(z), \(g.realignments)")
+    // 120 deg in 40 ms is no head turn: the AirPods re-zeroed (another app's spatial audio), re-align at once.
+    var h = aligned()
+    let j = h.update(t: 2.0, torsoDeg: 10, airpodsDeg: 50)
+    check(near(j, 10, 0.01) && h.realignments == 2, "a re-zero jump re-aligns: \(j)")
+    // Aligned while the head was turned 40 deg left. The head comes back to face forward (AirPods +40 at
+    // 40 deg/s) and the fusion reads 40 deg off; the 15 deg gate blocks the slow pull. After 8 s still: re-align.
+    var k = HeadFusion()
+    _ = k.update(t: 0, torsoDeg: 0, airpodsDeg: 0)
+    var s = 0.0
+    for i in 1...25 { s = k.update(t: Double(i) * 0.04, torsoDeg: 0, airpodsDeg: 1.6 * Double(i)) }
+    check(near(s, 40, 0.5), "a bad start reads 40 deg off: \(s)")
+    for i in 26...(26 + 9 * 25) { s = k.update(t: Double(i) * 0.04, torsoDeg: 0, airpodsDeg: 40) }
+    check(abs(s) < 1 && k.realignments == 2, "...and is re-aligned after 8 s still: \(s), \(k.realignments)")
+    // Whole-body turns (head fixed on the torso) show whether the AirPods yaw sign matches ARKit's.
+    var good = HeadFusion(), bad = HeadFusion()
+    for i in 0..<100 {
+        let t = Double(i) * 0.04, torso = Geo.wrap180(Double(i) * 2.4)     // 60 deg/s
+        _ = good.update(t: t, torsoDeg: torso, airpodsDeg: Geo.wrap180(torso + 33))
+        _ = bad.update(t: t, torsoDeg: torso, airpodsDeg: Geo.wrap180(-torso + 33))
+    }
+    check(good.signEvidence > 50 && bad.signEvidence < -50, "sign check: \(good.signEvidence) / \(bad.signEvidence)")
+}
+
+// MARK: - Health readouts (hour-one test 2)
+
+do {
+    var m = MotionStats()
+    for i in 0..<60 { m.add(t: 100 + Double(i) * 0.04, arrival: 100.03 + Double(i) * 0.04, yawDeg: 5) }
+    check(near(m.rateHz, 25, 0.01) && m.jitterMs < 0.01 && near(m.latencyMs, 30, 0.01) && m.samples == 60,
+          "AirPods stats: \(m.rateHz) Hz, \(m.jitterMs) ms jitter, \(m.latencyMs) ms latency")
+    var r = RateMeter(window: 2)
+    for i in 0..<100 { r.tick(Double(i) * 0.1) }
+    check(near(r.rate(9.9), 10, 0.6), "rate meter: \(r.rate(9.9))/s")
+    check(r.rate(30) == 0, "rate meter forgets old events")
+}
+
+// MARK: - Recording on the phone, in the server's layout (server/marco/recorder.py)
+
+do {
+    check(Recorder.folderName("a/../b c") == "abc" && Recorder.folderName("") == "unknown", "folder names match the server's")
+    check(Recorder.stamped(Data(#"{"a":1}"#.utf8), wall: 1.5) == Data(#"{"a":1,"received_wall":1.5}"#.utf8), "stamp adds received_wall")
+    check(Recorder.stamped(Data("{}".utf8), wall: 2) == Data(#"{"received_wall":2.0}"#.utf8), "stamp on an empty object")
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent("marco-rec-\(UUID().uuidString)")
+    let rec = Recorder(root: root)
+    rec.message(Data("{}".utf8))                                   // not recording yet: ignored
+    let dir = rec.start(sessionId: "rec-test")
+    let meta = FrameMeta(session_id: "rec-test", map_id: "m", frame_id: 7, t_device: 5, t_wall: Clock.wall(), tracking: "normal",
+                         camera_transform: Geo.flat(matrix_identity_float4x4), intrinsics: Geo.flat(matrix_identity_float3x3),
+                         image_resolution: [1920, 1440], jpeg_scale: 0.5)
+    rec.frame(meta: try! JSONEncoder().encode(meta), frameId: 7, jpeg: Data([1, 2, 3]), depth: Data([4]), confidence: Data([5]))
+    rec.message(try! JSONEncoder().encode(PoseMsg(session_id: "rec-test", map_id: "m", t_device: 5.1,
+                                                  camera_transform: Geo.flat(matrix_identity_float4x4), head_yaw_deg: 0, head_source: "phone")))
+    rec.stop()
+    rec.message(Data("{}".utf8))                                   // stopped: ignored
+    rec.flush()
+    let read = { (name: String) in (try? String(contentsOf: dir.appendingPathComponent(name), encoding: .utf8)) ?? "" }
+    let frames = read("frames.jsonl").split(separator: "\n"), phone = read("phone.jsonl").split(separator: "\n")
+    let f0 = (try? JSONSerialization.jsonObject(with: Data((frames.first ?? "").utf8))) as? [String: Any] ?? [:]
+    let p0 = (try? JSONSerialization.jsonObject(with: Data((phone.first ?? "").utf8))) as? [String: Any] ?? [:]
+    check(frames.count == 1 && f0["frame_id"] as? Int == 7 && f0["received_wall"] as? Double != nil, "frames.jsonl: \(frames)")
+    check(phone.count == 1 && p0["type"] as? String == "pose" && p0["received_wall"] as? Double != nil, "phone.jsonl: \(phone)")
+    let fm = FileManager.default, fdir = dir.appendingPathComponent("frames")
+    check(fm.contents(atPath: fdir.appendingPathComponent("000007.jpg").path) == Data([1, 2, 3])
+          && fm.contents(atPath: fdir.appendingPathComponent("000007.depth").path) == Data([4])
+          && fm.contents(atPath: fdir.appendingPathComponent("000007.conf").path) == Data([5]), "frame files are the bytes as sent")
+    check(rec.progress.frames == 1 && rec.progress.messages == 1, "recorder counts: \(rec.progress)")
+    try? fm.removeItem(at: root)
+}
+
 // MARK: - Guidance (INTERFACES.md §7)
 
 do {
@@ -224,6 +311,60 @@ do {
         ("where is the remote", .find("remote")), ("what is this", .whatIsThis), ("what am I touching", .whatIsThis),
         ("this is the door", .setDoor), ("stop", .stop), ("never mind", .stop), ("tell me a joke", nil)]
     for (text, want) in intents { check(Speech.intent(text) == want, "intent(\(text)) = \(String(describing: Speech.intent(text)))") }
+
+    // The wake word as the recognizer writes it, and "Marco" alone.
+    check(Speech.command(after: "Hey Marco, where's my wallet") == "where's my wallet", "hey Marco")
+    check(Speech.command(after: "Mark oh where are my keys") == "where are my keys", "Mark oh")
+    check(Speech.command(after: "Marco") == "", "the wake word alone is an empty command")
+    check(Speech.command(after: "Marcos Polo was a traveller") == nil, "Marcos is not the wake word")
+
+    // How people ask, with no registered items: the thing, as said.
+    let asks: [(String, Intent?)] = [
+        ("do you know where my keys are", .find("keys")), ("where did my wallet go", .find("wallet")),
+        ("where my keys at", .find("keys")), ("have you seen my glasses", .find("glasses")),
+        ("can you help me find my phone", .find("phone")), ("I can't find my charger", .find("charger")),
+        ("polo where are my keys", .find("keys")), ("okay could you find the remote for me", .find("remote")),
+        ("I'm looking for my cane", .find("cane")), ("where did I put the cumin", .find("cumin")),
+        ("where is it", nil), ("where", nil), ("keys", nil), ("please stop", .stop)]
+    for (text, want) in asks { check(Speech.intent(text) == want, "intent(\(text)) = \(String(describing: Speech.intent(text)))") }
+
+    // With registered items: the item's own name.
+    let v = ItemVocabulary(["keys", "Wallet", "blue water bottle", "coffee mug", "cumin jar", "paprika jar",
+                            "glasses case", "TV remote", "wallet"])
+    check(v.names.count == 8, "names are kept once, ignoring case: \(v.names)")
+    let resolved: [(String, String?)] = [
+        ("keys", "keys"), ("key", "keys"), ("my car keys", "keys"), ("keyring", "keys"), ("wallets", "Wallet"),
+        ("walet", "Wallet"), ("billfold", "Wallet"), ("the water bottle", "blue water bottle"), ("bottle", "blue water bottle"),
+        ("mug", "coffee mug"), ("cup", "coffee mug"), ("red mug", "coffee mug"), ("specs", "glasses case"),
+        ("remote", "TV remote"), ("clicker", "TV remote"), ("cumin", "cumin jar"), ("kumin", "cumin jar"),
+        ("jar", nil), ("passport", nil), ("cake", nil), ("water glass", nil), ("", nil)]
+    for (said, want) in resolved {
+        check(v.resolve(said)?.name == want, "resolve(\(said)) = \(String(describing: v.resolve(said)?.name)), want \(String(describing: want))")
+    }
+    check(v.resolve("keys")?.how == .exact && v.resolve("billfold")?.how == .synonym && v.resolve("walet")?.how == .spelling
+          && v.resolve("car keys")?.how == .partial, "how each matched")
+    let both = ItemVocabulary(["keys", "car keys"])
+    check(both.resolve("car keys")?.name == "car keys" && both.resolve("spare car keys")?.name == "car keys"
+          && both.resolve("keys")?.name == "keys", "the more specific name wins")
+
+    let withItems: [(String, Intent?)] = [
+        ("where are my car keys", .find("keys")), ("I can't find my specs", .find("glasses case")),
+        ("where's the thing", nil), ("where is my walet", .find("Wallet")), ("where are my keys and my wallet", .find("keys")),
+        ("where's my passport", .find("passport")), ("keys", .find("keys")), ("my coffee mug", .find("coffee mug")),
+        ("bottle", nil), ("tell me a joke", nil), ("what is this", .whatIsThis)]
+    for (text, want) in withItems {
+        check(Speech.intent(text, items: v) == want, "intent(\(text), items) = \(String(describing: Speech.intent(text, items: v)))")
+    }
+
+    // Answer sooner when nothing more is needed; wait when the name is still coming.
+    check(Speech.isComplete("where are my keys", items: v), "a whole registered name is complete")
+    check(!Speech.isComplete("where are my", items: v) && !Speech.isComplete("where's my water", items: v),
+          "half a name is not")
+    check(!Speech.isComplete("where are my car keys", items: v), "more words than the name: wait for the rest")
+    check(Speech.isComplete("stop", items: v) && !Speech.isComplete("tell me", items: v), "stop is complete")
+    check(Words.editDistance("cumin", "kumin") == 1 && Words.editDistance("", "abc") == 3 && Words.editDistance("abc", "abc") == 0,
+          "edit distance")
+    check(Words.content("My Mom's glasses") == ["mom", "glass"] && Words.stem("batteries") == "battery", "stems")
 }
 
 // MARK: - Server messages (§4), as the server sends them
@@ -319,6 +460,19 @@ do {
     check(Tones.beep(fmt, freq: 880, harmonics: 6, ms: 70, noise: 0.1).frameLength == 3360, "70 ms beep")
 }
 
+// MARK: - Connecting to the server (venue Mac or the Vultr box, over the tailnet)
+
+do {
+    let h = "marco-gpu.example.ts.net"
+    let ok = ServerCheck.describe(host: h, status: 200, error: nil, ms: 61, items: 3)
+    check(ok.hasPrefix("Server OK") && ok.contains("3 items") && ok.contains("61 ms"), ok)
+    check(ServerCheck.describe(host: h, status: 200, error: nil, ms: 5, items: 1).contains("1 item registered"), "singular")
+    check(ServerCheck.describe(host: h, status: 403, error: nil, ms: 0, items: nil).contains("TAILSCALE_ALLOWED_LOGINS"), "403 names the allow-list")
+    check(ServerCheck.describe(host: h, status: nil, error: .cannotFindHost, ms: 0, items: nil).contains("Tailscale app"), "DNS failure: Tailscale off")
+    check(ServerCheck.describe(host: h, status: nil, error: .timedOut, ms: 0, items: nil).contains("marco-vultr.sh status"), "timeout: is the box up")
+    check(ServerCheck.describe(host: h, status: nil, error: .appTransportSecurityRequiresSecureConnection, ms: 0, items: nil).contains("https"), "plain http")
+}
+
 // MARK: - Contract fixtures for the server
 
 if let i = CommandLine.arguments.firstIndex(of: "--emit"), i + 1 < CommandLine.arguments.count {
@@ -360,6 +514,25 @@ if let i = CommandLine.arguments.firstIndex(of: "--emit"), i + 1 < CommandLine.a
     ]
     write("phone.jsonl", lines.reduce(into: Data()) { $0.append($1); $0.append(0x0A) })
     lines.removeAll()
+
+    // A short walk recorded on the phone (Core/Recorder.swift), for server/tools/check_recording.py and
+    // marco.session.Session: 3 frames at 1/s, 21 poses at 10/s, a hand and a map event.
+    let rec = Recorder(root: dir.appendingPathComponent("recorded"))
+    rec.start(sessionId: sid)
+    rec.message(json(MapMsg(session_id: sid, event: "new_map", map_id: mid)))
+    for k in 0..<3 {
+        var m = meta
+        m.frame_id = k + 1
+        m.t_device = 1000.0 + Double(k)
+        rec.frame(meta: json(m), frameId: m.frame_id, jpeg: jpeg, depth: frame.depth, confidence: frame.confidence)
+    }
+    for k in 0...20 {
+        rec.message(json(PoseMsg(session_id: sid, map_id: mid, t_device: 1000.0 + Double(k) * 0.1, camera_transform: Geo.flat(T),
+                                 head_yaw_deg: 12.5, head_source: "fusion")))
+    }
+    rec.message(json(hand))
+    rec.stop()
+    rec.flush()
 
     var rng = SplitMix(state: 42)
     var headings: [[String: [Double]]] = []

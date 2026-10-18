@@ -1,8 +1,8 @@
 # XcodeGen spec: `brew install xcodegen && cd ios && xcodegen` writes Marco.xcodeproj (not checked in).
-# Change the bundle id to something unique to you, then pick your (free) Personal Team under Signing.
+# Signed with Utkarsh's free Personal Team. Someone else building it: change DEVELOPMENT_TEAM and the bundle id.
 name: Marco
 options:
-  bundleIdPrefix: com.example
+  bundleIdPrefix: com.utkarshlal
   deploymentTarget:
     iOS: "17.0"
 settings:
@@ -15,9 +15,15 @@ targets:
     platform: iOS
     sources:
       - path: Marco
+    info:                            # merged with the INFOPLIST_KEY_* settings below; for keys Xcode can't generate
+      path: Marco/Info.plist
+      properties:
+        UIFileSharingEnabled: true   # Finder > iPhone > Files > Marco shows Documents/sessions (recordings)
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.marco
+        PRODUCT_BUNDLE_IDENTIFIER: com.utkarshlal.marco
+        DEVELOPMENT_TEAM: 7764XWK2G5
+        CODE_SIGN_STYLE: Automatic
         TARGETED_DEVICE_FAMILY: "1"
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
@@ -27,3 +33,5 @@ targets:
         INFOPLIST_KEY_NSMicrophoneUsageDescription: "Marco listens for \"Marco\" and your questions."
         INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "Marco turns what you say into questions, on this iPhone."
         INFOPLIST_KEY_NSMotionUsageDescription: "Marco uses your AirPods' head tracking so sounds stay where things are."
+        INFOPLIST_KEY_NSLocalNetworkUsageDescription: "Marco sends what the camera sees to the team's server on this network."
+        INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace: YES
