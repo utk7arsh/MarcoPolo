@@ -315,3 +315,45 @@ def test_room_layout_becomes_walls_and_landmarks(server):
         synced(ws)
         m = valid(c.get("/dashboard/snapshot").json())["map"]
         assert m is None or (m["walls"] is None and "landmarks" not in m)
+
+
+def test_find_still_guides_to_where_a_missing_item_was_last_seen(server):
+    """The dashboard shows a missing or picked-up item at its last spot ("seen just now"), so Find must guide there,
+    not refuse. Only a never-seen item has nowhere to go."""
+    app_mod, c = server
+    dash = app_mod.dash
+    with c.websocket_connect("/v1/phone") as ws:
+        live_phone(c, ws)
+        synced(ws)
+        dash.observe("dashboard", dict(type="world", user=None, trajectory=[], items=[
+            dict(item_id="cup", name="cup", position=[0.5, -0.4, -1.0], surface="table", state="missing",
+                 last_seen_wall="2026-10-18T10:57:46.798Z"),
+            dict(item_id="pen", name="pen", position=None, surface=None, state="registered", last_seen_wall=None)]))
+        r = c.post("/dashboard/commands", json=dict(commandId="m-1", deviceId="s1", type="find", itemId="cup"))
+        assert r.status_code == 202
+        msg = ws.receive_json()
+        while msg["type"] != "command":
+            msg = ws.receive_json()
+        assert msg["item_id"] == "cup" and msg["position"] == [0.5, -0.4, -1.0]
+        r = c.post("/dashboard/commands", json=dict(commandId="m-2", deviceId="s1", type="find", itemId="pen"))
+        assert r.status_code == 409 and r.json()["error"]["code"] == "location_unavailable"
+
+
+def test_items_removed_on_the_server_leave_the_dashboard_entirely(server):
+    """Photon's /restart (DELETE /v1/items?source=photon): the items go, and so do their memory and label entries."""
+    app_mod, c = server
+    dash = app_mod.dash
+    rid = c.post("/v1/items", data={"name": "cumin", "source": "photon"},
+                 files={"photo": ("p.jpg", jpeg_bytes(), "image/jpeg")}).json()["item_id"]
+    keep = c.post("/v1/items", data={"name": "keys"}, files={"photo": ("p.jpg", jpeg_bytes(), "image/jpeg")}).json()["item_id"]
+    for iid in (rid, keep):
+        dash.observe("dashboard", dict(type="timeline", events=[dict(kind="seen", item_id=iid, t_wall="2026-10-18T10:00:00.000Z")]))
+    dash.observe("phone", dict(type="label_ready", item_id=rid, name="cumin", label_text="cumin"))
+    data = valid(c.get("/dashboard/snapshot").json())
+    assert rid in {i["id"] for i in data["items"]} and rid in {m["itemId"] for m in data["recentMemory"]}
+    assert c.delete("/v1/items", params={"source": "photon"}).json()["removed"] == [dict(item_id=rid, name="cumin")]
+    data = valid(c.get("/dashboard/snapshot").json())
+    assert {i["id"] for i in data["items"]} == {keep} or keep in {i["id"] for i in data["items"]}
+    assert rid not in {i["id"] for i in data["items"]}
+    assert rid not in {m["itemId"] for m in data["recentMemory"]} and keep in {m["itemId"] for m in data["recentMemory"]}
+    assert all(r.get("itemId") != rid for r in data["registrations"])

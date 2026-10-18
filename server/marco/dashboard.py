@@ -419,6 +419,7 @@ class Dashboard:
             tracking = "normal"
         fusion_fresh = self.fusion is not None and mono - self.fusion[1] <= HEADPHONE_FRESH_S
         items = [self._item(it, map_id) for it in self.items if it.get("item_id")]
+        known = {it["id"] for it in items}                 # removed items (Photon's /restart) leave no trace here
         return dict(
             session=dict(id=self.session_id or "", deviceId=self.device_id(), roomId=self.room_id, roomName=self.room_name,
                          worldMapId=map_id),
@@ -431,8 +432,8 @@ class Dashboard:
             items=items,
             camera=self._camera(),
             navigation=self._navigation(connected, mono),
-            registrations=list(reversed(self.registrations.values())),
-            recentMemory=list(self.memory),
+            registrations=[r for r in reversed(self.registrations.values()) if r.get("itemId") in (None, *known)],
+            recentMemory=[m for m in self.memory if m.get("itemId") in known],
             lastCommand=self.relay.last(),
         )
 

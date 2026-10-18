@@ -76,8 +76,11 @@ class CommandRelay:
             it = item(cmd["itemId"])
             if it is None:
                 raise CommandError(404, "unknown_item", "No item with that ID.")
-            if it.get("position") is None or it.get("state") in ("stale", "missing", "picked_up", "registered"):
-                raise CommandError(409, "location_unavailable", f"Marco doesn't know where the {it.get('name', 'item')} is right now.")
+            # A missing or picked-up item still has the 3D spot where Marco last saw it, and the dashboard shows it
+            # there ("seen just now"): guide to that spot. Only never-seen items and positions from an old map (stale)
+            # have nowhere to go. (Absence is often a false alarm: a hand over the item, or a detector miss.)
+            if it.get("position") is None or it.get("state") in ("stale", "registered"):
+                raise CommandError(409, "location_unavailable", f"Marco hasn't seen the {it.get('name', 'item')} yet in this room map.")
             if any(r["status"] in ("pending", "accepted") and r["cmd"]["type"] == "find" and r["session_id"] == session_id
                    for r in self.records.values()):
                 raise CommandError(409, "busy", "Another Find is still waiting for the iPhone.")
