@@ -2,8 +2,8 @@
 
 The default screen is now the approved Paper V3 control panel: Instrument Sans, open Camera / LiDAR / Audio / Server rows, a Voice commands status, and a circular Start/Stop control. It uses this app's existing ARKit, upload, speech, head tracking and spatial-audio engine. There is one app source tree, `Marco/`; the earlier standalone AVFoundation panel is not compiled alongside it.
 
-Mac spatial-audio test tools and verification notes live in [`spatial/`](spatial/README.md).
-They compile this app's audio classes; production audio remains in `Marco/Audio/`.
+Optional Mac spatial-audio experiments are kept locally in `ios/spatial/` and
+ignored by Git. The app's spatial-audio implementation is in `Marco/Audio/`.
 
 Open **`MarcoPolo.xcodeproj`**, select the **MarcoPolo** scheme and your signing team, then Run. This checked-in project uses the same `Marco/` sources as the XcodeGen option below, so XcodeGen is optional. Both projects use Swift 5 and iOS 17+. The three bundled Instrument Sans fonts and licence are in `Marco/Design/Fonts/`; font names are registered in `Marco/Info.plist` and `project.yml`.
 

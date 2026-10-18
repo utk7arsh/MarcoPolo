@@ -18,7 +18,6 @@ The contract between the parts is [docs/INTERFACES.md](docs/INTERFACES.md): ever
 |---|---|---|
 | Perception, world model, touch, API (Vedant) | `server/` | [server/README.md](server/README.md) |
 | iPhone app: ARKit, LiDAR, uploads, spatial audio, voice (Utkarsh) | `ios/` | [ios/README.md](ios/README.md) |
-| Mac spatial-audio tools, listening experiments and regression tests | `ios/spatial/` | [ios/spatial/README.md](ios/spatial/README.md) |
 | Caretaker labelling over iMessage (Utkarsh) | `photon/` | [photon/README.md](photon/README.md) |
 | Photon reference wiring: speaks the contract's §5 exactly, tested against the server | `photon-scaffold/` | [photon-scaffold/README.md](photon-scaffold/README.md) |
 | Dashboard (Sandeep) | `frontend/` | [frontend/README.md](frontend/README.md), [frontend/docs/fastapi-handoff.md](frontend/docs/fastapi-handoff.md) |

@@ -55,6 +55,10 @@ xcuserdata/
 *.xcuserstate
 DerivedData/
 
+# Local spatial-audio experiments (kept on this Mac, not published)
+/ios/spatial/
+/spatial/
+
 # Photon (the team's bridge has its own photon/.gitignore)
 photon/node_modules/
 photon-scaffold/node_modules/

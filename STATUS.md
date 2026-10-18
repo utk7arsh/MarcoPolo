@@ -341,3 +341,8 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
 - Preserved the user's move to `ios/spatial/` and rebased it onto the team's latest work through `58f0bef`, including the server/deployment fixes and newly pushed iOS recorder, health, voice and audio changes. The original move commit is retained locally on `backup/spatial-move-de6b76f`. Rebase completed without conflicts; no force push is needed.
 - Fixed the move's broken compiler paths (`../Marco/`, relative to `ios/spatial/`), updated run commands and documentation links, and verified build output remains ignored. The iPhone app sources, `ios/project.yml`, frontend and backend code were not changed by this repair.
 - Verification after the latest merge: **21 renderer checks, 18 simulation checks, two withdrawn-option checks and 286 production Swift checks passed**. The Mac helper builds/signs; the unsigned iOS Debug Simulator build succeeds. Shell syntax, moved links and whitespace checks pass. No listening test was launched, and no new physical-navigation result is claimed.
+
+## Spatial experiments kept local
+
+- At the user's request, removed `ios/spatial/` from Git tracking while preserving its files locally. Root ignore rules cover both `/ios/spatial/` and the former `/spatial/` location; README links to the unpublished folder were removed. The iPhone's production audio remains in `ios/Marco/Audio/`.
+- Incorporated the latest team work through `8cbed3c` before this removal. This is a repository-tracking/documentation change; app sources and project configuration are unchanged. Verified local file preservation, ignore rules and whitespace; no audio was played and no new device result is claimed. Existing Git history is retained.
