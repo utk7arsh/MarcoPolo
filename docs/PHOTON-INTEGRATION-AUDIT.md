@@ -6,8 +6,8 @@ user's authorization; the deployment evidence is recorded below.
 
 ## Detector crop persistence: fix after the audit
 
-Implemented on top of `651edc7`. The full release suites pass; push and deployment
-are now authorized, with live verification pending. This supersedes
+Implemented on top of `651edc7`, pushed and deployed as **`b11519b`** after the
+full release suites passed. Both GitHub workflows pass. This supersedes
 the unresolved crop finding in the historical review below; the Photon reset
 and list findings were outside this change.
 
@@ -46,6 +46,32 @@ and 26 Chromium tests**, **8 reference-client tests**, **461 Swift checks**, the
 unsigned iOS Release build and **19 audio/ARKit emulator tests**. The missing
 audio fixtures were generated offline into ignored data; they are not committed.
 Release evidence: `/private/tmp/marco-full-release-20261018/`.
+
+### Deployment verification
+
+- Server, Photon and the `/app/` build were deployed together; all **121 deployed
+  source/schema/asset files** match the tested release. Environment files remain
+  unchanged. The five existing items retain their IDs/names/labels/sources and
+  now have valid saved PNG templates; API, dashboard and detector IDs agree.
+- On Vultr's actual cached OWLv2/DINOv2 models, isolated app and Photon setup
+  registrations preserve exact crop pixels and embeddings across three reloads.
+  No test records were added to the shared registry. Linux staging: **198 passed,
+  8 skipped**; the Node contract then passes with `/opt/marco/node/bin` on PATH.
+  macOS-only checks were run locally; the external dataset remains unavailable.
+- Chrome loads five objects and their photos/logo, receives WebSocket snapshots,
+  survives reload and opens the idle Live view without request or script errors.
+  The read-only Photon doctor verifies credentials, assigned line, provider event
+  subscription and the private server socket. No iMessage was sent in this run.
+- `/v1/speech` returns non-silent ElevenLabs mono 24 kHz WAV in one measured
+  0.363 s request; repeat audio is identical and reports a cache hit. HTTP/WS
+  requests without identity are rejected with 403/1008. Both services are healthy
+  behind private Tailscale Serve. Physical phone/audio tests remain outstanding.
+- Backup: `/opt/marco/backups/release-b11519b-20261018T115513Z/` (previous code,
+  dashboard, registry and bridge state). Remote evidence:
+  `/opt/marco/deploy/release-b11519b/`. No environment file or credential is in Git.
+- CI: [server and Photon](https://github.com/utk7arsh/LAHacks-2026/actions/runs/39124877774),
+  [frontend](https://github.com/utk7arsh/LAHacks-2026/actions/runs/39124926139).
+  The following documentation-only update does not change tested runtime code.
 
 ## Reset audit and latest-main review: October 18, 2026
 

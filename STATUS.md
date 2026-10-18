@@ -15,7 +15,29 @@ Last updated: 2026-10-18. Keep this file current: update it whenever a decision 
 - The user authorized pushing and deploying this release. Vultr preflight
   confirms both services are active, private loopback listeners are intact,
   and the five saved app items agree across disk/API/dashboard/detector.
-  Deployment verification is pending; secrets and persistent state stay outside Git.
+  Secrets and persistent state stay outside Git.
+- **Pushed and deployed `b11519b`**: server, Photon and `/app/` dashboard.
+  Both GitHub CI workflows pass. Vultr staging adds **198 Linux passes, 8 skips**;
+  the Node contract passes separately with the deployed Node on PATH. The
+  remaining Linux skips include macOS-only Swift checks already passed locally.
+- Actual cached GPU models preserve exact crop pixels and query/DINO embeddings
+  for app and Photon setup photos across three isolated reloads. The running
+  server restored all five saved items, backfilled five valid crop PNGs, and
+  agrees with dashboard and detector IDs. No item IDs, names, labels or sources
+  changed; all three environment files are unchanged.
+- All **121 deployed source/schema/assets** match the release manifest. Chrome
+  verifies five rows/photos, logo, WebSocket snapshots, reload and the idle Live
+  view without browser errors. Photon read-only doctor passes, including provider
+  credentials/event subscription and the private server socket. No iMessage sent.
+- ElevenLabs returns non-silent mono 24 kHz WAV (one measured request: 0.363 s)
+  and an identical cached response. Unauthenticated HTTP/WS remain 403/1008;
+  both services bind loopback and Tailscale Serve stays private.
+- Rollback files and data are under
+  `/opt/marco/backups/release-b11519b-20261018T115513Z/`; deployment/test evidence
+  is in `/opt/marco/deploy/release-b11519b/` and
+  `/private/tmp/marco-full-release-20261018/`. The wearer phone is disconnected:
+  capture, real movement, command execution and audible playback still need a
+  physical-device run. This follow-up changes only release documentation.
 
 ## Detector crop persistence (October 18, 2026)
 
