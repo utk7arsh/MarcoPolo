@@ -39,12 +39,12 @@ def vs_others(scores, q, names):
     return float(scores[q] - np.max(np.asarray(scores)[others])) if others else None
 
 
-# Colour check: a detection must not look grossly different from the registration crop. OWLv2's photo+name score and
-# DINOv2's similarity both happily match a clear plastic mug to a black bottle (live, 2026-10-18); its lightness and
-# colourfulness give it away. The bounds are wide because lighting changes a lot: on the venue clips the right item
-# was up to 28.5 lightness and 19 colourfulness away, and no right item was lost (POC 28, appearance_eval.py).
-TH_LIGHT = float(os.environ.get("TH_LIGHT", "40"))       # CIELAB L*, 0 black ... 100 white
-TH_CHROMA = float(os.environ.get("TH_CHROMA", "30"))     # CIELAB chroma: 0 grey ... ~100 vivid
+# Colour check, OFF by default: a detection must not look grossly different from the registration crop (lightness and
+# colourfulness). On the venue clips it changed nothing (POC 28). On held-out ORBIT footage it costs 1 in 20 real
+# finds (80% -> 75%) for 13.9% -> 12.3% false alarms, about what raising TH_DINO to 0.314 does. It is also the check
+# most exposed to lighting (night against day) and to clear items (POC 29). TH_LIGHT=40 TH_CHROMA=30 turns it on.
+TH_LIGHT = float(os.environ.get("TH_LIGHT", "inf"))      # CIELAB L*, 0 black ... 100 white
+TH_CHROMA = float(os.environ.get("TH_CHROMA", "inf"))    # CIELAB chroma: 0 grey ... ~100 vivid
 # Off by default, both measured worse: elongation (seen from the chest a standing bottle looks squat, so the real
 # bottle failed it) and trying the top 3 boxes per item (3 false alarms on the clips instead of 1).
 TH_SHAPE = float(os.environ.get("TH_SHAPE", "inf"))      # elongation ratio (long side / short side), either way

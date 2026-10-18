@@ -142,7 +142,13 @@ def test_fast_pixels_turn_off_when_the_processor_disagrees(processor):
 
 
 
+def colour_check_on(monkeypatch):
+    monkeypatch.setattr(D, "TH_LIGHT", 40.0)                               # off by default (POC 29); on to test it
+    monkeypatch.setattr(D, "TH_CHROMA", 30.0)
+
+
 def test_appearance_tells_a_black_bottle_from_a_clear_mug(monkeypatch):
+    colour_check_on(monkeypatch)
     monkeypatch.setattr(D, "TH_SHAPE", 2.5)                                # off by default; on here to test it
     bottle = appearance(Image.new("RGB", (30, 100), (20, 20, 24)))         # dark, tall
     assert appearance_check(bottle, appearance(Image.new("RGB", (32, 96), (35, 33, 38)))) == ""   # it, in other light
@@ -161,6 +167,7 @@ def test_the_item_is_found_behind_a_better_scoring_look_alike(monkeypatch):
     det.items["bottle"]["look"] = appearance(Image.new("RGB", (20, 20), (15, 15, 18)))
     scene = Image.new("RGB", (100, 80), (230, 230, 230))
     scene.paste((10, 10, 12), (50, 0, 100, 80))                             # the right half is dark
+    colour_check_on(monkeypatch)
     monkeypatch.setattr(D, "TOP_K", 1)
     one = det.detect(scene)[0]
     assert not one["present"] and "lightness" in one["look"]                # only the look-alike was tried
@@ -170,8 +177,12 @@ def test_the_item_is_found_behind_a_better_scoring_look_alike(monkeypatch):
 
 
 
-def test_by_default_only_colour_is_checked():
+def test_by_default_no_appearance_check_runs(monkeypatch):
+    """Colour and shape are both off by default (POC 29): a light object passes; turning colour on refuses it."""
     bottle = appearance(Image.new("RGB", (30, 100), (20, 20, 24)))
+    light = appearance(Image.new("RGB", (30, 100), (200, 205, 210)))
     assert appearance_check(bottle, appearance(Image.new("RGB", (70, 66), (30, 30, 34)))) == ""   # squat from above: fine
-    assert "lightness" in appearance_check(bottle, appearance(Image.new("RGB", (30, 100), (200, 205, 210))))
+    assert appearance_check(bottle, light) == ""
     assert D.TOP_K == 1
+    colour_check_on(monkeypatch)
+    assert "lightness" in appearance_check(bottle, light)

@@ -88,7 +88,7 @@
 - **Colour check: PUSHED as `6cd9dff` (13:35 UTC), not deployed.** I wrongly told the user it was local only; corrected at ~14:30.
   - Only measured on the venue clips: 37 frames, 3 dark items. Same 8 hits / 1 FA with or without it.
   - Unmeasured on cans, Pringles and clear items. A clear mug's colour is mostly what's behind it.
-  - Off without a code change: `TH_LIGHT=inf TH_CHROMA=inf`. Recommended: deploy it off until the replay on the user's data shows it helps.
+  - Now off by default (`TH_LIGHT`/`TH_CHROMA` default `inf`), after POC 29: on held-out ORBIT it costs 1 in 20 real finds, about what raising `TH_DINO` to 0.314 does.
 - **Measured and rejected:**
   - top 3 boxes: 9 hits / 3 FA;
   - elongation check: the real bottle fails it from the chest;

@@ -165,6 +165,8 @@ During development, `npm run dev` proxies `/api` to this server instead (`API_PR
 | `MARCO_FRAMES_ASYNC` | `1` | answer `POST /v1/frames` with 202 before detection runs (INTERFACES.md 3.1), so the phone's upload never waits on the GPU; `0` answers after the brain is done (tests) |
 | `MARCO_LAYOUT_ASYNC` | `1` | make each layout on its own thread so a big map never delays a frame; `0` makes it inline (tests, offline tools) |
 | `MARCO_DINO_TURNS` | `1` | `4` compares the DINOv2 crop against the registration crop at 4 quarter turns and keeps the best: finds more items lying flat in any direction, and more look-alikes (POC 28) |
+| `TH_LIGHT`, `TH_CHROMA` | `inf` (off) | the colour check: refuse a box whose lightness or colourfulness is this far from the registration crop's. `40` and `30` turn it on. Off because on held-out footage it cost 1 in 20 real finds for few fewer false alarms, and it's the check most exposed to lighting (POC 29) |
+| `TH_SHAPE`, `MARCO_TOP_K` | `inf`, `1` | the elongation check and the boxes tried per item: both measured worse, so off (POC 28) |
 | `MARCO_PREVIEW_HZ` | `10` | the dashboard's live view: the most preview JPEGs a second the phone may send while a dashboard watches; `0` turns it off |
 | `MARCO_LOG` | `INFO` | server log level; at INFO every frame logs, per item, where it was placed or which check it failed (`journalctl -u marco`) |
 

@@ -34,10 +34,10 @@ The question: why does Marco take other objects for registered items, in general
     - at 64 % caught: 7.5 % → **3.4 %** (threshold 0.469).
   - **The 0.377 threshold carried to the venue clips, unchanged:** 9 hits and 1 false alarm, against 8 and 1 deployed. No worse anywhere.
 
-## What doesn't help, measured
+## What doesn't help (or barely), measured
 - **Colour check (in main as `6cd9dff`, not deployed):**
   - ORBIT: 80 % → **75 % caught**, false alarms 13.9 % → 12.3 %.
-  - Raising `TH_DINO` to the same 75 % recall gives about 11.8 %, so it's a worse trade than the DINOv2 threshold itself.
+  - At the same 75 % recall, raising `TH_DINO` to 0.314 instead gives 12.6 % (measured; an earlier interpolated 11.8 % was wrong). So the check is a finds-for-false-alarms dial, like the threshold, adding almost nothing the threshold can't.
   - Venue: no change. It's also the check most exposed to lighting (night against day). **Turn it off.**
 - **Choosing the box by image + name (audit finding 8):**
   - ORBIT false alarms 13.9 % → 15.8 % at the same recall; venue 1 → 4 false alarms.
@@ -47,3 +47,12 @@ The question: why does Marco take other objects for registered items, in general
 - ORBIT frames are 224 px handheld close-ups and our frames are 960 px from the chest, so the absolute rates differ. The comparisons between variants held on both sets.
 - The venue clips are 37 frames at one table: a sanity check, not proof.
 - The live sessions (night, 4 items) are the real test: score them with these settings fixed, never tune on them.
+
+## State (2026-10-18 ~15:00 UTC)
+- **Pushed `c7b5042`:** `server/tools/investigate_live.py` plus its test (223 server tests pass), POC 29, and the POC 28 names eval.
+- **The user's friend runs the investigation on the box** (steps in server/README.md) and sends back /tmp/marco-investigation.zip. I don't access the server.
+- **The colour check is off by default** (the user said "turn it off by default and push"): `TH_LIGHT`/`TH_CHROMA` default `inf`.
+- **Waiting for the user to decide:**
+  1. (done: colour check off)
+  2. the DINOv2 square crop at `TH_DINO` 0.377 (chosen on ORBIT; to be scored, not tuned, on the live sessions);
+  3. the absence and touch fixes (audit findings 1–3).
