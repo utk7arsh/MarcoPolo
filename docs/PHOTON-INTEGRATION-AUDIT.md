@@ -4,6 +4,107 @@
 unavailable for a live retest. The fixes were subsequently deployed with the
 user's authorization; the deployment evidence is recorded below.
 
+## Detector crop persistence: fix after the audit
+
+Implemented on top of `651edc7`. The full release suites pass; push and deployment
+are now authorized, with live verification pending. This supersedes
+the unresolved crop finding in the historical review below; the Photon reset
+and list findings were outside this change.
+
+- Setup registrations save the exact detector crop as a lossless PNG, for both
+  app and Photon sources. The detector and persistence share the same integer
+  box conversion. Dashboard JPEGs remain separate.
+- Touch labels save their already-cropped pixels. Reload uses the saved crop
+  without another name-gate crop. Label corrections preserve the template.
+- Explicit `photo_kind` metadata allows missing/corrupt templates to recover
+  from full setup photos or touch crops correctly. Stub registrations record the
+  same metadata so switching to real mode does not misclassify them.
+- Item deletion removes its template. A reproduced stale-cache case when
+  replacing a reference photo is fixed by invalidating the previous template.
+- Old unlabelled setup photos are recovered and upgraded once. Legacy labelled
+  records have insufficient metadata to distinguish a corrected full setup photo
+  from a touch crop; preserve them whole. An ambiguous old setup item may need
+  to be taught again. This limitation does not apply to new registrations.
+
+Regression tests cover both sources, exact patterned pixels across three
+reloads, EXIF orientation, touch crops, label/audio edits, legacy recovery,
+missing/corrupt templates, a missing display photo, scoped deletion, retakes,
+reference replacement and stub-to-real recovery. A test runs the actual
+`OwlDetector.register` method with substituted model outputs to check that the
+persisted pixels match what its query encoder receives. This is software
+verification without downloaded model weights or hardware testing.
+
+Final checks: **202 server tests passed, 4 skipped; 52 Photon tests and
+typecheck passed**. Skips are three missing local OWLv2-processor cases and the
+external ARKitScenes sample. All 27 new template tests pass. The synthetic
+`bench_frame.py` run at 1/5/10 items is within budget, with p95
+0.009/0.009/0.010 s; no real-model GPU benchmark was possible with the locally
+cached assets. Evidence: `/private/tmp/marco-reset-audit-20261018/templates-*`.
+
+Full release rerun also passes frontend formatting/lint/schema/build, **90 unit
+and 26 Chromium tests**, **8 reference-client tests**, **461 Swift checks**, the
+unsigned iOS Release build and **19 audio/ARKit emulator tests**. The missing
+audio fixtures were generated offline into ignored data; they are not committed.
+Release evidence: `/private/tmp/marco-full-release-20261018/`.
+
+## Reset audit and latest-main review: October 18, 2026
+
+Pulled latest `main` to **`651edc7`**, preserving the local status note and the
+existing stashes. This follow-up inspected Vultr and Photon history read-only;
+it did not delete records, send messages, restart services, push or deploy.
+Earlier deployment counts below are historical.
+
+| Finding | Status in `651edc7` |
+| --- | --- |
+| Deleted Photon objects left saved-label entries and timeline memories | Fixed by `6f88881`: snapshots filter these entries against surviving item IDs; regression coverage added. |
+| Five objects remain after caretaker `/restart` | Unchanged: the command deletes `source=photon` only, as INTERFACES.md specifies. All five survivors have `source=app`. |
+| Reset replies imply a completely fresh library | Unchanged: `photon/src/agent.ts` does not report the remaining app objects. |
+| Photon `list` includes rejected setup photos | Unchanged and reproduced locally: a `retake` with no `serverItemId` still produces `I know 1: mug.` |
+| Detector crop changes after server restart | Partly fixed by `a064c72`: app photos are cropped again, but caretaker setup photos are incorrectly treated like already-cropped touch photos. |
+
+The live audit found five records: Pringles, Diet coke, Sparkling water and two
+coffee records. Disk JSON, `/v1/items`, dashboard items and detector IDs agree;
+all five saved photos exist. There is no initialization failure evident in these
+records. Persistence uses JSON files, not a SQL database: server state is under
+`/var/lib/marco/data/registry/`, and bridge state is
+`/var/lib/marco-photon/marco-photon.json`. Their different counts are not by
+themselves corruption: the bridge also keeps rejected and pending photos.
+
+Server and Photon logs plus provider delivery history agree: `/restart` removed
+7 Photon records at 10:37:05 UTC, then 0 at 10:37:42; a later reset removed the
+new Chips record at 11:08:41. Those replies were delivered. Three subsequent
+Vape registrations returned `retake` (scores 0.041, 0.012 and 0.008 against the
+0.05 registration threshold). They were not registered in the server. The
+provider rejects threaded replies/reactions on this shared line with HTTP 409;
+the plain-text reply fallback delivered. No duplicate successful replies appear
+in the inspected recent history; this cannot rule out another agent elsewhere.
+
+The remaining crop issue is independent of reset: `RealBrain.register` saves a
+full setup photo for both sources, but `_reload` applies the registration crop
+only when `source == "app"`. A synthetic recording detector reproduced a
+32×32 initial template becoming 128×128 after reload for `source=photon`; the app
+template stayed 32×32. This verifies the code-path mismatch, not model accuracy.
+
+A fresh SSH fingerprint check after the pull found Vultr's `brain.py`,
+`dashboard.py` and `dashboard_commands.py` differ from latest main. Its Photon
+agent matches. Do not treat the old `DEPLOYED_REVISION` marker or the historical
+deployment notes as proof that these new server fixes are running.
+
+Recommended next changes: make reset replies state their scope and remaining
+count; list confirmed server registrations separately from pending/retake
+photos; preserve the detector's actual crop across reloads for both setup
+sources. If the demo needs an empty library, back up and deliberately clear the
+five app records separately rather than silently broadening `/restart`.
+Deploy the reviewed fixes together after testing.
+
+Verification on `651edc7`: **39 focused server tests, 52 Photon tests and 90
+frontend unit tests plus 26 Chromium tests pass**; Photon typecheck and the
+frontend TypeScript/Vite build pass. Isolated reproductions confirm both
+unresolved list and crop bugs. A second fetch still reports `651edc7` as latest
+main; a second SSH read confirms Vultr still reloads all photos with `gate=False`
+and the server process has not restarted since 10:48:40 UTC.
+Evidence: `/private/tmp/marco-reset-audit-20261018/`.
+
 ## Dashboard visibility follow-up
 
 The user reported zero objects after the controlled restart, then confirmed

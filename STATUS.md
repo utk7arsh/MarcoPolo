@@ -2,6 +2,86 @@
 
 Last updated: 2026-10-18. Keep this file current: update it whenever a decision is made or a piece lands.
 
+## Release validation (October 18, 2026)
+
+- Fresh fetch confirms baseline `651edc7` is latest main; no merge was needed.
+- Full checks pass: **202 server tests, 90 frontend unit tests, 26 Chromium
+  tests, 52 Photon tests, 8 reference-client tests, 461 Swift checks and 19
+  audio/ARKit emulator tests**. Frontend formatting, lint, schema check, production
+  build, Photon typecheck, deployment shell syntax and unsigned iOS Release
+  build pass. Four server cases require unavailable external assets and skip.
+- Missing audio research fixtures were generated with Apple's offline renderer
+  into ignored data folders; they are not release assets or hardware evidence.
+- The user authorized pushing and deploying this release. Vultr preflight
+  confirms both services are active, private loopback listeners are intact,
+  and the five saved app items agree across disk/API/dashboard/detector.
+  Deployment verification is pending; secrets and persistent state stay outside Git.
+
+## Detector crop persistence (October 18, 2026)
+
+- Fixed the crop/reload mismatch for app and Photon setup photos. Save the exact
+  detector pixels losslessly in `registry/templates/<item_id>.png`, separately
+  from the dashboard JPEG. Reload the template directly, without cropping it
+  again or depending on the label's name gate.
+- Touch labels, label/audio edits, deletion, replacement reference photos and
+  stub-to-real recovery preserve or invalidate templates appropriately. Explicit
+  `photo_kind` metadata controls recovery if a template is missing or corrupt.
+- Legacy unlabelled setup photos can be recovered once. Old labelled records
+  cannot reliably distinguish corrected setup photos from touch crops; preserve
+  those whole, and re-teach an ambiguous old setup item if needed.
+- Work is limited to registration/template persistence and its tests/docs on
+  baseline `651edc7`. No reset/list change or new wire protocol.
+  Details: `docs/PHOTON-INTEGRATION-AUDIT.md` and
+  `server/README.md`.
+- Final verification: **202 server tests passed, 4 skipped** (three require the
+  uncached OWLv2 processor; one requires the external ARKitScenes sample).
+  **52 Photon tests and typecheck pass**, including its real local server
+  registration/label/restart flow. The 27 new crop tests cover exact pixels,
+  reloads, corrections, fallback and deletion. Synthetic `bench_frame.py` runs
+  at 1/5/10 items remain under budget (p95 0.009/0.009/0.010 s); this is not a
+  real-model GPU performance or recognition check.
+
+## Reset audit and latest main review (October 18, 2026)
+
+- Pulled `main` to `651edc7` without conflicts; preserved the existing local
+  review note and stashes. `6f88881` removes deleted Photon objects' saved-label
+  and recent-memory entries from dashboard snapshots. `651edc7` adds the
+  Listen in control outside the Live page.
+- The persistent five are **app-sourced** Pringles, Diet coke, Sparkling water
+  and two coffee records. Disk/API/dashboard/detector IDs agree and their photos
+  exist. `/restart` still deletes only Photon records; reset replies still omit
+  the surviving app count. This is a reset-scope mismatch, not evidence of failed
+  registry initialization.
+- Reproduced two remaining bugs with isolated fixtures: Photon `list` includes
+  retake photos with no server item, and `a064c72` restores the detector crop for
+  app setup photos but not Photon setup photos (full photos are mistaken for
+  touch crops). No runtime fix was made in this review.
+- Fresh read-only SSH hashes show the latest server brain/dashboard/command
+  changes are not deployed on Vultr; the Photon agent matches main. No shared
+  data, messages, service state, push or deployment was changed.
+- Checks: **39 focused server tests, 52 Photon tests, 90 frontend unit tests and
+  26 Chromium tests pass**; Photon typecheck and frontend TypeScript/Vite build
+  pass. A second fetch and SSH read confirm the same main/deployment mismatch.
+  Details and suggested fixes are in `docs/PHOTON-INTEGRATION-AUDIT.md`.
+
+## Latest pull and local review (October 18, 2026)
+
+- Fast-forwarded 8 commits to `eb9cdbf` without conflicts; existing stashes were
+  left untouched. Fresh fetch confirms this checkout matches `origin/main`.
+- Checks: **172 server tests passed, 4 skipped** (three need a locally cached
+  OWLv2 processor; one needs the external ARKitScenes sample); **90 frontend unit
+  and 26 Chromium tests passed**; **52 Photon tests and typecheck passed**.
+  The full unsigned iOS Release build passes. GitHub server/Photon CI for
+  `eb9cdbf` also passes. Physical playback was not tested.
+- **Open integration gap:** iOS `AppModel.reportBeacon` reduces the new beacon
+  variants and pitched hand pings to `beep`, and arrival to `ding`. Dashboard
+  `ListenIn` still synthesizes the older beep/ding/660 Hz steady tone. It cannot
+  reproduce the new reach pitch ladder, arrival triad or 1175 Hz contact tone.
+  The sound contract needs compatible variant/pitch information and matching
+  browser synthesis before claiming an exact mirror of the wearer's audio.
+- This review changed only this status note; no code fix, push, deployment or
+  shared-server test was performed. GitHub has no open issues at review time.
+
 ## Server: duplicate items found again, faster frames, 202 first (October 18, 2026, Utkarsh)
 
 - **Bug fixed: an item registered twice could never be found.** The presence check's "looks more like this item than

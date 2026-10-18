@@ -103,18 +103,17 @@ class Recorder:
         return []
 
 
-def test_a_restart_crops_phone_photos_like_registering_did(tmp_path):
+def test_a_restart_reuses_saved_templates_even_if_the_name_check_now_fails(tmp_path):
     first = RealBrain(Recorder(), tmp_path)
     first.register("keys", dummy_jpeg())
     first.register("wallet", dummy_jpeg())
     from marco.registry import Registry
-    Registry(tmp_path / "registry").save("t1", name="jar", source="photon", photo=dummy_jpeg())   # a touch crop
+    Registry(tmp_path / "registry").save("t1", name="jar", source="photon", photo=dummy_jpeg(), photo_kind="crop")
     det = Recorder(refuse={"wallet"})
     after = RealBrain(det, tmp_path)                                               # restart
-    assert ("keys", True) in det.calls and ("keys", False) not in det.calls       # cropped, as when registered
-    assert ("wallet", True) in det.calls and ("wallet", False) in det.calls       # name check fails now: whole photo
-    assert ("jar", False) in det.calls and ("jar", True) not in det.calls         # Photon's crop stays whole
+    assert det.calls == [("keys", False), ("wallet", False), ("jar", False)]
     assert set(det.items.values()) == {"keys", "wallet", "jar"}
     outcomes = {r["name"]: r["outcome"] for r in after.debug_detection()["registrations"]}
-    assert outcomes == {"keys": "reloaded after a restart (cropped to the item)",
-                        "wallet": "reloaded after a restart (whole photo)", "jar": "reloaded after a restart (whole photo)"}
+    assert outcomes == {"keys": "reloaded after a restart (saved detector crop)",
+                        "wallet": "reloaded after a restart (saved detector crop)",
+                        "jar": "reloaded after a restart (recovered detector crop)"}

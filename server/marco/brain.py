@@ -15,6 +15,7 @@ import numpy as np
 from PIL import Image, ImageOps
 
 from . import geometry as G
+from .perception.detector import registration_crop
 from .registry import Registry
 from .touch import TouchDetector
 from .world.layout import summarize
@@ -29,6 +30,12 @@ LAYOUT_EVERY = int(os.environ.get("MARCO_LAYOUT_EVERY", "3"))   # frames between
 LAYOUT_ASYNC = os.environ.get("MARCO_LAYOUT_ASYNC", "1") != "0"  # on its own thread (0: inline, for tests and tools)
 DIAG_FRAMES = 30                   # frames kept for GET /v1/debug/detection
 log = logging.getLogger("marco")
+
+
+def _template_png(im):
+    buf = io.BytesIO()
+    im.save(buf, "PNG")
+    return buf.getvalue()
 
 
 def _failed_gates(d):
@@ -84,25 +91,46 @@ class RealBrain:
             aid = rec.get("audio_id")
             it = self.world.add_item(rec["name"], item_id=rec["item_id"], label_text=rec.get("label_text"),
                                      label_audio_url=f"/v1/audio/{aid}" if aid else None, source=rec.get("source", "app"))
-            photo = self.registry.photo(it.item_id)
-            if photo is None:
-                continue
             try:
-                im = Image.open(io.BytesIO(photo)).convert("RGB")
-                # A phone photo is cropped to the item exactly as registering it did, so the detector searches the
-                # same way before and after a restart (it used to search with the whole photo, background and all:
-                # live, its DINOv2 check then scored 0.0-0.2 on the right boxes). Photon's touch crops are already
-                # tight, as is any photo whose name check now fails: those stay whole.
-                res = self.detector.register(it.item_id, it.name, im) if it.source == "app" else None
-                if res is None or res["quality"] != "ok":
-                    self.detector.register(it.item_id, it.name, im, gate=False)
-                how = "cropped to the item" if res is not None and res["quality"] == "ok" else "whole photo"
-                self.reg_log.append(dict(name=it.name, item_id=it.item_id, outcome=f"reloaded after a restart ({how})",
-                                         at=now_wall()))
+                how = self._reload_template(it, rec)
+                if how is not None:
+                    self.reg_log.append(dict(name=it.name, item_id=it.item_id, outcome=f"reloaded after a restart ({how})",
+                                             at=now_wall()))
             except Exception as e:                      # one bad photo must not stop the server starting
                 logging.getLogger("marco").warning("could not re-register %s (%s): %s", it.item_id, it.name, e)
                 self.reg_log.append(dict(name=it.name, item_id=it.item_id, outcome=f"reload failed: {e}", at=now_wall()))
         self.audio.update(self.registry.audio())
+
+    def _reload_template(self, it, rec):
+        """Replay saved detector pixels, not a new name-dependent crop of the dashboard JPEG."""
+        im = None
+        try:
+            saved = self.registry.template(it.item_id)
+            if saved is not None:
+                im = Image.open(io.BytesIO(saved)).convert("RGB")
+        except (OSError, ValueError) as e:
+            log.warning("could not read template for %s; recovering from its photo: %s", it.item_id, e)
+        if im is not None:
+            self.detector.register(it.item_id, it.name, im, gate=False)
+            return "saved detector crop"
+        photo = self.registry.photo(it.item_id)
+        if photo is None:
+            return None
+        im = ImageOps.exif_transpose(Image.open(io.BytesIO(photo))).convert("RGB")
+        kind = rec.get("photo_kind")
+        if kind is None:
+            # Legacy records had no crop metadata. Unlabelled photos came through register(); labelled photos
+            # may be touch crops or corrected setup photos. Preserve ambiguous ones rather than double-crop them.
+            kind = "full" if rec.get("label_text") is None else "crop"
+        res = self.detector.register(it.item_id, it.name, im) if kind == "full" else None
+        if res is not None and res["quality"] == "ok":
+            template = registration_crop(im, res.get("box"))
+        else:
+            self.detector.register(it.item_id, it.name, im, gate=False)
+            template = im
+        self.registry.save(it.item_id, name=it.name, source=it.source, label_text=it.label_text,
+                           template=_template_png(template), photo_kind=kind)
+        return "recovered detector crop"
 
     # ---------------------------------------------------------------- views used by app.py
     @property
@@ -338,7 +366,8 @@ class RealBrain:
             return dict(item_id=None, **res), []
         buf = io.BytesIO()
         im.save(buf, "JPEG", quality=90)
-        self.registry.save(it.item_id, name=it.name, source=it.source, photo=buf.getvalue())
+        self.registry.save(it.item_id, name=it.name, source=it.source, photo=buf.getvalue(),
+                           template=_template_png(registration_crop(im, res.get("box"))), photo_kind="full")
         return dict(item_id=it.item_id, **res), [("dashboard", self.world.snapshot())]
 
     def label(self, touch_id, item_id, name, text, audio: bytes | None, audio_ext: str, source="photon"):
@@ -355,12 +384,13 @@ class RealBrain:
             item_id = tc.get("item_id")       # a lost HTTP response may retry the original touch
         if item_id and item_id not in self.world.items:
             raise KeyError(f"unknown item_id {item_id}")
-        new_photo = None
+        new_photo = template = None
         if item_id is None:
             it = self.world.add_item(name, source=source)
             new_photo = tc["crop_jpeg"]
             crop = Image.open(io.BytesIO(tc["crop_jpeg"])).convert("RGB")
             self.detector.register(it.item_id, name, crop, gate=False)     # a person already said what it is
+            template = _template_png(crop)
             if tc.get("position"):
                 it.position, it.state = np.asarray(tc["position"], float), "present"
                 it.surface, it.last_seen_wall = self.world.surface_for(it.position[1]), now_wall()
@@ -374,7 +404,8 @@ class RealBrain:
         if tc is not None:
             tc["item_id"] = item_id
         self.registry.save(item_id, name=it.name, source=it.source, label_text=it.label_text, photo=new_photo,
-                           audio_id=aid, audio=audio, audio_ext=ext)
+                           audio_id=aid, audio=audio, audio_ext=ext, template=template,
+                           photo_kind="crop" if new_photo is not None else None)
         ev = self.world._event("label_added", it)
         return [("phone", dict(type="label_ready", item_id=item_id, name=it.name, label_text=it.label_text,
                                label_audio_url=it.label_audio_url)),

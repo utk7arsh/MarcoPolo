@@ -244,7 +244,7 @@ class StubBrain:
                                label_text=None, label_audio_url=None, source=source)
         buf = io.BytesIO()
         im.save(buf, "JPEG", quality=90)
-        self.registry.save(iid, name=name, source=source, photo=buf.getvalue())
+        self.registry.save(iid, name=name, source=source, photo=buf.getvalue(), photo_kind="full")
         return dict(item_id=iid, quality="ok", reason=""), [("dashboard", self.world())]
 
     def label(self, touch_id, item_id, name, text, audio: bytes | None, audio_ext: str, source="photon"):
@@ -278,7 +278,8 @@ class StubBrain:
             tc["item_id"] = item_id
         if it.get("source") != "seed":
             self.registry.save(item_id, name=it["name"], source=it.get("source", "app"), label_text=it["label_text"],
-                               photo=new_photo, audio_id=aid, audio=audio, audio_ext=ext)
+                               photo=new_photo, audio_id=aid, audio=audio, audio_ext=ext,
+                               photo_kind="crop" if new_photo is not None else None)
         ev = self._event("label_added", it)
         return [("phone", dict(type="label_ready", item_id=item_id, name=it["name"], label_text=it["label_text"],
                                label_audio_url=it["label_audio_url"])),

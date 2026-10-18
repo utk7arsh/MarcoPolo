@@ -180,10 +180,26 @@ During development, `npm run dev` proxies `/api` to this server instead (`API_PR
 | `marco/brain.py` | the real brain: detection, placement, world, touch, answers, labels |
 | `marco/perception/detector.py` | OWLv2 image-guided detection + presence check + retake gate; `TruthDetector` for synthetic sessions |
 | `marco/world/memory.py` | items, sightings, moved/put down/picked up/missing/left behind, answers |
-| `marco/registry.py` | registrations and labels saved under `MARCO_DATA/registry/` (photos, voice notes, `items.json`) and reloaded at start; `DELETE /v1/items?source=photon` removes Photon's |
+| `marco/registry.py` | registrations and labels saved under `MARCO_DATA/registry/` (display photos, lossless detector templates, voice notes, `items.json`) and reloaded at start; `DELETE /v1/items?source=photon` removes Photon's |
 | `marco/world/roommap.py` | the voxel room map |
 | `marco/touch.py` | touch from the hand stream (fingertip depth continuity, vote, identity within 15 cm) |
 | `marco/recorder.py`, `marco/session.py` | writing and reading recorded sessions |
+
+### Saved registration crops
+
+The real brain saves the exact registration crop as `registry/templates/<item_id>.png`, separately from the
+dashboard's JPEG under `photos/`. App and caretaker setup photos follow the same path. Touch labels save their
+already-cropped pixels without another crop. Reload uses the lossless template without running the name gate
+again, so later label edits or a slightly different bounding box cannot change the image-query pixels.
+
+`items.json` records `photo_kind: "full"|"crop"` for the display photo. If a template is missing or corrupt, the
+server recovers from that photo according to its kind and saves the recovered template. Deleting an item deletes
+its template too; replacing its reference photo invalidates the old template. Label-only edits preserve it.
+
+Older records have no photo-kind metadata: unlabelled setup photos can be cropped once and upgraded. A labelled
+legacy record could be either a touch crop or a corrected setup photo, so it is kept whole rather than guessed
+and cropped again. Re-teach an ambiguous old setup photo if its recognition remains poor. No HTTP, WebSocket,
+geometry or per-frame inference contract changes are required by this storage change.
 
 ## Tests
 ```

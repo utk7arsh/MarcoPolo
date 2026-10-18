@@ -39,6 +39,11 @@ def vs_others(scores, q, names):
     return float(scores[q] - np.max(np.asarray(scores)[others])) if others else None
 
 
+def registration_crop(im, box):
+    """The exact pixels used as a setup template (also persisted for reload); synthetic detectors have no box."""
+    return im.crop(tuple(int(v) for v in box)) if box is not None else im
+
+
 def _device():
     import torch
     if torch.cuda.is_available():
@@ -133,7 +138,7 @@ class OwlDetector:
             box = self._to_px(self.owl.box_predictor(feats, fmap)[0, int(tl.argmax())].float().tolist(), im)
             if gate and score < GATE_NAME_SCORE:
                 return dict(quality="retake", reason=f"can't see the {name} clearly (score {score:.3f})", box=box)
-            crop = im.crop(tuple(int(v) for v in box)) if gate else im
+            crop = registration_crop(im, box) if gate else im
             cf, cfe = self._pass(crop)
             q_img = self.owl.embed_image_query(cfe, cf)[0]
             turns = [crop] + [crop.rotate(90 * i, expand=True) for i in range(1, max(DINO_TURNS, 1))]

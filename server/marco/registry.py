@@ -6,8 +6,9 @@ start they reload them, and the real brain registers each saved photo with the d
 straight away. Positions are not saved: the 1 frame/s pipeline places an item again as soon as the camera sees it.
 
 Layout under MARCO_DATA/registry/:
-  items.json               [{item_id, name, source, label_text, audio_id, audio_ext, created_wall, updated_wall}]
+  items.json               [{item_id, name, source, photo_kind, label_text, audio_id, audio_ext, created_wall, updated_wall}]
   photos/<item_id>.jpg     the photo (or touch crop) the item was registered from
+  templates/<item_id>.png  lossless pixels used by the real detector; independent of the display photo
   audio/<audio_id>.<ext>   the item's voice label, as uploaded
 Every write is atomic (temp file + rename), so a crash mid-write leaves the previous state.
 """
@@ -47,6 +48,7 @@ class Registry:
         if self.root is None:
             return
         (self.root / "photos").mkdir(parents=True, exist_ok=True)
+        (self.root / "templates").mkdir(parents=True, exist_ok=True)
         (self.root / "audio").mkdir(parents=True, exist_ok=True)
         index = self.root / "items.json"
         if index.exists():
@@ -76,17 +78,35 @@ class Registry:
                     out[aid] = (p.read_bytes(), ext)
         return out
 
+    def template(self, item_id) -> bytes | None:
+        if self.root is None:
+            return None
+        p = self.root / "templates" / f"{item_id}.png"
+        return p.read_bytes() if p.exists() else None
+
     def save(self, item_id, *, name, source, label_text=None, photo: bytes | None = None,
-             audio_id=None, audio: bytes | None = None, audio_ext=None):
+             audio_id=None, audio: bytes | None = None, audio_ext=None,
+             template: bytes | None = None, photo_kind=None):
         """Creates or updates one item. A new voice label replaces (and deletes) the item's previous one."""
         if self.root is None:
             return
         if not SAFE.match(item_id):
             raise ValueError(f"unsafe item_id {item_id!r}")
+        if photo_kind not in (None, "full", "crop"):
+            raise ValueError(f"unknown photo_kind {photo_kind!r}")
         rec = self.records.get(item_id) or dict(item_id=item_id, created_wall=_now_wall(), audio_id=None, audio_ext=None)
         rec.update(name=name, source=source, label_text=label_text, updated_wall=_now_wall())
         if photo is not None:
             _atomic_write(self.root / "photos" / f"{item_id}.jpg", photo)
+            if template is None:
+                # A replacement reference must not keep the previous photo's detector pixels or inferred kind.
+                (self.root / "templates" / f"{item_id}.png").unlink(missing_ok=True)
+                if photo_kind is None:
+                    rec.pop("photo_kind", None)
+        if template is not None:
+            _atomic_write(self.root / "templates" / f"{item_id}.png", template)
+        if photo_kind is not None:
+            rec["photo_kind"] = photo_kind
         if audio is not None and audio_id:
             if not (SAFE.match(audio_id) and SAFE_EXT.match(audio_ext or "")):
                 raise ValueError(f"unsafe audio id or extension {audio_id!r}.{audio_ext!r}")
@@ -104,6 +124,7 @@ class Registry:
             if rec is None:
                 continue
             (self.root / "photos" / f"{iid}.jpg").unlink(missing_ok=True)
+            (self.root / "templates" / f"{iid}.png").unlink(missing_ok=True)
             self._drop_audio(rec)
         self._write_index()
 
