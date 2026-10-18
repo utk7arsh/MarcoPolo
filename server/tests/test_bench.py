@@ -46,3 +46,12 @@ def test_bench_times_every_frame_for_each_item_count(fake):
 def test_offline_report_includes_timing(fake, tmp_path):
     rep = load("run_offline").run_session(str(fake), detector="truth", out_dir=str(tmp_path / "off"), pictures=False)
     assert rep["timing"]["frames"] > 10 and rep["timing"]["within_budget"]
+
+
+def test_gpu_check_verdict_keeps_room_for_the_upload():
+    gc = load("gpu_check")
+    est, ok = gc.verdict(0.235, 0.02)                 # OWLv2-base in half precision on the Mac
+    assert ok and abs(est - 0.315) < 1e-6
+    est, ok = gc.verdict(0.9, 0.02)                   # 0.98 s: inside 1 s, but no room left for the upload
+    assert not ok
+    assert gc.verdict(0.66, 0.0)[1] is False and gc.verdict(0.60, 0.0)[1] is True   # either side of the 0.7 s line

@@ -30,6 +30,8 @@ def test_everything_is_closed_without_auth(tmp_path, monkeypatch):
     data, files, _ = frame_parts()
     assert c.post("/v1/frames", data=data, files=files).status_code == 403
     assert c.get("/v1/items").status_code == 403
+    for builtin in ("/docs", "/redoc", "/openapi.json"):                 # FastAPI's own pages skip the gate: off
+        assert c.get(builtin).status_code == 404
     assert c.post("/v1/items", data={"name": "keys"}, files={"photo": ("p.jpg", jpeg_bytes(), "image/jpeg")}).status_code == 403
     from starlette.websockets import WebSocketDisconnect
     with pytest.raises(WebSocketDisconnect) as e:
@@ -139,6 +141,14 @@ def test_registration_retake_and_ok(server):
     assert c.post("/v1/items", data={"name": "keys"}, files={"photo": ("p.jpg", jpeg_bytes(32, 32), "image/jpeg")}).json()["quality"] == "retake"
     ok = c.post("/v1/items", data={"name": "remote"}, files={"photo": ("p.jpg", jpeg_bytes(), "image/jpeg")}).json()
     assert ok["quality"] == "ok" and any(i["name"] == "remote" for i in c.get("/v1/items").json())
+
+
+def test_root_url_says_the_server_is_up_but_only_behind_the_gate(server, monkeypatch):
+    _, c, _ = server
+    r = c.get("/")
+    assert r.status_code == 200 and r.json()["ok"] is True and r.json()["signed_in_as"] == "test-bypass"
+    monkeypatch.delenv("AUTH_TEST_BYPASS")
+    assert c.get("/").status_code == 403                          # closed without a login, like every route
 
 
 def test_set_place_door_needs_a_pose_then_answers_ok(server):
