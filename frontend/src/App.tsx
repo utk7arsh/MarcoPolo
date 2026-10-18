@@ -9,7 +9,7 @@ import { Icon } from './components/Icon'
 import { Dialog } from './components/Dialog'
 import { Photon } from './components/Photon'
 import { EmptyState } from './components/Shared'
-import { SoundPill } from './components/Hearing'
+import { ListenButton, SoundPill } from './components/Hearing'
 import { useHearing, useListenIn } from './lib/hearing'
 
 export function App({
@@ -98,6 +98,11 @@ export function App({
           </a>
         </nav>
         <div className="header-status">
+          {/* The laptop's copy of what the wearer hears, from every page (Live has its own button): on for a demo,
+              off when the phone's own speaker is already playing it. */}
+          {page !== 'live' && (
+            <ListenButton on={listen.on} onToggle={listen.toggle} />
+          )}
           {demo && (
             <button className="demo-badge" onClick={() => setDialog('demo')}>
               Demo
