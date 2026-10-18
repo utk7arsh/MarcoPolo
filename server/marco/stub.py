@@ -17,11 +17,13 @@ import io
 import os
 import time
 import uuid
+from pathlib import Path
 
 import numpy as np
 from PIL import Image, ImageOps
 
 from . import codec, geometry as G
+from .registry import Registry
 
 SPEEDUP = float(os.environ.get("STUB_SPEEDUP", "1"))
 VOXEL = 0.05
@@ -46,6 +48,14 @@ class StubBrain:
         self._last_world = 0.0
         self.seeded = False
         self.door = None           # set by the "this is the door" query
+        self.registry = Registry(Path(data_dir) / "registry" if data_dir else None)
+        for rec in self.registry.items():                  # registrations and labels saved before a restart
+            aid = rec.get("audio_id")
+            self.items[rec["item_id"]] = dict(item_id=rec["item_id"], name=rec["name"], position=None, surface=None,
+                                              last_seen_wall=None, state="registered", label_text=rec.get("label_text"),
+                                              label_audio_url=f"/v1/audio/{aid}" if aid else None,
+                                              source=rec.get("source", "app"))
+        self.audio.update(self.registry.audio())
 
     # ---------------------------------------------------------------- helpers
     def _seed(self, T):
@@ -61,7 +71,7 @@ class StubBrain:
             iid = "fake-" + name
             self.items[iid] = dict(item_id=iid, name=name, position=[round(float(v), 3) for v in pos],
                                    surface=G.surface_name(y), last_seen_wall=now_wall(), state="present",
-                                   label_text=None, label_audio_url=None)
+                                   label_text=None, label_audio_url=None, source="seed")
         self.seeded = True
 
     def _event(self, kind, item, **extra):
@@ -225,37 +235,64 @@ class StubBrain:
         self.guiding.discard(item_id)
 
     # ---------------------------------------------------------------- registration and labels
-    def register(self, name, photo: bytes):
+    def register(self, name, photo: bytes, source="app"):
         im = ImageOps.exif_transpose(Image.open(io.BytesIO(photo))).convert("RGB")
         if min(im.size) < 64:
             return dict(item_id=None, quality="retake", reason=f"can't see the {name} clearly (photo too small)"), []
         iid = uuid.uuid4().hex[:12]
         self.items[iid] = dict(item_id=iid, name=name, position=None, surface=None, last_seen_wall=None, state="registered",
-                               label_text=None, label_audio_url=None)
+                               label_text=None, label_audio_url=None, source=source)
+        buf = io.BytesIO()
+        im.save(buf, "JPEG", quality=90)
+        self.registry.save(iid, name=name, source=source, photo=buf.getvalue())
         return dict(item_id=iid, quality="ok", reason=""), [("dashboard", self.world())]
 
-    def label(self, touch_id, item_id, name, text, audio: bytes | None, audio_ext: str):
-        audio_url = None
+    def label(self, touch_id, item_id, name, text, audio: bytes | None, audio_ext: str, source="photon"):
+        audio_url = aid = None
+        ext = audio_ext or "m4a"
         if audio:
             aid = uuid.uuid4().hex[:12]
-            self.audio[aid] = (audio, audio_ext or "m4a")
+            self.audio[aid] = (audio, ext)
             audio_url = f"/v1/audio/{aid}"
         tc = self.touches.get(touch_id) if touch_id else None
         if touch_id and tc is None:
             raise KeyError(f"unknown touch_id {touch_id}")
         if item_id and item_id not in self.items:
             raise KeyError(f"unknown item_id {item_id}")
+        new_photo = None
         if item_id is None:
             item_id = uuid.uuid4().hex[:12]
             pos = tc["position"] if tc else None
+            new_photo = tc["crop_jpeg"] if tc else None
             self.items[item_id] = dict(item_id=item_id, name=name, position=pos,
                                        surface=G.surface_name(pos[1]) if pos else None, last_seen_wall=now_wall(),
-                                       state="present" if pos else "registered", label_text=None, label_audio_url=None)
+                                       state="present" if pos else "registered", label_text=None, label_audio_url=None,
+                                       source=source)
         it = self.items[item_id]
+        if audio_url and it.get("label_audio_url"):
+            self.audio.pop(it["label_audio_url"].rsplit("/", 1)[-1], None)   # a new voice label replaces the old one
         it.update(name=name or it["name"], label_text=text or name, label_audio_url=audio_url or it.get("label_audio_url"))
         if tc is not None:
             tc["item_id"] = item_id
+        if it.get("source") != "seed":
+            self.registry.save(item_id, name=it["name"], source=it.get("source", "app"), label_text=it["label_text"],
+                               photo=new_photo, audio_id=aid, audio=audio, audio_ext=ext)
         ev = self._event("label_added", it)
         return [("phone", dict(type="label_ready", item_id=item_id, name=it["name"], label_text=it["label_text"],
                                label_audio_url=it["label_audio_url"])),
                 ("dashboard", dict(type="timeline", events=[ev])), ("dashboard", self.world())]
+
+    def remove(self, source):
+        """DELETE /v1/items?source=...: forget every item from that source. Returns ([{item_id, name}], messages)."""
+        gone = [it for it in self.items.values() if it.get("source", "app") == source]
+        ids = {it["item_id"] for it in gone}
+        for it in gone:
+            del self.items[it["item_id"]]
+            if it.get("label_audio_url"):
+                self.audio.pop(it["label_audio_url"].rsplit("/", 1)[-1], None)
+        for tc in self.touches.values():
+            if tc.get("item_id") in ids:
+                tc["item_id"] = None
+        self.guiding -= ids
+        self.registry.remove(ids)
+        return [dict(item_id=it["item_id"], name=it["name"]) for it in gone], [("dashboard", self.world())]

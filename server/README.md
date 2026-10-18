@@ -52,7 +52,7 @@ AUTH_TEST_BYPASS=1 python -m marco.app            # http://127.0.0.1:8000
 |---|---|---|
 | `MARCO_MODE` | `stub` | `stub` or `real` |
 | `MARCO_DETECTOR` | `owl` | `owl`, or `truth` with `MARCO_TRUTH=<session>/truth.json` (synthetic sessions) |
-| `MARCO_DATA` | `server/data` | recordings (`sessions/<session_id>/`) |
+| `MARCO_DATA` | `server/data` | recordings (`sessions/<session_id>/`), and registrations and labels (`registry/`), which survive a restart |
 | `MARCO_AUTH` | `closed` | `closed` rejects everything; `tailscale` admits `TAILSCALE_ALLOWED_LOGINS` |
 | `AUTH_TEST_BYPASS` | unset | `1` = tests and loopback development only |
 | `HOST`, `PORT` | `127.0.0.1`, `8000` | loopback only |
@@ -115,6 +115,7 @@ python tools/check_recording.py data/sessions/<session_id>
 | `marco/brain.py` | the real brain: detection, placement, world, touch, answers, labels |
 | `marco/perception/detector.py` | OWLv2 image-guided detection + presence check + retake gate; `TruthDetector` for synthetic sessions |
 | `marco/world/memory.py` | items, sightings, moved/put down/picked up/missing/left behind, answers |
+| `marco/registry.py` | registrations and labels saved under `MARCO_DATA/registry/` (photos, voice notes, `items.json`) and reloaded at start; `DELETE /v1/items?source=photon` removes Photon's |
 | `marco/world/roommap.py` | the voxel room map |
 | `marco/touch.py` | touch from the hand stream (fingertip depth continuity, vote, identity within 15 cm) |
 | `marco/recorder.py`, `marco/session.py` | writing and reading recorded sessions |

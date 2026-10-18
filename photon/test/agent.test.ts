@@ -5,7 +5,7 @@ import { extname, join } from "node:path";
 import { test } from "node:test";
 import { MarcoAgent } from "../src/agent.js";
 import type { Config } from "../src/config.js";
-import { MarcoServerError, type LabelPost, type LabelRequest, type MarcoServerApi, type Registration } from "../src/marco-server.js";
+import { MarcoServerError, type LabelPost, type LabelRequest, type MarcoServerApi, type Registration, type Removal } from "../src/marco-server.js";
 import { Media } from "../src/media.js";
 import { SimChannel, type SimPart } from "../src/sim.js";
 import { Store } from "../src/store.js";
@@ -26,7 +26,17 @@ class FakeServer implements MarcoServerApi {
   failLabels = 0;
   /** HTTP status to reject the next label post with (e.g. 404 when the server forgot the touch). */
   rejectLabel: number | null = null;
+  /** Items the server holds from Photon, as DELETE /v1/items?source=photon would remove them. */
+  held = new Map<string, string>();
+  removals: string[] = [];
   private seq = 0;
+
+  async removeItems(source: string): Promise<Removal> {
+    this.removals.push(source);
+    const removed = [...this.held].map(([item_id, name]) => ({ item_id, name }));
+    this.held.clear();
+    return { status: "ok", removed };
+  }
 
   async getCrop(cropUrl: string) {
     this.crops.push(cropUrl);
@@ -44,12 +54,17 @@ class FakeServer implements MarcoServerApi {
       throw new MarcoServerError(`POST /v1/labels: HTTP ${status}`, status);
     }
     this.labels.push({ ...label, audioExt: label.audioPath ? extname(label.audioPath) : null });
-    return { status: "ok", item_id: label.itemId ?? `srv_${label.touchId}` };
+    const itemId = label.itemId ?? `srv_${label.touchId}`;
+    this.held.set(itemId, label.name);
+    return { status: "ok", item_id: itemId };
   }
 
   async postItem(name: string, photoPath: string): Promise<Registration> {
     this.items.push({ name, photoExt: extname(photoPath) });
-    return this.quality === "ok" ? { item_id: `srv_item_${++this.seq}`, quality: "ok", reason: "" } : { item_id: null, quality: "retake", reason: "photo too small" };
+    if (this.quality !== "ok") return { item_id: null, quality: "retake", reason: "photo too small" };
+    const itemId = `srv_item_${++this.seq}`;
+    this.held.set(itemId, name);
+    return { item_id: itemId, quality: "ok", reason: "" };
   }
 }
 
@@ -311,4 +326,53 @@ test("retry: a redelivered photo with a caption is registered once", async () =>
   assert.deepEqual(t.server.items.map((i) => i.name), ["keys"]);
   assert.equal(t.store.items().length, 1);
   assert.equal(t.texts().filter((s) => s.startsWith('Saved "keys"')).length, 1);
+});
+
+test("/restart removes Photon's items from the server and starts the bridge afresh", async () => {
+  const t = setup();
+  await t.say([{ text: "hi" }]);
+  await t.say([photo(), { text: "Dad's keys" }]);
+  const { photoId } = await askMom(t, "t1");
+  await t.say([{ text: "cumin" }], photoId);
+  assert.equal(t.store.items().length, 2);
+
+  await t.say([{ text: "/restart" }]);
+  assert.deepEqual(t.server.removals, ["photon"]);
+  assert.equal(t.lastText(), "Fresh start: I removed 2 labels from Marco (keys, cumin). Send photos to teach me again.");
+  assert.equal(t.store.items().length, 0);
+  assert.ok(t.store.caretaker(MOM), "Mom stays linked");
+
+  // The same touch can be asked about again, and is labelled from scratch.
+  assert.equal((await t.agent.onLabelRequest(request("t1"))).status, "sent");
+  await t.say([{ text: "paprika" }]);
+  assert.deepEqual(t.server.labels.at(-1)?.touchId, "t1");
+});
+
+test("/restart with nothing to remove says so", async () => {
+  const t = setup();
+  await t.say([{ text: "hi" }]);
+  await t.say([{ text: "/Restart" }]);
+  assert.equal(t.lastText(), "Fresh start: Marco had no labels from you, so there was nothing to remove.");
+});
+
+test("/restart is a command even while a question is open, never its answer", async () => {
+  const t = setup();
+  await askMom(t, "t1");
+  await t.say([{ text: "/restart" }]);
+  assert.equal(t.server.labels.length, 0);
+  assert.deepEqual(t.server.removals, ["photon"]);
+  assert.equal(t.store.openQuestions(MOM).length, 0);
+});
+
+test("retry: a replayed /restart re-sends the reply without removing again", async () => {
+  const t = setup();
+  await t.say([{ text: "hi" }]);
+  await t.say([photo(), { text: "keys" }]);
+  const restart = t.sim.inbound(MOM, [{ text: "/restart" }]);
+  t.sim.failSends = 1;
+  await assert.rejects(t.agent.handle(restart));
+  await t.agent.handle(restart);
+  assert.deepEqual(t.server.removals, ["photon"], "the server is asked once");
+  assert.equal(t.texts().filter((s) => s.startsWith("Fresh start")).length, 1);
+  assert.match(t.lastText(), /removed 1 label from Marco \(keys\)/);
 });

@@ -40,10 +40,20 @@ Her answer goes to `POST /v1/labels` **before** Marco thanks her, and the server
 | "I don't know" | Nothing. Marco thanks her and logs it. |
 | A setup photo with a caption, or a photo then its name | `POST /v1/items` with `name` and `photo`; plus `POST /v1/labels` with the `item_id` if there's a voice memo |
 
+- **Every post carries `source=photon`**, so Photon's items can be removed together (below).
 - **`name`** is the short name ("cumin", from the text or the ElevenLabs transcript).
 - **`text`** is her words, which the phone speaks; for a voice memo that's the transcript.
 - **Voice memos** are sent as **m4a**, converted from iMessage's CAF, so the phone (AVAudioFile) and the dashboard's browser can both play them.
 - **Photos** are sent as JPEG; iPhone HEIC is converted.
+
+## Chat commands
+
+| The caretaker texts | Marco does |
+|---|---|
+| `/restart` | Removes every item and label Photon gave the server (`DELETE /v1/items?source=photon`), with their voice notes and saved files, and forgets them here too. Replies with what it removed. The app's own setup items stay. Use it between test runs. |
+| `list` | Lists the names Marco knows |
+
+The server saves Photon's labels across restarts (`MARCO_DATA/registry/`), so `/restart` is the way to clear them.
 
 ## Run it
 
@@ -88,7 +98,7 @@ cd photon && MARCO_SERVER_URL=http://127.0.0.1:8000 npm run sim          # statu
   - records use ids derived from the message, sends carry idempotency keys, and the server is called once per answer, so a replay never double-posts or double-texts;
   - an event that fails 3 times is logged and skipped.
 - **The server forgot the touch** (a `404` after a restart): the item is registered from its crop with `POST /v1/items`, then labelled. The caretaker's answer isn't lost.
-- **`/v1/photon` reconnects with backoff.** The server doesn't queue `label_request` while the bridge is disconnected, so `GET /health` reports `marco_server.connected`.
+- **`/v1/photon` reconnects with backoff,** including through a server restart or redeploy. The server doesn't queue `label_request` while the bridge is disconnected, so `GET /health` reports `marco_server.connected`.
 - **Security:**
   - the status port binds 127.0.0.1;
   - it serves only `/health` (plus `/dev/*` in sim mode);
@@ -98,7 +108,7 @@ cd photon && MARCO_SERVER_URL=http://127.0.0.1:8000 npm run sim          # statu
 ## Tests
 
 ```bash
-npm test     # 39 tests
+npm test     # 45 tests
 ```
 
 | File | Covers |
@@ -106,7 +116,7 @@ npm test     # 39 tests
 | `test/agent.test.ts` | both flows against a fake server that answers like `server/marco/stub.py`: what is posted, when, and what the caretaker is told; corrections, retakes, the 404 fallback, retries |
 | `test/marco-server.test.ts` | the §5 client: exact multipart fields and filenames, error mapping (403 / 404 / 5xx), the `/v1/photon` socket's ordering and reconnect |
 | `test/photon.test.ts` | the Photon 2.0 transport against a fake `api.photon.codes` (responses pass Photon's own schemas) and a real Socket.IO server: replay from the cursor |
-| `test/server-contract.test.ts` | **end to end with the real `server/`** (stub, loopback), with this service as its own process: `what_is_this` → `label_request` → iMessage → text, then voice memo → `label_ready` with m4a audio → `what_is_this` known → setup photo → `GET /v1/items` |
+| `test/server-contract.test.ts` | **end to end with the real `server/`** (stub, loopback), with this service as its own process: `what_is_this` → `label_request` → iMessage → text, then voice memo → `label_ready` with m4a audio → `what_is_this` known → setup photo → `GET /v1/items` → server restart (all still there) → `/restart` (Photon's items gone, and still gone after another restart) |
 | `test/media.test.ts`, `test/names.test.ts` | Opus CAF to m4a, HEIC to JPEG, name extraction |
 
 The end-to-end test runs when `server/.venv` (or `MARCO_SERVER_PYTHON`) has the server's stub dependencies.

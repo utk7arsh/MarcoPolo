@@ -1,6 +1,6 @@
-# Marco: who builds what, and the interfaces between us (v0.2, 2026-10-17)
+# Marco: who builds what, and the interfaces between us (v0.3, 2026-10-17)
 
-Three owners, one contract. Change a message format only by updating this file, the code and tests on both sides, and telling the others. What changed since v0.1 is listed in §11.
+Three owners, one contract. Change a message format only by updating this file, the code and tests on both sides, and telling the others. What changed since v0.1 is listed in §11, and since v0.2 in §12.
 
 ## 1. Owners
 
@@ -129,11 +129,16 @@ Three owners, one contract. Change a message format only by updating this file, 
 
 ### 3.3 Registration: `POST /v1/items` (multipart `photo` + `name`), from the app's setup flow or from Photon
 - **Photo:** any normal upright photo; EXIF is fine here, and the server applies it. Send JPEG (convert HEIC on the phone).
+- **`source`** (optional form field): who registers it, `app` (the default: the app's setup flow) or `photon` (a caretaker). It lets one source's items be removed together (§5).
 - **Reply:** `{item_id, quality: "ok"|"retake", reason}`. On `retake`, say *"I can't see the {name} clearly, try again."*
 - **`GET /v1/items`** lists every item, with these fields (labels made before an app launch come from here):
   - `item_id`, `name`, `position`, `surface`, `state`;
   - `last_seen_wall`;
-  - `label_text`, `label_audio_url`, `size_m`.
+  - `label_text`, `label_audio_url`, `size_m`;
+  - `source`: `app`, `photon`, or `seed` (the stub's built-in fake items).
+- **Saved across server restarts:** every registration and label, with its photo (or touch crop) and voice note, under `MARCO_DATA/registry/`.
+  - On start, the server reloads them and registers the photos with the detector again, so detection works at once.
+  - Positions are not saved: an item is placed again when the camera next sees it. Until then it reads `state: "registered"`.
 
 ### 3.4 ARWorldMap rules (Utkarsh), so positions survive relaunch
 1. Save `getCurrentWorldMap` about every 30 s and when the app goes to the background.
@@ -185,6 +190,12 @@ Three owners, one contract. Change a message format only by updating this file, 
   - replies `{"status": "ok", "item_id": "…"}`.
 - **A voice note after the name:** post again with that `item_id` (instead of `touch_id`), the same `name` and `text`, and the `audio`.
 - **Caretaker-initiated setup:** the caretaker sends a photo with a caption. Post it to `POST /v1/items` with `name` = the caption.
+- **`source=photon`** goes on every Photon `POST /v1/items` and `POST /v1/labels` (an item a label creates gets this source).
+- **Starting over (testing):** when a caretaker texts `/restart`, the bridge calls `DELETE /v1/items?source=photon`.
+  - The server forgets every Photon item, with its label, voice note and saved files.
+  - The app's own setup items (`source=app`) are untouched.
+  - The reply is `{"status": "ok", "removed": [{"item_id": "…", "name": "…"}]}`.
+  - `source` is required (422 without it), so nothing is ever removed by accident. The route sits behind the same auth gate.
 
 ## 6. Server to dashboard: WebSocket `/v1/dashboard` (read-only)
 
@@ -270,3 +281,10 @@ If an `event moved` (or `put_down`) arrives for the target, retarget to its new 
 - **`GET /v1/items` fields** are listed.
 - **§7:** directions are relative to the body and sound to the head; there is a "within reach" line, the facing lock releases past 20°, and the steady tone releases above 40 cm.
 - **"Getting my bearings."** replaces "Marco is getting its bearings."
+
+## 12. Changes since v0.2
+- **Registrations and labels persist** across server restarts (§3.3), under `MARCO_DATA/registry/`.
+- **`source`:**
+  - optional on `POST /v1/items` (default `app`) and `POST /v1/labels` (default `photon`);
+  - listed in `GET /v1/items`.
+- **New route** `DELETE /v1/items?source=…`, which forgets one source's items. Photon's `/restart` command uses it (§5).

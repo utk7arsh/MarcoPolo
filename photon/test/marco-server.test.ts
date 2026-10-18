@@ -49,8 +49,9 @@ test("postLabel sends §5's multipart fields: touch_id, name, text, audio with i
     assert.deepEqual(res, { status: "ok", item_id: "i1" });
     const [req] = api.seen;
     assert.deepEqual([req?.method, req?.url], ["POST", "/v1/labels"]);
-    assert.deepEqual([...req!.form!.keys()].sort(), ["audio", "name", "text", "touch_id"]);
+    assert.deepEqual([...req!.form!.keys()].sort(), ["audio", "name", "source", "text", "touch_id"]);
     assert.equal(req!.form!.get("touch_id"), "t1");
+    assert.equal(req!.form!.get("source"), "photon", "so /restart can remove exactly what Photon added");
     assert.equal(req!.form!.get("name"), "cumin");
     const audio = req!.form!.get("audio") as File;
     assert.equal(audio.name, "voice_1.m4a", "the server keeps the extension from the filename");
@@ -65,7 +66,7 @@ test("postLabel for a follow-up sends item_id instead of touch_id, and no audio 
   const api = await fakeServer(() => ({ status: 200, body: { status: "ok", item_id: "i1" } }));
   try {
     await new MarcoServer(api.base).postLabel({ itemId: "i1", name: "cumin", text: "cumin" });
-    assert.deepEqual([...api.seen[0]!.form!.keys()].sort(), ["item_id", "name", "text"]);
+    assert.deepEqual([...api.seen[0]!.form!.keys()].sort(), ["item_id", "name", "source", "text"]);
   } finally {
     api.close();
   }
@@ -80,7 +81,8 @@ test("postItem sends name and a JPEG photo; getCrop resolves the server's relati
     const client = new MarcoServer(`${api.base}/`);
     assert.deepEqual(await client.postItem("keys", photo), { item_id: "i2", quality: "ok", reason: "" });
     const form = api.seen[0]!.form!;
-    assert.deepEqual([...form.keys()].sort(), ["name", "photo"]);
+    assert.deepEqual([...form.keys()].sort(), ["name", "photo", "source"]);
+    assert.equal(form.get("source"), "photon");
     assert.equal((form.get("photo") as File).type, "image/jpeg");
     assert.deepEqual([...(await client.getCrop("/v1/touch/t1/crop.jpg"))], [0xff, 0xd8, 1]);
     assert.equal(api.seen[1]?.url, "/v1/touch/t1/crop.jpg");
@@ -112,6 +114,17 @@ test("errors: 403 explains the allow-list, 404 is permanent, 500 and 429 are wor
     assert.equal((await failure()).permanent, false);
     status = 429;
     assert.equal((await failure()).permanent, false);
+  } finally {
+    api.close();
+  }
+});
+
+test("removeItems sends DELETE /v1/items?source=photon and returns what was removed", async () => {
+  const api = await fakeServer(() => ({ status: 200, body: { status: "ok", removed: [{ item_id: "i1", name: "cumin" }] } }));
+  try {
+    const res = await new MarcoServer(api.base).removeItems("photon");
+    assert.deepEqual(res.removed, [{ item_id: "i1", name: "cumin" }]);
+    assert.deepEqual([api.seen[0]?.method, api.seen[0]?.url], ["DELETE", "/v1/items?source=photon"]);
   } finally {
     api.close();
   }
@@ -153,5 +166,45 @@ test("the /v1/photon socket delivers label_requests in order, ignores other mess
     socket.close();
     wss.close();
     http.close();
+  }
+});
+
+test("the /v1/photon socket comes back after the server is down for a while (a restart or redeploy)", async () => {
+  // Regression: Node's WebSocket fires only `error` (no `close`) for a refused connection, which used to end the retries.
+  const port = await new Promise<number>((resolve) => {
+    const probe = createServer().listen(0, "127.0.0.1", () => {
+      const p = (probe.address() as AddressInfo).port;
+      probe.close(() => resolve(p));
+    });
+  });
+  const serve = () =>
+    new Promise<{ http: Server; wss: WebSocketServer }>((resolve) => {
+      const http = createServer();
+      const wss = new WebSocketServer({ server: http, path: "/v1/photon" });
+      http.listen(port, "127.0.0.1", () => resolve({ http, wss }));
+    });
+  const stop = ({ http, wss }: { http: Server; wss: WebSocketServer }) => {
+    for (const c of wss.clients) c.terminate();
+    wss.close();
+    http.close();
+  };
+  let srv = await serve();
+  const socket = connectPhotonSocket(`http://127.0.0.1:${port}`, async () => {});
+  const until = async (ok: () => boolean, ms: number) => {
+    for (const end = Date.now() + ms; !ok() && Date.now() < end; ) await new Promise((r) => setTimeout(r, 25));
+  };
+  try {
+    await until(() => socket.connected, 3000);
+    assert.equal(socket.connected, true);
+    stop(srv);
+    await until(() => !socket.connected, 3000);
+    assert.equal(socket.connected, false);
+    await new Promise((r) => setTimeout(r, 2500)); // several refused attempts while the server is down
+    srv = await serve();
+    await until(() => socket.connected, 10_000);
+    assert.equal(socket.connected, true, "reconnected once the server was back");
+  } finally {
+    socket.close();
+    stop(srv);
   }
 });

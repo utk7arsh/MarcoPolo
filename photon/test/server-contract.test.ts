@@ -2,7 +2,9 @@
 // service running as its own process in sim mode (the caretaker is played over /dev/inbound):
 //   phone asks "what is this?" -> server label_request on /v1/photon -> Photon texts the crop to Mom ->
 //   Mom replies by text, then by voice memo -> POST /v1/labels -> the phone gets label_ready with playable audio;
-//   Mom sends a setup photo -> POST /v1/items -> GET /v1/items has it.
+//   Mom sends a setup photo -> POST /v1/items -> GET /v1/items has it;
+//   the server restarts -> the labels, voice memo and registration are still there (marco/registry.py);
+//   Mom texts /restart -> DELETE /v1/items?source=photon -> none of Photon's items remain, even after another restart.
 // Skips unless a Python with the server's stub dependencies is available (MARCO_SERVER_PYTHON, server/.venv or poc/.venv).
 import assert from "node:assert/strict";
 import { execFileSync, spawn, spawnSync, type ChildProcess } from "node:child_process";
@@ -87,7 +89,7 @@ function frameForm(jpeg: Buffer): FormData {
   return form;
 }
 
-test("end to end with the real Marco server: label_request -> iMessage -> /v1/labels -> label_ready; setup photo -> /v1/items", { skip: SKIP, timeout: 120_000 }, async () => {
+test("end to end with the real Marco server: label_request -> iMessage -> /v1/labels -> label_ready; setup photo -> /v1/items; persistence; /restart", { skip: SKIP, timeout: 180_000 }, async () => {
   const dir = mkdtempSync(join(tmpdir(), "marco-e2e-"));
   const jpegPath = join(dir, "frame.jpg");
   execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc=size=960x720", "-frames:v", "1", jpegPath]);
@@ -109,9 +111,17 @@ test("end to end with the real Marco server: label_request -> iMessage -> /v1/la
   const children: ChildProcess[] = [];
   let phone: WebSocket | null = null;
   try {
-    children.push(
-      start(PYTHON!, ["-m", "marco.app"], SERVER_DIR, { AUTH_TEST_BYPASS: "1", MARCO_MODE: "stub", MARCO_AUTH: "closed", MARCO_DATA: join(dir, "server-data"), HOST: "127.0.0.1", PORT: String(serverPort) }, logs),
-    );
+    const serverEnv = { AUTH_TEST_BYPASS: "1", MARCO_MODE: "stub", MARCO_AUTH: "closed", MARCO_DATA: join(dir, "server-data"), HOST: "127.0.0.1", PORT: String(serverPort) };
+    let server = start(PYTHON!, ["-m", "marco.app"], SERVER_DIR, serverEnv, logs);
+    children.push(server);
+    const restartServer = async () => {
+      const exited = new Promise((r) => server.once("exit", r));
+      server.kill("SIGTERM");
+      await exited;
+      server = start(PYTHON!, ["-m", "marco.app"], SERVER_DIR, serverEnv, logs);
+      children.push(server);
+      await waitFor("the Marco server after a restart", async () => (await fetch(`${base}/v1/items`)).ok);
+    };
     await waitFor("the Marco server", async () => (await fetch(`${base}/v1/items`)).ok);
     assert.equal((await fetch(`${base}/v1/frames`, { method: "POST", body: frameForm(readFileSync(jpegPath)) })).status, 202);
 
@@ -183,8 +193,29 @@ test("end to end with the real Marco server: label_request -> iMessage -> /v1/la
     // Teach: a setup photo with a caption is registered on the server.
     const saved = await mom({ image_base64: setupPhoto.toString("base64"), image_mime: setupMime, text: "These are Grandpa's keys" });
     assert.equal(saved.find((m) => m.type === "text")?.text, 'Saved "keys". Grandpa can ask me for it by name now.');
-    const items = (await (await fetch(`${base}/v1/items`)).json()) as Array<{ name: string }>;
-    assert.ok(items.some((i) => i.name === "keys"), JSON.stringify(items));
+    type ServerItem = { item_id: string; name: string; source?: string; label_text?: string; label_audio_url?: string | null };
+    const serverItems = async () => (await (await fetch(`${base}/v1/items`)).json()) as ServerItem[];
+    const fromPhoton = async () => (await serverItems()).filter((i) => i.source === "photon");
+    assert.deepEqual((await fromPhoton()).map((i) => i.name).sort(), ["cumin", "keys"]);
+
+    // Persistence: a fresh server process on the same data folder (what a redeploy is) still has them.
+    await restartServer();
+    const kept = await fromPhoton();
+    assert.deepEqual(kept.map((i) => i.name).sort(), ["cumin", "keys"]);
+    const cumin = kept.find((i) => i.name === "cumin")!;
+    assert.equal(cumin.item_id, first.item_id);
+    assert.equal(cumin.label_text, "That's the cumin, love");
+    const keptAudio = await fetch(`${base}${cumin.label_audio_url}`);
+    assert.equal(keptAudio.headers.get("content-type"), "audio/mp4");
+    assert.equal(Buffer.from(await keptAudio.arrayBuffer()).toString("latin1", 4, 8), "ftyp");
+    await waitFor("Photon reconnected to /v1/photon", async () => (await (await fetch(`${bridge}/health`)).json()).marco_server.connected);
+
+    // /restart from the caretaker's chat removes exactly what Photon added, for good.
+    const cleared = (await mom({ text: "/restart" })).find((m) => m.type === "text")?.text ?? "";
+    assert.match(cleared, /^Fresh start: I removed 2 labels from Marco \((cumin, keys|keys, cumin)\)\./);
+    assert.deepEqual(await fromPhoton(), []);
+    await restartServer();
+    assert.deepEqual(await fromPhoton(), [], "still gone after a restart");
   } catch (err) {
     console.error(logs.join("").slice(-4000));
     throw err;

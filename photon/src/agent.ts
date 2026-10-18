@@ -1,7 +1,7 @@
 import type { Channel, Conversation, Inbound, Part } from "./channel.js";
 import { normalizeHandle, type Config } from "./config.js";
 import { log } from "./log.js";
-import { MarcoServerError, type LabelRequest, type MarcoServerApi } from "./marco-server.js";
+import { MarcoServerError, PHOTON_SOURCE, type LabelRequest, type MarcoServerApi } from "./marco-server.js";
 import type { Media } from "./media.js";
 import { extractName, isDontKnow } from "./names.js";
 import { now, stableId, type Caretaker, type Item, type Label, type LastAnswer, type Question, type Store } from "./store.js";
@@ -13,6 +13,8 @@ const NAME_FOLLOWUP_MS = 10 * 60_000;
 const VOICE_FOLLOWUP_MS = 2 * 60_000;
 const LOVE = "❤️";
 const LIKE = "👍";
+/** Texted by a caretaker: remove every label Photon gave the Marco server, to test again from scratch. */
+const RESTART = /^\/restart[\s.!]*$/i;
 
 export interface AgentDeps {
   config: Config;
@@ -94,6 +96,8 @@ export class MarcoAgent {
       .join(" ");
     const answer: Answer = { text, audio, messageId: message.id };
 
+    // Commands come first, so "/restart" is never taken as the answer to an open question.
+    if (!images.length && !audio && RESTART.test(text)) return this.restart(caretaker, message.id);
     if (images.length) return this.onPhotos(caretaker, images, answer);
     if (!text && !audio) return;
     const question = this.pickQuestion(caretaker, message.parentId, answer);
@@ -377,6 +381,37 @@ export class MarcoAgent {
     return label.audio
       ? `Saved "${name}" with your voice. ${user} can ask me for it by name now.`
       : `Saved "${name}". ${user} can ask me for it by name now.`;
+  }
+
+  /**
+   * /restart: remove every item and label Photon gave the Marco server (DELETE /v1/items?source=photon), and forget
+   * them here too, so testing starts afresh. The phone's own setup items are untouched. Safe to replay: the reply is
+   * stored before it is sent, and a replay only re-sends it.
+   */
+  private async restart(caretaker: Caretaker, messageId: string) {
+    const { server, store, media } = this.deps;
+    let reply = caretaker.lastCommand?.messageId === messageId ? caretaker.lastCommand.reply : null;
+    if (!reply) {
+      try {
+        const { removed } = await server.removeItems(PHOTON_SOURCE);
+        for (const item of store.resetLabels()) {
+          media.remove(item.photo);
+          media.remove(item.label?.audio);
+        }
+        const names = removed.map((r) => r.name);
+        const shown = names.length > 8 ? `${names.slice(0, 8).join(", ")} and ${names.length - 8} more` : names.join(", ");
+        reply = removed.length
+          ? `Fresh start: I removed ${removed.length} label${removed.length === 1 ? "" : "s"} from Marco (${shown}). Send photos to teach me again.`
+          : "Fresh start: Marco had no labels from you, so there was nothing to remove.";
+        log.info(`/restart from ${caretaker.name}: removed ${removed.length} item(s) from the Marco server`);
+      } catch (err) {
+        if (!(err instanceof MarcoServerError && err.permanent)) throw err; // network or 5xx: the event is replayed
+        log.error("/restart: the Marco server refused", err);
+        reply = `I couldn't clear Marco's labels just now (the server said HTTP ${err.status}).`;
+      }
+      caretaker = store.upsertCaretaker({ ...caretaker, lastCommand: { messageId, reply } });
+    }
+    await this.say(caretaker, reply, { key: `restart:${messageId}` });
   }
 
   /** Read receipt on our photo: the caretaker is looking at it right now. (§5 has no message for this yet.) */

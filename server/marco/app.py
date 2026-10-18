@@ -7,6 +7,7 @@ Run (loopback only):  AUTH_TEST_BYPASS=1 python -m marco.app        # local deve
 import asyncio
 import json
 import os
+import re
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
@@ -158,10 +159,19 @@ async def ws_dashboard(ws: WebSocket):
     await _listen_only(ws, "dashboard")
 
 
+def checked_source(source: str) -> str:
+    s = (source or "").strip()
+    if not re.fullmatch(r"[a-z0-9_-]{1,32}", s):
+        raise HTTPException(status_code=422, detail="source must be a short lowercase token, e.g. app or photon")
+    return s
+
+
 @app.post("/v1/items")
-async def post_item(name: str = Form(...), photo: UploadFile = File(...), caller=Depends(require_caller)):
+async def post_item(name: str = Form(...), photo: UploadFile = File(...), source: str = Form("app"),
+                    caller=Depends(require_caller)):
+    src = checked_source(source)
     try:
-        res, out = brain.register(name.strip(), await photo.read())
+        res, out = brain.register(name.strip(), await photo.read(), source=src)
     except OSError as e:
         raise HTTPException(status_code=422, detail=f"unreadable photo: {e}")
     await dispatch(out)
@@ -170,18 +180,29 @@ async def post_item(name: str = Form(...), photo: UploadFile = File(...), caller
 
 @app.post("/v1/labels")
 async def post_label(name: str = Form(...), touch_id: str | None = Form(None), item_id: str | None = Form(None),
-                     text: str | None = Form(None), audio: UploadFile | None = File(None), caller=Depends(require_caller)):
+                     text: str | None = Form(None), audio: UploadFile | None = File(None), source: str = Form("photon"),
+                     caller=Depends(require_caller)):
+    src = checked_source(source)
     if not touch_id and not item_id:
         raise HTTPException(status_code=422, detail="give touch_id (label what was touched) or item_id (relabel an item)")
     data = await audio.read() if audio is not None else None
     ext = (Path(audio.filename).suffix.lstrip(".") if audio is not None and audio.filename else "m4a")
     try:
-        out = brain.label(touch_id, item_id, name.strip(), text, data, ext)
+        out = brain.label(touch_id, item_id, name.strip(), text, data, ext, source=src)
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e))
     await dispatch(out)
     item = next((m["item_id"] for _, m in out if m.get("type") == "label_ready"), None)
     return dict(status="ok", item_id=item)          # Photon adds a later voice note to this item_id
+
+
+@app.delete("/v1/items")
+async def delete_items(source: str, caller=Depends(require_caller)):
+    """Forget every item (and its label, voice note and saved files) registered by one source, e.g. source=photon
+    when a caretaker texts /restart to start testing afresh. The phone's own setup items (source=app) are untouched."""
+    removed, out = brain.remove(checked_source(source))
+    await dispatch(out)
+    return dict(status="ok", removed=removed)
 
 
 @app.get("/")

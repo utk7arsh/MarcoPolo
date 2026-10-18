@@ -40,10 +40,21 @@ export interface LabelPost {
   audioPath?: string | null;
 }
 
+/** DELETE /v1/items?source=... reply: what the server forgot. */
+export interface Removal {
+  status: string;
+  removed: Array<{ item_id: string; name: string }>;
+}
+
+/** Everything this bridge registers or labels is tagged with this source, so /restart can remove exactly that. */
+export const PHOTON_SOURCE = "photon";
+
 export interface MarcoServerApi {
   getCrop(cropUrl: string): Promise<Buffer>;
   postLabel(label: LabelPost): Promise<LabelResult>;
   postItem(name: string, photoPath: string): Promise<Registration>;
+  /** Forget every item from one source, with its label and voice note (the caretaker's /restart). */
+  removeItems(source: string): Promise<Removal>;
 }
 
 /** An error from the server. `permanent` means retrying the same request cannot help (4xx other than 408/429). */
@@ -60,6 +71,8 @@ export class MarcoServerError extends Error {
     return this.status >= 400 && this.status < 500 && this.status !== 408 && this.status !== 429;
   }
 }
+
+const CONNECT_TIMEOUT_MS = 10_000;
 
 const NOT_AUTHORISED =
   "the Marco server refused this machine (fail-closed gate). Use its tailscale serve URL, and check that this machine's tailnet login is in TAILSCALE_ALLOWED_LOGINS";
@@ -95,6 +108,7 @@ export class MarcoServer implements MarcoServerApi {
     if (touchId) form.append("touch_id", touchId);
     if (itemId) form.append("item_id", itemId);
     form.append("name", name);
+    form.append("source", PHOTON_SOURCE);
     if (text) form.append("text", text);
     if (audioPath) form.append("audio", new Blob([new Uint8Array(await readFile(audioPath))], { type: contentTypeFor(audioPath) }), basename(audioPath));
     const res = await this.call("POST /v1/labels", "/v1/labels", { method: "POST", body: form });
@@ -104,9 +118,15 @@ export class MarcoServer implements MarcoServerApi {
   async postItem(name: string, photoPath: string): Promise<Registration> {
     const form = new FormData();
     form.append("name", name);
+    form.append("source", PHOTON_SOURCE);
     form.append("photo", new Blob([new Uint8Array(await readFile(photoPath))], { type: contentTypeFor(photoPath) }), basename(photoPath));
     const res = await this.call("POST /v1/items", "/v1/items", { method: "POST", body: form });
     return (await res.json()) as Registration;
+  }
+
+  async removeItems(source: string): Promise<Removal> {
+    const res = await this.call("DELETE /v1/items", `/v1/items?source=${encodeURIComponent(source)}`, { method: "DELETE" });
+    return (await res.json()) as Removal;
   }
 }
 
@@ -141,7 +161,30 @@ export function connectPhotonSocket(
   const connect = () => {
     const socket = new WebSocketImpl(url);
     ws = socket;
+    // Node's WebSocket fires only `error` (no `close`) when the connection is refused, e.g. while the server restarts,
+    // so either event schedules the next attempt, once. The watchdog covers an attempt that hangs.
+    let retrying = false;
+    const retry = () => {
+      if (retrying) return;
+      retrying = true;
+      clearTimeout(watchdog);
+      if (up) onState(false);
+      up = false;
+      if (stopped) return;
+      setTimeout(connect, backoff);
+      backoff = Math.min(backoff * 2, 8_000);
+    };
+    const watchdog = setTimeout(() => {
+      if (up) return;
+      try {
+        socket.close();
+      } catch {
+        // already closing
+      }
+      retry();
+    }, CONNECT_TIMEOUT_MS);
     socket.onopen = () => {
+      clearTimeout(watchdog);
       up = true;
       backoff = 500;
       onState(true);
@@ -161,14 +204,10 @@ export function connectPhotonSocket(
       queue = queue.then(() => onRequest(request)).catch((err) => log.error(`label_request ${request.touch_id} failed`, err));
     };
     socket.onclose = (ev: CloseEvent) => {
-      if (up) onState(false);
-      up = false;
       if (ev.code === 1008) log.error(`/v1/photon closed with 1008: ${NOT_AUTHORISED}`);
-      if (stopped) return;
-      setTimeout(connect, backoff);
-      backoff = Math.min(backoff * 2, 8_000);
+      retry();
     };
-    socket.onerror = () => {};
+    socket.onerror = () => retry();
   };
   connect();
 

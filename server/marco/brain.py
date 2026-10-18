@@ -3,14 +3,17 @@ queries -> answers; Photon labels -> new items. Same methods as StubBrain, so ap
 """
 import base64
 import io
+import logging
 import os
 import time
 import uuid
+from pathlib import Path
 
 import numpy as np
 from PIL import Image, ImageOps
 
 from . import geometry as G
+from .registry import Registry
 from .touch import TouchDetector
 from .world.memory import World, now_wall
 from .world.roommap import RoomMap
@@ -48,6 +51,23 @@ class RealBrain:
         self.last_touch = None         # (touch_id, item_id, t)
         self._last_world = 0.0
         self.frames_seen = 0
+        self.registry = Registry(Path(data_dir) / "registry" if data_dir else None)
+        self._reload()
+
+    def _reload(self):
+        """Items and labels saved before a restart: back into the world model, and their photos into the detector."""
+        for rec in self.registry.items():
+            aid = rec.get("audio_id")
+            it = self.world.add_item(rec["name"], item_id=rec["item_id"], label_text=rec.get("label_text"),
+                                     label_audio_url=f"/v1/audio/{aid}" if aid else None, source=rec.get("source", "app"))
+            photo = self.registry.photo(it.item_id)
+            if photo is None:
+                continue
+            try:
+                self.detector.register(it.item_id, it.name, Image.open(io.BytesIO(photo)).convert("RGB"), gate=False)
+            except Exception as e:                      # one bad photo must not stop the server starting
+                logging.getLogger("marco").warning("could not re-register %s (%s): %s", it.item_id, it.name, e)
+        self.audio.update(self.registry.audio())
 
     # ---------------------------------------------------------------- views used by app.py
     @property
@@ -192,29 +212,35 @@ class RealBrain:
         pass
 
     # ---------------------------------------------------------------- registration and labels
-    def register(self, name, photo: bytes):
+    def register(self, name, photo: bytes, source="app"):
         im = ImageOps.exif_transpose(Image.open(io.BytesIO(photo))).convert("RGB")
         im.thumbnail((MAX_PHOTO_PX, MAX_PHOTO_PX))          # phone photos are 12-48 MP; OWLv2 looks at 960 px anyway
-        it = self.world.add_item(name)
+        it = self.world.add_item(name, source=source)
         res = self.detector.register(it.item_id, name, im)
         if res["quality"] != "ok":
             del self.world.items[it.item_id]
             return dict(item_id=None, **res), []
+        buf = io.BytesIO()
+        im.save(buf, "JPEG", quality=90)
+        self.registry.save(it.item_id, name=it.name, source=it.source, photo=buf.getvalue())
         return dict(item_id=it.item_id, **res), [("dashboard", self.world.snapshot())]
 
-    def label(self, touch_id, item_id, name, text, audio: bytes | None, audio_ext: str):
-        audio_url = None
+    def label(self, touch_id, item_id, name, text, audio: bytes | None, audio_ext: str, source="photon"):
+        audio_url = aid = None
+        ext = audio_ext or "m4a"
         if audio:
             aid = uuid.uuid4().hex[:12]
-            self.audio[aid] = (audio, audio_ext or "m4a")
+            self.audio[aid] = (audio, ext)
             audio_url = f"/v1/audio/{aid}"
         tc = self.touches.get(touch_id) if touch_id else None
         if touch_id and tc is None:
             raise KeyError(f"unknown touch_id {touch_id}")
         if item_id and item_id not in self.world.items:
             raise KeyError(f"unknown item_id {item_id}")
+        new_photo = None
         if item_id is None:
-            it = self.world.add_item(name)
+            it = self.world.add_item(name, source=source)
+            new_photo = tc["crop_jpeg"]
             crop = Image.open(io.BytesIO(tc["crop_jpeg"])).convert("RGB")
             self.detector.register(it.item_id, name, crop, gate=False)     # a person already said what it is
             if tc.get("position"):
@@ -224,10 +250,34 @@ class RealBrain:
         it = self.world.items[item_id]
         it.name = name or it.name
         it.label_text = text or name or it.label_text
+        if audio_url and it.label_audio_url:
+            self.audio.pop(it.label_audio_url.rsplit("/", 1)[-1], None)   # a new voice label replaces the old one
         it.label_audio_url = audio_url or it.label_audio_url
         if tc is not None:
             tc["item_id"] = item_id
+        self.registry.save(item_id, name=it.name, source=it.source, label_text=it.label_text, photo=new_photo,
+                           audio_id=aid, audio=audio, audio_ext=ext)
         ev = self.world._event("label_added", it)
         return [("phone", dict(type="label_ready", item_id=item_id, name=it.name, label_text=it.label_text,
                                label_audio_url=it.label_audio_url)),
                 ("dashboard", dict(type="timeline", events=[ev])), ("dashboard", self.world.snapshot())]
+
+    def remove(self, source):
+        """DELETE /v1/items?source=...: forget every item from that source (its detector entry, label audio and saved
+        files). Returns ([{item_id, name}], messages)."""
+        gone = [it for it in self.world.items.values() if it.source == source]
+        ids = {it.item_id for it in gone}
+        for it in gone:
+            del self.world.items[it.item_id]
+            self.detector.forget(it.item_id)
+            if it.label_audio_url:
+                self.audio.pop(it.label_audio_url.rsplit("/", 1)[-1], None)
+        for tc in self.touches.values():
+            if tc.get("item_id") in ids:
+                tc["item_id"] = None
+        if self.last_touch and self.last_touch[1] in ids:
+            self.last_touch = None
+        if self.guidance_target in ids:
+            self.guidance_target = None
+        self.registry.remove(ids)
+        return [dict(item_id=it.item_id, name=it.name) for it in gone], [("dashboard", self.world.snapshot())]

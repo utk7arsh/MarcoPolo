@@ -75,6 +75,10 @@ export class Media {
     return join(this.dir, basename(file));
   }
 
+  remove(file: string | null | undefined) {
+    if (file) rmSync(this.path(file), { force: true });
+  }
+
   private fresh(prefix: string, ext: string): string {
     return `${prefix}_${randomBytes(8).toString("hex")}.${ext}`;
   }

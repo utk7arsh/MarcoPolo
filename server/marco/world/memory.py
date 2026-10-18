@@ -45,6 +45,7 @@ class Item:
     label_text: str | None = None
     label_audio_url: str | None = None
     confidence: float = 0.0
+    source: str = "app"                # who registered it: "app" (the phone's setup flow) or "photon" (a caretaker)
     pending: list = field(default_factory=list)   # (t, position) sightings away from the stored spot
     misses: int = 0
     touched_t: float | None = None
@@ -53,7 +54,8 @@ class Item:
         return dict(item_id=self.item_id, name=self.name,
                     position=None if self.position is None else [round(float(v), 3) for v in self.position],
                     surface=self.surface, state=self.state, last_seen_wall=self.last_seen_wall,
-                    label_text=self.label_text, label_audio_url=self.label_audio_url, size_m=round(self.size_m, 3))
+                    label_text=self.label_text, label_audio_url=self.label_audio_url, size_m=round(self.size_m, 3),
+                    source=self.source)
 
 
 class World:

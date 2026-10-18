@@ -71,6 +71,8 @@ export interface Caretaker {
   linkedAt: string;
   welcomedAt?: string | null;
   lastHelpAt: string | null;
+  /** The last chat command (/restart) and its reply, so a replayed event repeats the reply instead of the command. */
+  lastCommand?: { messageId: string; reply: string } | null;
 }
 
 interface Data {
@@ -148,6 +150,15 @@ export class Store {
     this.data.caretakers[caretaker.handle] = caretaker;
     this.save();
     return caretaker;
+  }
+
+  /** /restart: forget every item and question (caretakers, the event cursor and processed ids stay). */
+  resetLabels(): Item[] {
+    const items = Object.values(this.data.items);
+    this.data.items = {};
+    this.data.questions = {};
+    this.save();
+    return items;
   }
 
   item(id: string): Item | undefined {
