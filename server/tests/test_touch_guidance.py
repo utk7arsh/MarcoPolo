@@ -98,3 +98,38 @@ def test_hand_proximity_comes_from_the_knuckles_when_the_fingertip_is_hidden():
     out = hand(b, 1.1, JAR + [0, 0.30, 0], tip_conf=0.2, beyond_gap=0.3)    # the back of the hand hides the tip
     prox = [m for ch, m in out if m.get("type") == "hand_proximity"]
     assert prox and prox[0]["item_id"] == it.item_id
+
+
+
+def held(b, t0, tip, n, **kw):
+    out = []
+    for i in range(n):
+        out += hand(b, t0 + i / 15, tip, **kw)
+    return out
+
+
+def test_a_hand_held_on_the_guided_item_is_a_touch_even_with_the_fingertip_hidden():
+    """The phone's held tone means "on it" (hand_proximity <= 5 cm). Holding there must also end the search with
+    "Got it", even when the back of the hand hides the fingertip and the contact check can't run."""
+    b, it = guided_brain()
+    lid = JAR + [0, 0.075, 0]
+    out = held(b, 1.0, lid, 10, tip_conf=0.2)                       # hidden fingertip: the knuckle fallback
+    prox = [m for _, m in out if m.get("type") == "hand_proximity"]
+    assert prox and min(m["distance_m"] for m in prox) <= 0.05
+    touches = events(out, "touch")
+    assert len(touches) == 1 and touches[0]["item_id"] == it.item_id
+    assert not events(out, "touch_end")                             # held: one touch, no flicker
+
+
+def test_brushing_past_the_guided_item_is_not_a_touch():
+    b, it = guided_brain()
+    lid = JAR + [0, 0.075, 0]
+    out = held(b, 1.0, lid, 3, tip_conf=0.2) + held(b, 1.3, lid + [0, 0.3, 0], 6, tip_conf=0.2)
+    assert not events(out, "touch")
+
+
+def test_holding_near_an_item_nobody_is_looking_for_needs_the_real_contact_check():
+    b, it = guided_brain()
+    b.guidance_target = None                                        # not being guided
+    out = held(b, 1.0, JAR + [0, 0.075, 0], 10, tip_conf=0.2)
+    assert not events(out, "touch")

@@ -30,6 +30,10 @@ MIN_TIP_CONF = 0.5
 HAND_JOINTS = ("indexTip", "indexDIP", "indexPIP", "indexMCP", "middleMCP", "wrist")   # fingertip first
 MIN_HAND_CONF = 0.3
 HAND_FRESH_S = 1.5         # a hand last seen this long ago no longer counts as "at the item"
+# Held on the guided item: the hand within HOLD_M of it for HOLD_N messages in a row (about 0.4 s at 15 Hz) is a
+# touch even when the chest camera can't see the fingertip (the back of the hand hides it on low tables). The phone
+# plays its held tone from the same hand_proximity distance at 5 cm, so the tone and "Got it" now agree.
+HOLD_M, HOLD_RELEASE_M, HOLD_N = 0.05, 0.08, 6
 STILL_PX = 16.0            # knuckle motion per message (1920x1440 px) at 15 Hz
 JOINTS = ["wrist", "thumbCMC", "thumbMP", "thumbIP", "thumbTip", "indexMCP", "indexPIP", "indexDIP", "indexTip",
           "middleMCP", "middlePIP", "middleDIP", "middleTip", "ringMCP", "ringPIP", "ringDIP", "ringTip",
@@ -57,6 +61,7 @@ class TouchDetector:
         self.tip_t = None
         self.hand = None           # latest hand position (world): the fingertip, else the knuckles or wrist
         self.hand_t = None
+        self.held_n = 0            # messages in a row with the hand on the guided item
         self.votes = []            # recent contact flags
 
     def set_camera(self, K, res):
@@ -156,6 +161,12 @@ class TouchDetector:
             self.hand, self.hand_t = hp, t
         share = sum(self.votes) / max(len(self.votes), 1)
         hit = None
+        near = None
+        if hp is not None and target_id in items:                  # the steady tone, even with the fingertip hidden
+            c, s_ = items[target_id]
+            near = dist_to_item(hp, c, s_)
+            out.append(dict(type="hand_proximity", item_id=target_id, distance_m=round(near, 3)))
+        self.held_n = self.held_n + 1 if near is not None and near <= (HOLD_RELEASE_M if self.held_n else HOLD_M) else 0
         if p is not None and items:
             ds = {iid: dist_to_item(p, c, s) for iid, (c, s) in items.items()}
             k = min(ds, key=ds.get)
@@ -164,9 +175,8 @@ class TouchDetector:
                     hit = k
             elif share >= VOTE_ON and ds[k] <= NEAR_ITEM_M:
                 hit = k
-        if hp is not None and target_id in items:                  # the steady tone, even with the fingertip hidden
-            c, s_ = items[target_id]
-            out.append(dict(type="hand_proximity", item_id=target_id, distance_m=round(dist_to_item(hp, c, s_), 3)))
+        if self.held_n >= HOLD_N and self.current in (None, target_id):
+            hit = target_id                               # held on the guided item: a touch, fingertip seen or not
         # Motion needs 3 knuckle samples; until then the hand does not count as still.
         moving = len(self.knuckles) < 3 or float(np.median(np.linalg.norm(np.diff(np.array(self.knuckles), axis=0), axis=1))) > STILL_PX
         if hit is not None and hit != self.current and moving:
@@ -179,7 +189,8 @@ class TouchDetector:
                 self.current, self.touch_id = None, None
             if hit is not None and self.streak[1] >= STREAK:
                 self.current, self.touch_id = hit, uuid.uuid4().hex[:12]
-                out.append(dict(type="touch", touch_id=self.touch_id, item_id=hit, position=[round(float(v), 3) for v in p],
+                where = p if p is not None else hp             # the knuckles when the fingertip is hidden
+                out.append(dict(type="touch", touch_id=self.touch_id, item_id=hit, position=[round(float(v), 3) for v in where],
                                 t_device=t))
                 began = hit
         return out, began
