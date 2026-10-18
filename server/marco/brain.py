@@ -88,8 +88,17 @@ class RealBrain:
             if photo is None:
                 continue
             try:
-                self.detector.register(it.item_id, it.name, Image.open(io.BytesIO(photo)).convert("RGB"), gate=False)
-                self.reg_log.append(dict(name=it.name, item_id=it.item_id, outcome="reloaded after a restart", at=now_wall()))
+                im = Image.open(io.BytesIO(photo)).convert("RGB")
+                # A phone photo is cropped to the item exactly as registering it did, so the detector searches the
+                # same way before and after a restart (it used to search with the whole photo, background and all:
+                # live, its DINOv2 check then scored 0.0-0.2 on the right boxes). Photon's touch crops are already
+                # tight, as is any photo whose name check now fails: those stay whole.
+                res = self.detector.register(it.item_id, it.name, im) if it.source == "app" else None
+                if res is None or res["quality"] != "ok":
+                    self.detector.register(it.item_id, it.name, im, gate=False)
+                how = "cropped to the item" if res is not None and res["quality"] == "ok" else "whole photo"
+                self.reg_log.append(dict(name=it.name, item_id=it.item_id, outcome=f"reloaded after a restart ({how})",
+                                         at=now_wall()))
             except Exception as e:                      # one bad photo must not stop the server starting
                 logging.getLogger("marco").warning("could not re-register %s (%s): %s", it.item_id, it.name, e)
                 self.reg_log.append(dict(name=it.name, item_id=it.item_id, outcome=f"reload failed: {e}", at=now_wall()))

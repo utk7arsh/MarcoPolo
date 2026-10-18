@@ -84,3 +84,37 @@ def test_the_route_is_gated_and_works_in_stub_mode(tmp_path, monkeypatch):
     monkeypatch.setenv("AUTH_TEST_BYPASS", "1")
     r = c.get("/v1/debug/detection")
     assert r.status_code == 200 and r.json()["detector"] == "stub"
+
+
+class Recorder:
+    """A detector that records how each item was registered."""
+
+    def __init__(self, refuse=()):
+        self.items, self.calls, self.refuse = {}, [], set(refuse)
+
+    def register(self, item_id, name, im=None, gate=True):
+        self.calls.append((name, gate))
+        if gate and name in self.refuse:
+            return dict(quality="retake", reason="can't see it", box=None)
+        self.items[item_id] = name
+        return dict(quality="ok", reason="", box=[0, 0, 10, 10])
+
+    def detect(self, *a, **k):
+        return []
+
+
+def test_a_restart_crops_phone_photos_like_registering_did(tmp_path):
+    first = RealBrain(Recorder(), tmp_path)
+    first.register("keys", dummy_jpeg())
+    first.register("wallet", dummy_jpeg())
+    from marco.registry import Registry
+    Registry(tmp_path / "registry").save("t1", name="jar", source="photon", photo=dummy_jpeg())   # a touch crop
+    det = Recorder(refuse={"wallet"})
+    after = RealBrain(det, tmp_path)                                               # restart
+    assert ("keys", True) in det.calls and ("keys", False) not in det.calls       # cropped, as when registered
+    assert ("wallet", True) in det.calls and ("wallet", False) in det.calls       # name check fails now: whole photo
+    assert ("jar", False) in det.calls and ("jar", True) not in det.calls         # Photon's crop stays whole
+    assert set(det.items.values()) == {"keys", "wallet", "jar"}
+    outcomes = {r["name"]: r["outcome"] for r in after.debug_detection()["registrations"]}
+    assert outcomes == {"keys": "reloaded after a restart (cropped to the item)",
+                        "wallet": "reloaded after a restart (whole photo)", "jar": "reloaded after a restart (whole photo)"}

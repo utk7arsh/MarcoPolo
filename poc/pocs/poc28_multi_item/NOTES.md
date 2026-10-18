@@ -47,3 +47,11 @@
   - **Rotation-tolerant matching** (`turns.py`, `MARCO_DINO_TURNS=4`) compares the crop against the registration crop at 4 quarter turns. It finds 7 of 18 at 0.38 and 10 at 0.33, but false alarms rise to 2–3. Opt-in only.
 - **New for live debugging:** `GET /v1/debug/detection` and a per-frame log line (see `server/README.md`). For each item and recent frame they show the scores and whether it was placed, or which check failed.
   - Every live session is also recorded on the box under `MARCO_DATA/sessions/<session_id>/` and can be replayed here exactly.
+
+## Live debug log, 2026-10-18 10:58 UTC (the box: CUDA float16, TH_DINO 0.30)
+- **Setup:** 5 detector items (Pringles, Diet coke, Sparkling water, coffee ×2), all "reloaded after a restart", which means whole-photo references.
+- **OWLv2 is finding things.** Photo + name scores were 5–9 on the boxes that look right (coffee 7–9, Diet coke 7–8, Pringles 3–5).
+- **DINOv2 rejects nearly all of them,** at 0.0–0.25 where 0.30 is needed. One sighting passed (Diet coke, 0.303, placed 0.54 m away).
+- **Cause:** a reference made from the whole photo describes the photo's background, not the item. Fix: re-crop phone photos on reload (brain._reload), the same as the first registration. This also fits "earlier we could tag things": before a restart, references were crops.
+- **Look-alike cans:** Diet coke and Sparkling water fall on the same box. OWLv2's image query prefers Diet coke, while DINOv2 prefers Sparkling water (0.49 against 0.30), so the margin check hands it to Diet coke. Crop queries should separate them better; re-check after redeploy.
+- **"coffee" is still registered twice** (identical scores). It's harmless since Utkarsh's twin fix, but one could be removed.
