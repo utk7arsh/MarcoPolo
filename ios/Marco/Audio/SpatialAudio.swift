@@ -22,6 +22,7 @@ final class SpatialAudio {
     private var speechConverter: AVAudioConverter?
     private var voiceAtItem = false
     private static let ahead = AVAudio3DPoint(x: 0, y: 0, z: -1)
+    private var itemPosition = SpatialAudio.ahead
 
     init() {
         engine.attach(environment)
@@ -70,6 +71,7 @@ final class SpatialAudio {
     /// Where the guided item is now, listener-relative. Call every tick while guiding.
     func place(_ p: SIMD3<Float>) {
         let pt = AVAudio3DPoint(x: p.x, y: p.y, z: p.z)
+        itemPosition = pt
         beacon.position = pt
         tone.position = pt
         voice.position = voiceAtItem ? pt : Self.ahead
@@ -103,7 +105,7 @@ final class SpatialAudio {
     /// Marco's voice, rendered in 3D: at the guided item ("Polo!") or straight ahead.
     func say(_ text: String, atItem: Bool) {
         voiceAtItem = atItem
-        if !atItem { voice.position = Self.ahead }
+        voice.position = atItem ? itemPosition : Self.ahead
         let u = AVSpeechUtterance(string: text)
         u.voice = AVSpeechSynthesisVoice(language: "en-US")
         synth.write(u) { [weak self] buffer in
@@ -128,7 +130,7 @@ final class SpatialAudio {
             throw PlaybackError.unreadableAudio
         }
         voiceAtItem = atItem
-        if !atItem { voice.position = Self.ahead }
+        voice.position = atItem ? itemPosition : Self.ahead
         voice.scheduleBuffer(mono, at: nil, options: [.interrupts], completionHandler: nil)
     }
 

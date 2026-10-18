@@ -2,6 +2,9 @@
 
 The default screen is now the approved Paper V3 control panel: Instrument Sans, open Camera / LiDAR / Audio / Server rows, a Voice commands status, and a circular Start/Stop control. It uses this app's existing ARKit, upload, speech, head tracking and spatial-audio engine. There is one app source tree, `Marco/`; the earlier standalone AVFoundation panel is not compiled alongside it.
 
+Mac spatial-audio test tools and verification notes live in [`../spatial/`](../spatial/README.md).
+They compile this app's audio classes; production audio remains in `Marco/Audio/`.
+
 Open **`MarcoPolo.xcodeproj`**, select the **MarcoPolo** scheme and your signing team, then Run. This checked-in project uses the same `Marco/` sources as the XcodeGen option below, so XcodeGen is optional. Both projects use Swift 5 and iOS 17+. The three bundled Instrument Sans fonts and licence are in `Marco/Design/Fonts/`; font names are registered in `Marco/Info.plist` and `project.yml`.
 
 Use the gear to set the server's Tailscale address. Start waits for camera permission, and **Running** appears after the first real AR frame. The Server row reflects the actual phone WebSocket, so it is **Not connected** before starting. The Audio row reports the active route and its OS spatial-audio flag; this does not identify a headphone model or certify active head tracking. This ARKit pipeline requires a LiDAR-capable phone.

@@ -1,6 +1,6 @@
 # Instructions for AI assistants working in this repo
 
-1. **Read `STATUS.md` first**, then `docs/INTERFACES.md`, which is the contract between the server, the iPhone app and the Photon bridge. Reach into `poc/` only for the evidence behind a decision.
+1. **Read `STATUS.md` first**, then `AGENTS.md`, `docs/HACKATHON-ROADMAP.md` (the user's primary architecture), and `docs/INTERFACES.md`, which is the contract between the server, the iPhone app and the Photon bridge. Reach into `poc/` only for the evidence behind a decision.
 2. **Every change to logic gets unit tests, and you run them before calling it done:**
    - server: `cd server && ../poc/.venv/bin/python -m pytest -q tests` (or the venv you set up from `server/requirements.txt`). This includes the iOS and Photon contract tests.
    - Swift: `sh ios/check.sh` type-checks every file that builds on macOS and runs `ios/Tests/main.swift`. The ARKit/UIKit files only build in Xcode.
