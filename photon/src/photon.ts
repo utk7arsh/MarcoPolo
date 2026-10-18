@@ -110,7 +110,7 @@ export class PhotonChannel implements Channel {
         path: this.project,
         headers: {
           "content-length": String(body.size),
-          "content-type": `multipart/related; type="application/json"; boundary=${boundary}`,
+          "content-type": `multipart/related; boundary=${boundary}`,
           "idempotency-key": key,
         },
         body,

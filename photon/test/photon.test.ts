@@ -64,7 +64,13 @@ async function fakePhoton() {
     if (req.headers.authorization !== `Bearer ${KEY}`) return json(401, { title: "unauthorized" });
     const base = `/v1/projects/${PROJECT}`;
     if (req.method === "POST" && req.url === `${base}/messages`) return json(202, accepted(`msg_out_${++sent}`));
-    if (req.method === "POST" && req.url === `${base}/attachments`) return json(201, attachmentMeta("att_up_1", "image/jpeg", "jar.jpg"));
+    if (req.method === "POST" && req.url === `${base}/attachments`) {
+      // The real provider rejects extra parameters such as type="application/json".
+      if (!/^multipart\/related; boundary=[^;\s]+$/.test(String(req.headers["content-type"]))) {
+        return json(400, { code: "INVALID_ATTACHMENT_REQUEST", detail: "multipart Content-Type contains an unsupported parameter" });
+      }
+      return json(201, attachmentMeta("att_up_1", "image/jpeg", "jar.jpg"));
+    }
     if (req.method === "GET" && req.url === `${base}/attachments/att_photo`) return json(200, attachmentMeta("att_photo", "image/heic", "IMG_0001.HEIC"));
     if (req.method === "GET" && req.url === `${base}/attachments/att_voice`) return json(200, attachmentMeta("att_voice", "audio/x-caf", "Audio Message.caf"));
     if (req.method === "GET" && req.url?.endsWith("/content")) {
@@ -108,7 +114,7 @@ test("send: a photo is uploaded as multipart/related, then sent as an attachment
     await api.channel.send(CONV, { type: "image", path, mimeType: "image/jpeg" }, { key: "ask:req_1:photo" });
     const [upload, send] = api.requests;
     assert.equal(upload?.url, `/v1/projects/${PROJECT}/attachments`);
-    assert.match(String(upload?.headers["content-type"]), /^multipart\/related; type="application\/json"; boundary=marco-/);
+    assert.match(String(upload?.headers["content-type"]), /^multipart\/related; boundary=marco-[a-f0-9]+$/);
     assert.equal(Number(upload?.headers["content-length"]), upload?.body.length);
     const boundary = String(upload?.headers["content-type"]).split("boundary=")[1]!;
     const sections = upload!.body.toString("latin1").split(`--${boundary}`);

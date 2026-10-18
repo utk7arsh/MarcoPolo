@@ -2,6 +2,33 @@
 
 Last updated: 2026-10-18. Keep this file current: update it whenever a decision is made or a piece lands.
 
+## Pre-mobile live integration audit (October 18, 2026)
+
+- Rechecked GitHub, deployed source, service environments, private routes and
+  authentication. Runtime files matched; synchronized a README-only difference.
+  The served dashboard exactly matches a fresh build with `--base=/app/`.
+- Real caretaker photo/name registration exposed another older bridge on a
+  teammate's machine: two readiness mug records were saved and the older
+  voice-memo prompt appeared. User confirmed that older copy is now stopped.
+  No duplicate records were deleted. Threaded replies/reactions get provider
+  409 on this line; the existing plain-text fallback was delivered successfully.
+- **Fixed a reproduced production blocker:** outgoing Photon photo uploads used
+  an unsupported `type` parameter in `Content-Type`. The provider returned 400
+  `INVALID_ATTACHMENT_REQUEST`. Removed that parameter, tightened the fake
+  provider's validation, observed the regression fail before the fix, and passed
+  all 52 Photon tests afterward. Deployed the fix and restarted only the bridge;
+  the server replayed the retained request and the real test photo/question sent.
+- Current runs: 120 server tests (one dataset skip), 52 Photon tests, 53 frontend
+  unit tests and 22 Chromium tests pass. Actual Swift client → private Vultr
+  speech → silent HRTF rendering passes six assertions; fresh reply 1.295 s.
+  Fourteen real-HTTP/local-rendering fallback, offline and cancellation checks
+  also pass. Private speech invalid requests return 422; unauthenticated HTTP/WS
+  return 403/1008. Live server generation: 0.406 s, cached 0.002 s, valid mono
+  24 kHz WAV. Keys remain server-only and absent from tracked files.
+- Live unknown-object test uses synthetic sensor data, not physical camera or
+  touch proof. Awaiting caretaker's typed reply before recording the final
+  `label_ready` → spoken response result. Physical iPhone/AirPods checks remain.
+
 ## Vultr server and Photon activated (October 18, 2026)
 
 - User authorized bridge setup, server restart and the GitHub workflow update.

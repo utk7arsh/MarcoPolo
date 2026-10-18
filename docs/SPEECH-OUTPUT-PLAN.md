@@ -47,10 +47,10 @@ Vultr service, put the variables privately in `/etc/marco/local.env`, deploy thi
 code and restart. See [server setup](../server/README.md). The deploy sync excludes
 `.env*`; no key belongs in a browser, phone bundle, Git or Photon configuration.
 
-The local implementation is ready. Shared-server deployment and a physical
-updated-app test are separate remaining steps; they were not performed here.
-Older deployed servers return 404, so the updated phone uses its Apple fallback
-until the new endpoint is deployed.
+The implementation is deployed on Vultr and its process loads the private
+environment file. Live private `/v1/speech` calls and the production Swift HTTP
+client pass, including silent spatial rendering. The physical updated-app test
+remains. See [the deployment and integration audit](PHOTON-INTEGRATION-AUDIT.md).
 
 ## Verification (October 18, 2026)
 
