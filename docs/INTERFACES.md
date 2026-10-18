@@ -283,6 +283,13 @@ speech. It uses the same fail-closed Tailscale authentication as every other rou
   - **Devices:** the phone is `connected` while a message arrived in the last 5 s. AirPods are `connected` while poses are AirPods-fused, and `unknown` otherwise.
   - **Registrations:** `label_request` and `label_ready`, plus `POST /v1/items` results.
   - **recentMemory:** `seen`, `moved`/`put_down` and `label_added` timeline events.
+  - **Room layout:** the latest `room_layout` for the current map (below). `map.walls` holds its walls as `{from: {x, z}, to: {x, z}}`. `map.landmarks` holds its furniture as `{id, kind, x, z, width, depth, yawDeg, shape}`:
+    - `x, z` is the centre; `width` runs across, `depth` front to back;
+    - `yawDeg` is the way the front faces, in the wearer's convention (0 = world -z, 90 = +x);
+    - `shape` is `round` or `rect`;
+    - kinds today are `table`, `chair`, `sofa`, `bench`, `bed`, `storage`, `tree` and `plant`; draw unknown kinds as a plain block.
+
+    The layout is display only. It's LiDAR geometry, so it can be wrong (a doorway the scan hasn't seen through yet can show as a wall). It's dropped when the map changes. Without a layout, `walls` is null and `landmarks` is absent.
 - **Room name:** `MARCO_ROOM_ID` and `MARCO_ROOM_NAME`.
 
 **The raw feed**, WebSocket `/v1/dashboard` (read-only), which the adapter itself is built from:
@@ -292,6 +299,7 @@ speech. It uses the same fail-closed Tailscale authentication as every other rou
 | `frame` | every frame (about 1/s) | upright JPEG for display, plus boxes in its pixels: `[{item_id, name, box, score, present}]` |
 | `world` | 2/s | items `[{item_id, name, position, surface, last_seen_wall, state}]`, user `{position, heading_deg}`, trajectory of the last 5 min |
 | `map_points` | every 5 s | new voxel points `[[x, y, z, r, g, b], …]` (2–5 cm voxels) |
+| `room_layout` | every 3 frames (`MARCO_LAYOUT_EVERY`, 0 = off), once the floor is known | `{map_id, walls: [[[x, z], [x, z]], …], objects: [{kind, x, z, width, depth, yaw, height, shape}]}` from `server/marco/world/layout.py`: walls and furniture shapes summarised from the LiDAR map |
 | `guidance` | 10/s | the phone's guidance state (§3.2), plus target and user positions, for the radar |
 | `timeline` | on change | events and sightings: what, when, where |
 
@@ -382,3 +390,7 @@ If an `event moved` (or `put_down`) arrives for the target, retarget to its new 
 ## 13. Changes since v0.3
 - **Output-only ElevenLabs:** authenticated `POST /v1/speech` (§3.5), short exact text to mono WAV, bounded caching/timeouts and Apple fallback. iOS plays it through the existing spatial voice node.
 - **Typed Photon labels:** no Scribe, transcription or new caregiver audio labels. Photos and typed names, retries, corrections and source attribution stay. Stored legacy media and optional wire fields remain compatible.
+- **Room layout on the dashboard map** (§6):
+  - a new raw-feed message, `room_layout`;
+  - in the snapshot, `map.walls` is filled, and there is a new optional `map.landmarks`;
+  - a new `map_id` on a frame now starts a fresh room map (old-frame voxels used to stay).

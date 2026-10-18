@@ -14,6 +14,7 @@ Everything here runs on the event loop thread; the core's state is only read, ne
 import asyncio
 import base64
 import io
+import math
 import os
 import re
 import time
@@ -74,6 +75,7 @@ class Dashboard:
         self.frame_meta = None
         self.frame_counter = 0
         self.bounds = None            # [min_x, max_x, min_z, max_z] of map points in the current map
+        self.layout = None            # the core's latest room_layout (walls and furniture shapes) for the current map
         self.memory = []              # recentMemory entries, newest first
         self.memory_keys = set()
         self.memory_counter = 0
@@ -96,6 +98,7 @@ class Dashboard:
         if map_id and (reset or map_id != self.map_id):
             if self.map_id is not None or reset:
                 self.bounds = None                       # a new coordinate frame: old extents don't apply
+                self.layout = None
                 self.pose = None
                 self.guidance = None
             self.map_id = map_id
@@ -163,6 +166,9 @@ class Dashboard:
                 if xs:
                     b = self.bounds or [min(xs), max(xs), min(zs), max(zs)]
                     self.bounds = [min(b[0], min(xs)), max(b[1], max(xs)), min(b[2], min(zs)), max(b[3], max(zs))]
+            elif kind == "room_layout":
+                if msg.get("map_id") in (None, self.map_id):
+                    self.layout = msg
             elif kind == "timeline":
                 for e in msg.get("events") or []:
                     self._memory(e)
@@ -334,8 +340,36 @@ class Dashboard:
         if not xs:
             return None
         min_x, max_x, min_z, max_z = min(xs) - MAP_PAD_M, max(xs) + MAP_PAD_M, min(zs) - MAP_PAD_M, max(zs) + MAP_PAD_M
-        return dict(worldMapId=map_id, bounds=dict(minX=round(min_x, 3), maxX=round(max_x, 3), minZ=round(min_z, 3),
-                                                   maxZ=round(max_z, 3)), walls=None)
+        out = dict(worldMapId=map_id, bounds=dict(minX=round(min_x, 3), maxX=round(max_x, 3), minZ=round(min_z, 3),
+                                                  maxZ=round(max_z, 3)), walls=None)
+        if self.layout is not None:
+            out.update(self._layout())
+        return out
+
+    def _layout(self):
+        """The room layout in the frontend's shape: walls as segments, furniture as `landmarks` (kind, centre, size,
+        yawDeg = the way its front faces, like bodyYawDeg). Display only; drawn from LiDAR, so it can be wrong."""
+        walls, marks, seen = [], [], {}
+        for a, b in self.layout.get("walls") or []:
+            try:
+                walls.append({"from": dict(x=round(float(a[0]), 3), z=round(float(a[1]), 3)),
+                              "to": dict(x=round(float(b[0]), 3), z=round(float(b[1]), 3))})
+            except (TypeError, ValueError, IndexError):
+                continue
+        objs = sorted((o for o in self.layout.get("objects") or [] if isinstance(o, dict)),
+                      key=lambda o: (str(o.get("kind")), o.get("x", 0), o.get("z", 0)))
+        for o in objs:
+            try:
+                x, z, w, d, yaw = (float(o[k]) for k in ("x", "z", "width", "depth", "yaw"))
+            except (KeyError, TypeError, ValueError):
+                continue
+            kind = str(o.get("kind") or "object")
+            if not all(map(math.isfinite, (x, z, w, d, yaw))) or w <= 0 or d <= 0 or not SAFE_ID.match(kind):
+                continue
+            seen[kind] = seen.get(kind, 0) + 1
+            marks.append(dict(id=f"{kind}-{seen[kind]}", kind=kind, x=round(x, 3), z=round(z, 3), width=round(w, 2),
+                              depth=round(d, 2), yawDeg=round(yaw, 1), shape="round" if o.get("shape") == "round" else "rect"))
+        return dict(walls=walls, landmarks=marks)
 
     def _camera(self):
         if not self.frames:

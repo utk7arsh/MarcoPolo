@@ -1,0 +1,330 @@
+{
+ "fake-livingroom": {
+  "frames": 38,
+  "voxels": 44426,
+  "floor_y": -0.048999999999999995,
+  "roommap_add_ms_p50": 4.3,
+  "grid_add_ms_p50": 0.3,
+  "grid_add_ms_max": 0.65,
+  "summarize_ms_p50": 4.1,
+  "summarize_ms_max": 4.8,
+  "grid_mb": 0.92,
+  "grid_cols": [
+   83,
+   92
+  ],
+  "layout_json_bytes": 960,
+  "walls": 7,
+  "objects": {
+   "sofa": 1,
+   "storage": 1,
+   "table": 4
+  },
+  "objects_vs_truth": {
+   "truth_objects": 6,
+   "found": 6,
+   "kind_right": 6,
+   "median_iou": 0.6,
+   "median_centre_err_m": 0.13,
+   "extra": 0,
+   "rows": [
+    {
+     "truth": "sofa",
+     "cls": "sofa",
+     "kind": "sofa",
+     "kind_ok": true,
+     "iou": 0.75,
+     "centre_err_m": 0.1
+    },
+    {
+     "truth": "dining_table",
+     "cls": "table",
+     "kind": "table",
+     "kind_ok": true,
+     "iou": 0.71,
+     "centre_err_m": 0.07
+    },
+    {
+     "truth": "shelf",
+     "cls": "shelf",
+     "kind": "storage",
+     "kind_ok": true,
+     "iou": 0.67,
+     "centre_err_m": 0.08
+    },
+    {
+     "truth": "coffee_table",
+     "cls": "table",
+     "kind": "table",
+     "kind_ok": true,
+     "iou": 0.54,
+     "centre_err_m": 0.16
+    },
+    {
+     "truth": "kitchen_counter",
+     "cls": "counter",
+     "kind": "table",
+     "kind_ok": true,
+     "iou": 0.54,
+     "centre_err_m": 0.18
+    },
+    {
+     "truth": "entry_table",
+     "cls": "table",
+     "kind": "table",
+     "kind_ok": true,
+     "iou": 0.14,
+     "centre_err_m": 0.27
+    }
+   ],
+   "extras": []
+  },
+  "walls_vs_truth": {
+   "drawn_m": 21.2,
+   "precision": 0.95,
+   "truth_seen_m": 22.2,
+   "recall_seen": 0.95
+  }
+ },
+ "arkitscenes-41069021": {
+  "frames": 19,
+  "voxels": 19461,
+  "floor_y": -0.6529999999999999,
+  "roommap_add_ms_p50": 3.21,
+  "grid_add_ms_p50": 0.2,
+  "grid_add_ms_max": 0.28,
+  "summarize_ms_p50": 3.8,
+  "summarize_ms_max": 4.5,
+  "grid_mb": 0.89,
+  "grid_cols": [
+   71,
+   105
+  ],
+  "layout_json_bytes": 897,
+  "walls": 4,
+  "objects": {
+   "chair": 1,
+   "storage": 1,
+   "table": 4
+  },
+  "objects_vs_truth": {
+   "truth_objects": 17,
+   "found": 5,
+   "kind_right": 4,
+   "median_iou": 0.43,
+   "median_centre_err_m": 0.25,
+   "extra": 1,
+   "rows": [
+    {
+     "truth": "chair",
+     "cls": "chair",
+     "kind": "chair",
+     "kind_ok": true,
+     "iou": 0.5,
+     "centre_err_m": 0.08
+    },
+    {
+     "truth": "table 2",
+     "cls": "table",
+     "kind": "table",
+     "kind_ok": true,
+     "iou": 0.47,
+     "centre_err_m": 0.2
+    },
+    {
+     "truth": "sofa",
+     "cls": "sofa",
+     "kind": "table",
+     "kind_ok": false,
+     "iou": 0.43,
+     "centre_err_m": 0.25
+    },
+    {
+     "truth": "table 3",
+     "cls": "table",
+     "kind": "table",
+     "kind_ok": true,
+     "iou": 0.4,
+     "centre_err_m": 0.27
+    },
+    {
+     "truth": "cabinet 9",
+     "cls": "cabinet",
+     "kind": "table",
+     "kind_ok": true,
+     "iou": 0.14,
+     "centre_err_m": 0.26
+    },
+    {
+     "truth": "table",
+     "cls": "table",
+     "kind": null,
+     "kind_ok": false,
+     "iou": 0.0,
+     "centre_err_m": null
+    },
+    {
+     "truth": "table 4",
+     "cls": "table",
+     "kind": null,
+     "kind_ok": false,
+     "iou": 0.0,
+     "centre_err_m": null
+    },
+    {
+     "truth": "chair 2",
+     "cls": "chair",
+     "kind": null,
+     "kind_ok": false,
+     "iou": 0.0,
+     "centre_err_m": null
+    },
+    {
+     "truth": "cabinet",
+     "cls": "cabinet",
+     "kind": null,
+     "kind_ok": false,
+     "iou": 0.0,
+     "centre_err_m": null
+    },
+    {
+     "truth": "cabinet 2",
+     "cls": "cabinet",
+     "kind": null,
+     "kind_ok": false,
+     "iou": 0.0,
+     "centre_err_m": null
+    },
+    {
+     "truth": "cabinet 3",
+     "cls": "cabinet",
+     "kind": null,
+     "kind_ok": false,
+     "iou": 0.0,
+     "centre_err_m": null
+    },
+    {
+     "truth": "cabinet 4",
+     "cls": "cabinet",
+     "kind": null,
+     "kind_ok": false,
+     "iou": 0.0,
+     "centre_err_m": null
+    },
+    {
+     "truth": "cabinet 5",
+     "cls": "cabinet",
+     "kind": null,
+     "kind_ok": false,
+     "iou": 0.0,
+     "centre_err_m": null
+    },
+    {
+     "truth": "cabinet 6",
+     "cls": "cabinet",
+     "kind": null,
+     "kind_ok": false,
+     "iou": 0.0,
+     "centre_err_m": null
+    },
+    {
+     "truth": "cabinet 7",
+     "cls": "cabinet",
+     "kind": null,
+     "kind_ok": false,
+     "iou": 0.0,
+     "centre_err_m": null
+    },
+    {
+     "truth": "oven",
+     "cls": "oven",
+     "kind": null,
+     "kind_ok": false,
+     "iou": 0.0,
+     "centre_err_m": null
+    },
+    {
+     "truth": "cabinet 8",
+     "cls": "cabinet",
+     "kind": null,
+     "kind_ok": false,
+     "iou": 0.0,
+     "centre_err_m": null
+    }
+   ],
+   "extras": [
+    {
+     "kind": "storage",
+     "x": -1.834,
+     "z": -2.895,
+     "width": 0.36,
+     "depth": 1.02
+    }
+   ]
+  }
+ },
+ "rec1-normal": {
+  "frames": 10,
+  "voxels": 2530,
+  "floor_y": -1.2530000000000001,
+  "roommap_add_ms_p50": 0.94,
+  "grid_add_ms_p50": 0.14,
+  "grid_add_ms_max": 0.19,
+  "summarize_ms_p50": 3.6,
+  "summarize_ms_max": 4.1,
+  "grid_mb": 1.7,
+  "grid_cols": [
+   114,
+   124
+  ],
+  "layout_json_bytes": 381,
+  "walls": 0,
+  "objects": {
+   "table": 3
+  }
+ },
+ "rec2-find": {
+  "frames": 14,
+  "voxels": 8773,
+  "floor_y": -1.4529999999999998,
+  "roommap_add_ms_p50": 1.92,
+  "grid_add_ms_p50": 0.15,
+  "grid_add_ms_max": 0.24,
+  "summarize_ms_p50": 2.8,
+  "summarize_ms_max": 3.2,
+  "grid_mb": 1.06,
+  "grid_cols": [
+   75,
+   118
+  ],
+  "layout_json_bytes": 617,
+  "walls": 0,
+  "objects": {
+   "bench": 1,
+   "chair": 3,
+   "table": 1
+  }
+ },
+ "rec3-moved": {
+  "frames": 13,
+  "voxels": 7696,
+  "floor_y": -1.4489999999999998,
+  "roommap_add_ms_p50": 1.95,
+  "grid_add_ms_p50": 0.16,
+  "grid_add_ms_max": 0.23,
+  "summarize_ms_p50": 2.8,
+  "summarize_ms_max": 3.1,
+  "grid_mb": 1.18,
+  "grid_cols": [
+   98,
+   100
+  ],
+  "layout_json_bytes": 385,
+  "walls": 0,
+  "objects": {
+   "bench": 1,
+   "chair": 1,
+   "table": 1
+  }
+ }
+}

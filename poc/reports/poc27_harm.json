@@ -1,0 +1,53 @@
+{
+ "fake-livingroom": {
+  "detector": "truth",
+  "frames": 38,
+  "outputs_identical": true,
+  "layouts_sent": 11,
+  "frame_ms_off": {
+   "p50": 11.5,
+   "p95": 14.1,
+   "mean": 14.8
+  },
+  "frame_ms_on": {
+   "p50": 9.4,
+   "p95": 23.2,
+   "mean": 14.4
+  },
+  "mean_added_ms": -0.3
+ },
+ "rec2-find": {
+  "detector": "owl",
+  "frames": 14,
+  "outputs_identical": true,
+  "layouts_sent": 3,
+  "frame_ms_off": {
+   "p50": 377.3,
+   "p95": 401.3,
+   "mean": 382.4
+  },
+  "frame_ms_on": {
+   "p50": 378.0,
+   "p95": 386.3,
+   "mean": 375.6
+  },
+  "mean_added_ms": -6.7
+ },
+ "arkitscenes-41069021": {
+  "detector": "owl",
+  "frames": 19,
+  "outputs_identical": true,
+  "layouts_sent": 5,
+  "frame_ms_off": {
+   "p50": 393.8,
+   "p95": 405.7,
+   "mean": 394.8
+  },
+  "frame_ms_on": {
+   "p50": 395.3,
+   "p95": 406.1,
+   "mean": 396.2
+  },
+  "mean_added_ms": 1.4
+ }
+}

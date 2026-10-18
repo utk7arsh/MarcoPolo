@@ -557,6 +557,31 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
 
   Needed: Sandeep runs the browser integration (`VITE_DATA_SOURCE=api`, no mocked routes); Utkarsh builds the app and redeploys; then a real Find from the dashboard.
 
+## Room map on the dashboard (POC 27, 2026-10-18, Vedant)
+- **What:** the dashboard map now draws the room: walls, plus one stock shape per kind of furniture (table, chair, sofa, bench, bed, shelf, tree, plant) at its scanned position, size and facing. It's in the style of a car's screen, Tesla-like.
+  - Geometry only, from the LiDAR the server already has: `server/marco/world/layout.py`, a 10 cm column grid inside `RoomMap`.
+  - The brain sends `room_layout` every 3 frames on its own thread. The adapter fills `map.walls` and the new `map.landmarks`.
+  - Frontend: `lib/roomShapes.ts`, `components/RoomShape.tsx` and `MapView`.
+  - Contract: `docs/INTERFACES.md` §6 and §12.
+- **Harm checks** (`poc/pocs/poc27_room_map/`, notes in `NOTES.md`):
+  - Detection outputs are identical with the layout on and off: 3 sessions, real OWLv2 on two of them.
+  - Mean frame latency doesn't change (noise, ±7 ms on about 380 ms frames).
+  - `summarize` takes 5 ms for one room and 177 ms at the 40 m × 40 m cap, and runs off the frame thread.
+  - Grid memory: 1 MB per room, 19 MB at the cap. Snapshot: 1 KB per room, 40 KB at most.
+- **Accuracy** (it's display only, so it's never used for guidance or speech):
+  - synthetic room: walls 95 % precision and recall; 6/6 furniture with the right kind.
+  - ARKitScenes: 5/17. Cabinet runs come out as walls, and the frames are sparse.
+  - iPhone venue clips: the round table, the chairs around it (facing it) and the ledge as a bench. Stepping stones show up as low tables. No trees: they're beyond LiDAR range.
+  - Previews: `poc/reports/figures/poc27_dash_*.png`.
+- **Not verified here:**
+  - `npm run check` (vitest, Playwright, lint) in `frontend/`. The changed TS passes Prettier and a TypeScript 6 check with real zod types.
+  - the live map in a browser.
+
+  Needed: Sandeep runs `npm run check` and looks at the map with `VITE_DATA_SOURCE=api`.
+- **Next, if wanted:**
+  - label the shapes with the camera: OWLv2 text queries reuse the frame's image pass, an extra head call;
+  - indoors, Apple RoomPlan on the phone (Utkarsh; needs a device test).
+
 ## In progress / next
 1. **Reconcile the routes** (`docs/INTERFACES.md` §10) with Sandeep:
    - **Photon: done.** `photon/` adopted §5 unchanged; no server change was needed.

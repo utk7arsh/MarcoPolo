@@ -284,3 +284,34 @@ def test_the_built_dashboard_is_served_behind_the_gate(server, tmp_path, monkeyp
     assert "javascript" in c.get("/app/assets/app.js").headers["content-type"]
     assert c.get("/app/objects/keys").text == "<html>marco</html>"                 # client-side route
     assert c.get("/app/..%2Fsecret.txt").text != "no"
+
+
+def test_room_layout_becomes_walls_and_landmarks(server):
+    """The core's room_layout (marco/world/layout.py) in the snapshot: walls as segments, furniture as landmarks with
+    stable kinds and ids; malformed shapes are dropped, another map's layout is ignored, a new map clears it."""
+    app_mod, c = server
+    dash = app_mod.dash
+    with c.websocket_connect("/v1/phone") as ws:
+        live_phone(c, ws)
+        synced(ws)
+        layout = dict(type="room_layout", map_id=dash.map_id, walls=[[[0, 0], [4, 0]], [[4, 0], [4, 5.25]]], objects=[
+            dict(kind="table", x=2, z=2.4, width=1.2, depth=0.8, yaw=90, height=0.75, shape="rect"),
+            dict(kind="chair", x=2.1, z=3.2, width=0.45, depth=0.5, yaw=0, height=0.45),
+            dict(kind="tree", x=-1, z=1, width=1.4, depth=1.4, yaw=0, height=2.2, shape="round"),
+            dict(kind="chair", x=1, z=1, width=0, depth=0.5, yaw=0),                     # no size
+            dict(kind="<b>", x=1, z=1, width=1, depth=1, yaw=0),                         # not a kind
+            dict(kind="plant", x=float("nan"), z=0, width=1, depth=1, yaw=0),            # not finite
+            dict(kind="sofa", x=1, z=1, width=2, depth=0.9)])                            # no facing
+        dash.observe("dashboard", layout)
+        m = valid(c.get("/dashboard/snapshot").json())["map"]
+        assert m["walls"] == [{"from": {"x": 0.0, "z": 0.0}, "to": {"x": 4.0, "z": 0.0}},
+                              {"from": {"x": 4.0, "z": 0.0}, "to": {"x": 4.0, "z": 5.25}}]
+        assert [x["id"] for x in m["landmarks"]] == ["chair-1", "table-1", "tree-1"]
+        assert m["landmarks"][1] == dict(id="table-1", kind="table", x=2.0, z=2.4, width=1.2, depth=0.8, yawDeg=90.0, shape="rect")
+        assert m["landmarks"][2]["shape"] == "round"
+        dash.observe("dashboard", dict(layout, map_id="some-other-map", objects=[]))
+        assert len(valid(c.get("/dashboard/snapshot").json())["map"]["landmarks"]) == 3
+        ws.send_json(dict(type="map", session_id="s1", event="new_map", map_id="m2"))
+        synced(ws)
+        m = valid(c.get("/dashboard/snapshot").json())["map"]
+        assert m is None or (m["walls"] is None and "landmarks" not in m)

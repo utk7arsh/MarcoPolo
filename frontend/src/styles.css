@@ -691,6 +691,14 @@ button svg {
   display: inline-block;
   border-radius: 50%;
 }
+.scan-dot {
+  width: 9px;
+  height: 7px;
+  background: #e7e9ec;
+  border: 1px solid #c4c9d0;
+  display: inline-block;
+  border-radius: 2px;
+}
 .guidance-panel {
   padding: 8px 0 0;
   display: flex;

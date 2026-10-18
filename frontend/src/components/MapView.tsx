@@ -3,6 +3,8 @@ import type { DashboardData } from '../lib/schema'
 import { currentMapWearer, locationIsValid } from '../lib/format'
 import { Icon } from './Icon'
 import { itemIcon } from '../lib/itemIcon'
+import { fixtureLandmark, LANDMARK_LABELS } from '../lib/roomShapes'
+import { RoomShape } from './RoomShape'
 import { EmptyState } from './Shared'
 
 export function MapView({
@@ -64,47 +66,55 @@ export function MapView({
                 y1={z(wall.from.z)}
                 x2={x(wall.to.x)}
                 y2={z(wall.to.z)}
-                stroke="#c9ccd2"
-                strokeWidth="3.5"
+                stroke="#b9bec6"
+                strokeWidth="5"
+                strokeLinecap="round"
               />
             ))}
             <text x={x(b.minX) + 25} y={z(b.minZ) + 31} className="room-label">
               {data.session.roomName.toUpperCase()}
             </text>
-            {map.fixtures?.map((fixture) => (
-              <g key={fixture.id}>
-                <rect
-                  x={x(fixture.x)}
-                  y={z(fixture.z)}
-                  width={fixture.width * scale}
-                  height={fixture.depth * scale}
-                  rx={fixture.kind === 'table' ? 32 : 12}
-                  fill={fixture.kind === 'table' ? '#eeede8' : '#eaeae7'}
-                  stroke="#deddd6"
-                />
-                {fixture.kind === 'sofa' && (
-                  <rect
-                    x={x(fixture.x) + 12}
-                    y={z(fixture.z) + 12}
-                    width={fixture.width * scale - 24}
-                    height={fixture.depth * scale - 24}
-                    rx="9"
-                    fill="#f2f2ef"
-                    stroke="#e2e2dd"
-                  />
-                )}
-                {fixture.kind === 'table' && (
-                  <text
-                    x={x(fixture.x + fixture.width / 2)}
-                    y={z(fixture.z + fixture.depth) + 28}
-                    textAnchor="middle"
-                    className="surface-label"
-                  >
-                    {fixture.name}
-                  </text>
-                )}
-              </g>
+            {map.landmarks?.map((mark) => (
+              <RoomShape
+                key={mark.id}
+                kind={mark.kind}
+                x={x(mark.x)}
+                y={z(mark.z)}
+                width={mark.width}
+                depth={mark.depth}
+                yawDeg={mark.yawDeg}
+                scale={scale}
+                round={mark.shape === 'round'}
+                label={`${LANDMARK_LABELS[mark.kind] ?? 'Object'} (scanned)`}
+              />
             ))}
+            {map.fixtures?.map((fixture) => {
+              const mark = fixtureLandmark(fixture, b)
+              return (
+                <g key={fixture.id}>
+                  <RoomShape
+                    kind={fixture.kind}
+                    x={x(mark.x)}
+                    y={z(mark.z)}
+                    width={mark.width}
+                    depth={mark.depth}
+                    yawDeg={mark.yawDeg}
+                    scale={scale}
+                    label={fixture.name}
+                  />
+                  {fixture.kind === 'table' && (
+                    <text
+                      x={x(fixture.x + fixture.width / 2)}
+                      y={z(fixture.z + fixture.depth) + 28}
+                      textAnchor="middle"
+                      className="surface-label"
+                    >
+                      {fixture.name}
+                    </text>
+                  )}
+                </g>
+              )
+            })}
             {live && wearer && targetPosition && (
               <line
                 x1={x(wearer.position.x)}
@@ -186,6 +196,13 @@ export function MapView({
             <i className="ring-dot" />
             Remembered objects
           </span>
+          {map.landmarks &&
+            (map.landmarks.length > 0 || !!map.walls?.length) && (
+              <span>
+                <i className="scan-dot" />
+                Scanned room
+              </span>
+            )}
         </div>
         <button
           className="text-button"

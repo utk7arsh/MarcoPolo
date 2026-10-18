@@ -80,6 +80,20 @@ export const snapshotSchema = z.object({
             }),
           )
           .optional(),
+        landmarks: z
+          .array(
+            z.object({
+              id: z.string(),
+              kind: z.string(),
+              x: coordinate,
+              z: coordinate,
+              width: z.number().positive(),
+              depth: z.number().positive(),
+              yawDeg: coordinate,
+              shape: z.string().optional(),
+            }),
+          )
+          .optional(),
       })
       .nullable(),
     wearer: z

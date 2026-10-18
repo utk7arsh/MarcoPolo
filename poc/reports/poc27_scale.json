@@ -1,0 +1,47 @@
+[
+ {
+  "rooms": 1,
+  "area_m": "8 x 9",
+  "grid_mb": 0.9,
+  "walls": 7,
+  "objects": 6,
+  "summarize_ms": 5.1,
+  "dropped_points": 0
+ },
+ {
+  "rooms": 4,
+  "area_m": "14 x 15",
+  "grid_mb": 2.6,
+  "walls": 26,
+  "objects": 24,
+  "summarize_ms": 16.3,
+  "dropped_points": 0
+ },
+ {
+  "rooms": 9,
+  "area_m": "20 x 21",
+  "grid_mb": 5.2,
+  "walls": 57,
+  "objects": 54,
+  "summarize_ms": 38.1,
+  "dropped_points": 0
+ },
+ {
+  "rooms": 25,
+  "area_m": "32 x 33",
+  "grid_mb": 12.9,
+  "walls": 155,
+  "objects": 150,
+  "summarize_ms": 128.6,
+  "dropped_points": 0
+ },
+ {
+  "rooms": 49,
+  "area_m": "40 x 40",
+  "grid_mb": 19.2,
+  "walls": 266,
+  "objects": 253,
+  "summarize_ms": 176.6,
+  "dropped_points": 1104185
+ }
+]

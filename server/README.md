@@ -155,6 +155,8 @@ During development, `npm run dev` proxies `/api` to this server instead (`API_PR
 | `MARCO_DASHBOARD_DIR` | unset | the built dashboard, served at `/app/` |
 | `MARCO_ROOM_ID`, `MARCO_ROOM_NAME` | `room`, `Room` | the room the dashboard shows |
 | `DASHBOARD_COMMAND_TIMEOUT_S` | `10` | how long a command waits for the phone's answer before `rejected` / `no_answer` |
+| `MARCO_LAYOUT_EVERY` | `3` | frames between room layouts (walls and furniture shapes on the map, `marco/world/layout.py`); `0` turns them off |
+| `MARCO_LAYOUT_ASYNC` | `1` | make each layout on its own thread so a big map never delays a frame; `0` makes it inline (tests, offline tools) |
 
 ## Code
 | Module | What |

@@ -7,6 +7,7 @@ import logging
 import os
 import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import numpy as np
@@ -15,6 +16,7 @@ from PIL import Image, ImageOps
 from . import geometry as G
 from .registry import Registry
 from .touch import TouchDetector
+from .world.layout import summarize
 from .world.memory import World, now_wall
 from .world.roommap import RoomMap
 
@@ -22,6 +24,8 @@ TRANSPOSE = [None, Image.Transpose.ROTATE_270, Image.Transpose.ROTATE_180, Image
 MAX_PHOTO_PX = 2048
 MAX_RANGE_M = float(os.environ.get("MAX_RANGE_M", "4.0"))   # LiDAR placement isn't reliable further away
 RECENT_TOUCH_S = 3.0
+LAYOUT_EVERY = int(os.environ.get("MARCO_LAYOUT_EVERY", "3"))   # frames between room layouts for the dashboard; 0 = off
+LAYOUT_ASYNC = os.environ.get("MARCO_LAYOUT_ASYNC", "1") != "0"  # on its own thread (0: inline, for tests and tools)
 
 
 def crop_around(up, fr, k, scale, uv, z, half_m=0.12):
@@ -52,6 +56,9 @@ class RealBrain:
         self._sensor_clock = None      # (latest streamed device time, server monotonic receipt)
         self._last_world = 0.0
         self.frames_seen = 0
+        self.map_id = None             # the coordinate frame the room map is in
+        self._layout = None            # (future, map_id) of the room layout being made
+        self._layout_pool = ThreadPoolExecutor(1, thread_name_prefix="layout") if LAYOUT_ASYNC else None
         self.registry = Registry(Path(data_dir) / "registry" if data_dir else None)
         self._reload()
 
@@ -86,6 +93,10 @@ class RealBrain:
         T, K = G.mat4(meta["camera_transform"]), G.mat3(meta["intrinsics"])
         res = tuple(meta["image_resolution"])
         fr = G.Frame(T, K, res, depth, conf)
+        if meta.get("map_id") != self.map_id:
+            if self.map_id is not None:
+                self.roommap = RoomMap()           # a new coordinate frame: the old room map doesn't apply
+            self.map_id = meta.get("map_id")
         self.world.observe_camera(T)
         self.touch.set_camera(K, res)
         t = float(meta["t_device"])
@@ -122,9 +133,30 @@ class RealBrain:
         new = self.roommap.add(fr, np.asarray(im), scale)
         if new:
             out.append(("dashboard", dict(type="map_points", points=new)))
+        out += self._room_layout()
         for e in events:
             out += [("phone", e), ("dashboard", dict(type="timeline", events=[e]))]
         out.append(("dashboard", self.world.snapshot()))
+        return out
+
+    def _room_layout(self):
+        """The dashboard's walls and furniture shapes (world/layout.py), every LAYOUT_EVERY frames once the floor is
+        known. They're made on their own thread, so a big map never delays a frame, and sent with the first frame
+        after they're ready; one at a time, and a layout for a map that has since changed is dropped."""
+        out, job = [], self._layout
+        if job is not None and job[0].done():
+            self._layout = None
+            try:
+                if job[1] == self.map_id:
+                    out.append(("dashboard", dict(type="room_layout", map_id=job[1], **job[0].result())))
+            except Exception as e:                       # display only: never let it break a frame
+                logging.getLogger("marco").warning("room layout failed: %s", e)
+        if LAYOUT_EVERY and self._layout is None and (self.frames_seen - 1) % LAYOUT_EVERY == 0 \
+                and self.world.floor_y is not None:
+            grid, floor = self.roommap.grid.view(), self.world.floor_y
+            if self._layout_pool is None:
+                return out + [("dashboard", dict(type="room_layout", map_id=self.map_id, **summarize(grid, floor)))]
+            self._layout = (self._layout_pool.submit(summarize, grid, floor), self.map_id)
         return out
 
     def place(self, sbox, fr):

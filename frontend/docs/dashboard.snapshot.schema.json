@@ -257,6 +257,49 @@
                       "depth"
                     ]
                   }
+                },
+                "landmarks": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "type": "string"
+                      },
+                      "x": {
+                        "type": "number"
+                      },
+                      "z": {
+                        "type": "number"
+                      },
+                      "width": {
+                        "type": "number",
+                        "exclusiveMinimum": 0
+                      },
+                      "depth": {
+                        "type": "number",
+                        "exclusiveMinimum": 0
+                      },
+                      "yawDeg": {
+                        "type": "number"
+                      },
+                      "shape": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "kind",
+                      "x",
+                      "z",
+                      "width",
+                      "depth",
+                      "yawDeg"
+                    ]
+                  }
                 }
               },
               "required": [
