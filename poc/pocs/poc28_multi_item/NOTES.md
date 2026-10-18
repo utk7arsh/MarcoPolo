@@ -34,3 +34,16 @@
 2. Make restarts register exactly like the first registration: re-crop with the name check, and fall back to the whole photo.
 3. Next: registration photos from the vest's own angle, which the user suggested earlier.
 4. Caveat: 3 clips, 10–14 s each. Re-run `eval_detection.py` on a longer walk with more clutter before settling on 0.25 or lower.
+
+## 2026-10-18 later: "the brain can't find anything" (user, live test)
+- **The full server path works on the recorded iPhone clips.**
+  - Real mode, run locally on loopback, fed by `tools/live_check.py` the way the phone streams: frames over HTTP, poses over the socket, the three photos registered over HTTP.
+  - All 14 frames were accepted, with no errors in the server log.
+  - The bottle and the power bank were found and located; the wallet wasn't (`never_seen`).
+  - The 140 unit tests pass. So it isn't a general code break; something about the live session (photos, frames, the box) differs.
+- **float16 isn't it.** The A16 runs OWLv2 in float16 (`detector.py`), and every threshold was set in float32. On MPS in float16, scores moved by 0.05 on average, and 1 present/absent decision flipped out of 68 (`fp16.py`).
+- **The one consistent failure is the DINOv2 crop check.** The new debug route showed it on the replay, e.g. "wallet: not present: DINOv2 crop similarity 0.37 < 0.38".
+  - **Applied: `TH_DINO` 0.38 → 0.30.** Same clips: rec2 now finds all 3 items, the wallet included (1.9 cm placement error), and rec3 finds both.
+  - **Rotation-tolerant matching** (`turns.py`, `MARCO_DINO_TURNS=4`) compares the crop against the registration crop at 4 quarter turns. It finds 7 of 18 at 0.38 and 10 at 0.33, but false alarms rise to 2–3. Opt-in only.
+- **New for live debugging:** `GET /v1/debug/detection` and a per-frame log line (see `server/README.md`). For each item and recent frame they show the scores and whether it was placed, or which check failed.
+  - Every live session is also recorded on the box under `MARCO_DATA/sessions/<session_id>/` and can be replayed here exactly.

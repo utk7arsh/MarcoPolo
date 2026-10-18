@@ -7,6 +7,7 @@ import logging
 import os
 import time
 import uuid
+from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -26,6 +27,19 @@ MAX_RANGE_M = float(os.environ.get("MAX_RANGE_M", "4.0"))   # LiDAR placement is
 RECENT_TOUCH_S = 3.0
 LAYOUT_EVERY = int(os.environ.get("MARCO_LAYOUT_EVERY", "3"))   # frames between room layouts for the dashboard; 0 = off
 LAYOUT_ASYNC = os.environ.get("MARCO_LAYOUT_ASYNC", "1") != "0"  # on its own thread (0: inline, for tests and tools)
+DIAG_FRAMES = 30                   # frames kept for GET /v1/debug/detection
+log = logging.getLogger("marco")
+
+
+def _failed_gates(d):
+    """Which presence gates a detection failed (OwlDetector's scores), in words."""
+    try:
+        from .perception.detector import TH
+    except ImportError:
+        return "missed"
+    names = (("photo_name", "photo+name score"), ("dino", "DINOv2 crop similarity"), ("vs_others", "margin over the other items"))
+    out = [f"{label} {d[g]:.2f} < {TH[g]:.2f}" for g, label in names if d.get(g) is not None and d[g] < TH[g]]
+    return ", ".join(out) or "missed"
 
 
 def crop_around(up, fr, k, scale, uv, z, half_m=0.12):
@@ -58,6 +72,8 @@ class RealBrain:
         self.frames_seen = 0
         self.map_id = None             # the coordinate frame the room map is in
         self._layout = None            # (future, map_id) of the room layout being made
+        self.diag = deque(maxlen=DIAG_FRAMES)   # per frame: what each item scored and where (or why not) it was placed
+        self.reg_log = deque(maxlen=20)         # recent registrations and restart reloads, with their outcome
         self._layout_pool = ThreadPoolExecutor(1, thread_name_prefix="layout") if LAYOUT_ASYNC else None
         self.registry = Registry(Path(data_dir) / "registry" if data_dir else None)
         self._reload()
@@ -73,8 +89,10 @@ class RealBrain:
                 continue
             try:
                 self.detector.register(it.item_id, it.name, Image.open(io.BytesIO(photo)).convert("RGB"), gate=False)
+                self.reg_log.append(dict(name=it.name, item_id=it.item_id, outcome="reloaded after a restart", at=now_wall()))
             except Exception as e:                      # one bad photo must not stop the server starting
                 logging.getLogger("marco").warning("could not re-register %s (%s): %s", it.item_id, it.name, e)
+                self.reg_log.append(dict(name=it.name, item_id=it.item_id, outcome=f"reload failed: {e}", at=now_wall()))
         self.audio.update(self.registry.audio())
 
     # ---------------------------------------------------------------- views used by app.py
@@ -108,20 +126,35 @@ class RealBrain:
         scale = float(meta.get("jpeg_scale", jw / fr.W))
         up = im.transpose(TRANSPOSE[k]) if k else im
         self.last_frame = (up, meta, fr, k, scale)
+        t0 = time.perf_counter()
         dets = self.detector.detect(up, fr=fr, k=k, jpeg_scale=scale)
-        events, detected, boxes = [], set(), []
+        detect_ms = (time.perf_counter() - t0) * 1000
+        events, detected, boxes, why = [], set(), [], []
         for d in dets:
             boxes.append(dict(item_id=d["item_id"], name=d["name"], box=d["box"], score=d.get("score"), present=d["present"]))
-            if not d["present"] or d["item_id"] not in self.world.items:
+            rec = dict(item_id=d["item_id"], name=d["name"], present=d["present"], box=[round(float(v)) for v in d["box"]],
+                       **{g: round(float(d[g]), 3) for g in ("photo_name", "dino", "vs_others") if d.get(g) is not None})
+            why.append(rec)
+            if d["item_id"] not in self.world.items:
+                rec["result"] = "the detector knows this id but the world model doesn't"
+                continue
+            if not d["present"]:
+                rec["result"] = "not present: " + _failed_gates(d)
                 continue
             sbox = G.detector_box_to_sensor(d["box"], k, jw, jh, scale)
-            pos = self.place(sbox, fr)
+            pos, reason = self.place_why(sbox, fr)
             if pos is None:
+                rec["result"] = "present, not placed: " + reason
                 continue
             z = float(-((pos - T[:3, 3]) @ T[:3, :3])[2])
+            rec["result"] = f"placed at {[round(float(v), 2) for v in pos]}, {z:.2f} m away"
             size_m = max(sbox[2] - sbox[0], sbox[3] - sbox[1]) * max(z, 0.1) / K[0, 0]
             events += self.world.sighting(d["item_id"], pos, t, size_m=size_m, confidence=d.get("score") or 0.5)
             detected.add(d["item_id"])
+        self.diag.append(dict(frame_id=meta["frame_id"], t_device=t, received=now_wall(), upright_turns=k, jpeg=[jw, jh],
+                              detect_ms=round(detect_ms, 1), items=why))
+        if why:
+            log.info("frame %s: %s", meta["frame_id"], "; ".join(f"{r['name']}: {r['result']}" for r in why))
         events += self.world.check_absence(fr, detected, t, hand=self.touch.hand_near(t))
         self.frames_seen += 1
         if self.frames_seen % 5 == 1:
@@ -162,11 +195,40 @@ class RealBrain:
     def place(self, sbox, fr):
         """3D footprint of a detection box (sensor px), or None: no depth there, or beyond MAX_RANGE_M (a far
         false alarm would otherwise move the item)."""
+        return self.place_why(sbox, fr)[0]
+
+    def place_why(self, sbox, fr):
+        """place(), and why not when it can't."""
         pos = G.locate_footprint(sbox, fr)
         if pos is None:
-            return None
+            return None, "no usable LiDAR depth under the box"
         z = float(-((pos - fr.T[:3, 3]) @ fr.T[:3, :3])[2])
-        return pos if 0.1 < z <= MAX_RANGE_M else None
+        if z > MAX_RANGE_M:
+            return None, f"{z:.1f} m away, beyond MAX_RANGE_M {MAX_RANGE_M:.1f} m"
+        if z <= 0.1:
+            return None, f"{z:.2f} m away, too close"
+        return pos, ""
+
+    def debug_detection(self):
+        """GET /v1/debug/detection: why items are or aren't being found, for debugging a live session."""
+        det = self.detector
+        info = dict(detector=type(det).__name__)
+        for attr, key in (("OWL", "owl_model"), ("DINO", "dino_model"), ("dev", "device"), ("dtype", "dtype")):
+            if hasattr(det, attr):
+                info[key] = str(getattr(det, attr))
+        try:
+            from .perception.detector import GATE_NAME_SCORE, TH
+            info["thresholds"] = dict(TH, registration_name_score=GATE_NAME_SCORE)
+        except ImportError:
+            pass
+        known = {iid: (v.get("name") if isinstance(v, dict) else v) for iid, v in getattr(det, "items", {}).items()}
+        world = [dict(item_id=it.item_id, name=it.name, state=it.state, surface=it.surface, last_seen_wall=it.last_seen_wall,
+                      position=None if it.position is None else [round(float(v), 3) for v in it.position], source=it.source)
+                 for it in self.world.items.values()]
+        return dict(info, frames_seen=self.frames_seen, map_id=self.map_id, floor_y=self.world.floor_y,
+                    max_range_m=MAX_RANGE_M, detector_items=[dict(item_id=i, name=n) for i, n in known.items()],
+                    world_items=world, missing_from_detector=[w["name"] for w in world if w["item_id"] not in known],
+                    registrations=list(self.reg_log), recent_frames=list(self.diag)[::-1])
 
     # ---------------------------------------------------------------- phone stream
     def on_phone(self, msg):
@@ -259,6 +321,9 @@ class RealBrain:
         im.thumbnail((MAX_PHOTO_PX, MAX_PHOTO_PX))          # phone photos are 12-48 MP; OWLv2 looks at 960 px anyway
         it = self.world.add_item(name, source=source)
         res = self.detector.register(it.item_id, name, im)
+        self.reg_log.append(dict(name=name, item_id=it.item_id if res["quality"] == "ok" else None, outcome=res["quality"],
+                                 reason=res.get("reason") or "", photo_px=list(im.size),
+                                 box=[round(float(v)) for v in res["box"]] if res.get("box") else None, at=now_wall()))
         if res["quality"] != "ok":
             del self.world.items[it.item_id]
             return dict(item_id=None, **res), []

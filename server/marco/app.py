@@ -279,6 +279,14 @@ def get_items(caller=Depends(require_caller)):
     return brain.items_public()
 
 
+@app.get("/v1/debug/detection")
+def debug_detection(caller=Depends(require_caller)):
+    """Why items are or aren't found, live: the detector's state, recent registrations, and for the last 30 frames each
+    item's presence scores and where it was placed (or why not). Open it on a tailnet laptop while the phone streams."""
+    fn = getattr(brain, "debug_detection", None)
+    return fn() if fn else dict(detector="stub", detail="MARCO_MODE=stub: no detector runs (set MARCO_MODE=real)")
+
+
 @app.get("/v1/timeline")
 def get_timeline(item_id: str | None = None, caller=Depends(require_caller)):
     return [e for e in brain.events if item_id is None or e.get("item_id") == item_id]
@@ -442,6 +450,10 @@ def dashboard_app(path: str, caller=Depends(require_caller)):
 def main():
     import uvicorn
 
+    handler = logging.StreamHandler()                    # per-frame detection lines etc. (journalctl -u marco)
+    handler.setFormatter(logging.Formatter("%(asctime)s marco %(levelname)s %(message)s"))
+    logging.getLogger("marco").addHandler(handler)
+    logging.getLogger("marco").setLevel(os.environ.get("MARCO_LOG", "INFO"))
     host = os.environ.get("HOST", "127.0.0.1")
     if host not in ("127.0.0.1", "localhost", "::1"):
         raise SystemExit(f"refusing to bind {host}: the server binds loopback only. Reach it from other devices "

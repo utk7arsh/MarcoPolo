@@ -16,9 +16,15 @@ import numpy as np
 
 from .. import geometry as G
 
-TH = {"photo_name": float(os.environ.get("TH_PHOTO_NAME", "-2.426")), "dino": float(os.environ.get("TH_DINO", "0.38")),
+# TH_DINO was 0.38 (POC 26, ORBIT's handheld photos). From the vest it rejected 13 of 19 correct boxes on the venue
+# clips; 0.30 finds 8 of them instead of 5 there with no extra false alarm (POC 28, poc/pocs/poc28_multi_item).
+TH = {"photo_name": float(os.environ.get("TH_PHOTO_NAME", "-2.426")), "dino": float(os.environ.get("TH_DINO", "0.30")),
       "vs_others": float(os.environ.get("TH_VS_OTHERS", "0.078"))}
 GATE_NAME_SCORE = float(os.environ.get("GATE_NAME_SCORE", "0.05"))
+# MARCO_DINO_TURNS=4: compare the DINOv2 crop against the registration crop turned 0/90/180/270 degrees and keep the
+# best match (an item lying flat can sit in any direction). On the venue clips it finds more (7 of 18 vs 5 at 0.38) but
+# also matches look-alikes more (3 false alarms vs 1 at 0.30), so it's off by default: try it live.
+DINO_TURNS = int(os.environ.get("MARCO_DINO_TURNS", "1"))
 
 
 def _same_name(a, b):
@@ -130,7 +136,8 @@ class OwlDetector:
             crop = im.crop(tuple(int(v) for v in box)) if gate else im
             cf, cfe = self._pass(crop)
             q_img = self.owl.embed_image_query(cfe, cf)[0]
-            self.items[item_id] = dict(name=name, q_img=q_img, q_txt=q_txt, dino=self._dino([crop])[0])
+            turns = [crop] + [crop.rotate(90 * i, expand=True) for i in range(1, max(DINO_TURNS, 1))]
+            self.items[item_id] = dict(name=name, q_img=q_img, q_txt=q_txt, dino=self._dino(turns))
         return dict(quality="ok", reason="", box=box)
 
     def forget(self, item_id):
@@ -157,11 +164,12 @@ class OwlDetector:
                 out.append(dict(item_id=iid, name=names[q], box=[round(v, 1) for v in box],
                                 photo_name=float(L[b, q] + Lt[b, q]), vs_others=vs_others(L[b], q, names)))
             E = self._dino(crops)
-            R = self.torch.stack([self.items[i]["dino"] for i in ids])
-            dino = (E * R).sum(-1).cpu().tolist()          # every crop check in one trip back from the GPU
+            refs = [self.items[i]["dino"] for i in ids]          # (turns, D), or (D,) for one turn
+            dino = self.torch.stack([(r.reshape(-1, E.shape[-1]) @ E[q]).max() for q, r in enumerate(refs)])
+            dino = dino.cpu().tolist()                     # every crop check in one trip back from the GPU
         for q, iid in enumerate(ids):
             d = out[q]
-            d["dino"] = float(dino[q])
+            d["dino"] = float(dino[q])                     # the best of the registration's turns
             d["present"] = bool(d["photo_name"] >= TH["photo_name"] and d["dino"] >= TH["dino"]
                                 and (d["vs_others"] is None or d["vs_others"] >= TH["vs_others"]))
             d["score"] = round(1 / (1 + np.exp(-(d["photo_name"] - TH["photo_name"]))), 3)

@@ -349,7 +349,7 @@ speech. It uses the same fail-closed Tailscale authentication as every other rou
 | `guidance` | 10/s | the phone's guidance state (§3.2), plus target and user positions, for the radar |
 | `timeline` | on change | events and sightings: what, when, where |
 
-Also `GET /v1/timeline?item_id=…` and `GET /v1/items`. The pre-recorded outside-view 3D video can be rendered from `map_points` plus `world`.
+Also `GET /v1/timeline?item_id=…` and `GET /v1/items`. For debugging, `GET /v1/debug/detection` gives, for the last 30 frames, each item's presence scores and where it was placed (or why not); see `server/README.md`. The pre-recorded outside-view 3D video can be rendered from `map_points` plus `world`.
 
 ## 7. The spatial-audio sequence: who computes what
 

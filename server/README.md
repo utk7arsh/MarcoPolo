@@ -56,7 +56,7 @@ AUTH_TEST_BYPASS=1 python -m marco.app            # http://127.0.0.1:8000
 | `MARCO_AUTH` | `closed` | `closed` rejects everything; `tailscale` admits `TAILSCALE_ALLOWED_LOGINS` |
 | `AUTH_TEST_BYPASS` | unset | `1` = tests and loopback development only |
 | `HOST`, `PORT` | `127.0.0.1`, `8000` | loopback only |
-| `TH_PHOTO_NAME`, `TH_DINO`, `TH_VS_OTHERS`, `GATE_NAME_SCORE` | POC 25/26 values | presence and retake thresholds: refit on the real props |
+| `TH_PHOTO_NAME`, `TH_DINO`, `TH_VS_OTHERS`, `GATE_NAME_SCORE` | POC 25/26 values; `TH_DINO` 0.30 (POC 28, was 0.38) | presence and retake thresholds: refit on the real props |
 | `STUB_SPEEDUP` | `1` | speeds up the stub's fake touch sequence (tests) |
 
 Every message and frame that arrives is recorded under `data/sessions/<session_id>/`:
@@ -164,6 +164,8 @@ During development, `npm run dev` proxies `/api` to this server instead (`API_PR
 | `MARCO_LAYOUT_EVERY` | `3` | frames between room layouts (walls and furniture shapes on the map, `marco/world/layout.py`); `0` turns them off |
 | `MARCO_FRAMES_ASYNC` | `1` | answer `POST /v1/frames` with 202 before detection runs (INTERFACES.md 3.1), so the phone's upload never waits on the GPU; `0` answers after the brain is done (tests) |
 | `MARCO_LAYOUT_ASYNC` | `1` | make each layout on its own thread so a big map never delays a frame; `0` makes it inline (tests, offline tools) |
+| `MARCO_DINO_TURNS` | `1` | `4` compares the DINOv2 crop against the registration crop at 4 quarter turns and keeps the best: finds more items lying flat in any direction, and more look-alikes (POC 28) |
+| `MARCO_LOG` | `INFO` | server log level; at INFO every frame logs, per item, where it was placed or which check it failed (`journalctl -u marco`) |
 
 ## Code
 | Module | What |
@@ -192,3 +194,15 @@ Besides the server's own unit and API tests, two contract tests run each client 
 - `test_photon_contract.py` runs the Photon scaffold's JS client (`photon-scaffold/`) against a live loopback server.
 
 They skip themselves where `swiftc` or `node` is missing.
+
+## Debugging detection live
+`GET /v1/debug/detection` (behind the same gate) shows why items are or aren't found. Open it on a tailnet laptop while the phone streams:
+- **The detector:** model, device and precision, the thresholds, and which registered items it knows. `missing_from_detector` lists items the world model has but the detector lost, for example a photo that failed to reload after a restart.
+- **Recent registrations:** each one's outcome, including `retake` and its reason, and restart reloads.
+- **The last 30 frames, newest first:** for each item, its photo + name score, its DINOv2 similarity and its margin over the other items. The `result` field says one of:
+  - `placed at [x, y, z], d m away`;
+  - `not present`, with each failed check and its threshold;
+  - `present, not placed`: no usable LiDAR depth under the box, or beyond `MAX_RANGE_M`.
+
+The same per-frame line goes to the log. Every live session is also recorded under `MARCO_DATA/sessions/<session_id>/`. Copy that folder off the box, and `tools/eval_detection.py` or `tools/run_offline.py` replay it exactly.
+

@@ -621,9 +621,10 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
 
 ## In progress / next
 0. **Several registered items (POC 28, 2026-10-18; `poc/pocs/poc28_multi_item/NOTES.md`):** every frame already checks every item, and order or count changes nothing (identical scores alone or together). Items are missed because the DINOv2 crop check (`TH_DINO` 0.38, calibrated on ORBIT's handheld photos) rejects correct boxes from the vest: it was the blocker in 13 of 19 such frames, and the wallet was never accepted.
-   - **Proposed:** `TH_DINO` 0.30. On the venue clips that's 5 → 8 hits with no extra false alarms.
-   - **Also proposed:** make restarts re-register like the first registration. Today the restart path queries with the whole photo, the first registration with the crop.
-   - **Waiting on the user's go-ahead.**
+   - **Applied 2026-10-18 after the live "can't find anything" report:** `TH_DINO` 0.30 (5 → 8 hits on the venue clips, no extra false alarms). rec2 now finds all 3 items, the wallet included.
+   - **New:** `GET /v1/debug/detection` and per-frame log lines say, per item and frame, whether it was placed or which check failed (`server/README.md`).
+   - **Still proposed:** make restarts re-register like the first registration. Today the restart path queries with the whole photo, the first registration with the crop.
+   - **Needed to find the live cause:** the live session's recording from the box (`/var/lib/marco/data/sessions/<id>/`) and the registry photos (`/var/lib/marco/data/registry/`), to replay here.
 0b. **Touching the item ends the search (fixed on the server, 2026-10-18; `server/tests/test_touch_guidance.py`):**
    - **Bug:** the hand covering the target hid it from the detector, so after 3 frames it became `missing`. That dropped it from touch matching, so no `touch` came and the search kept going. Reproduced in a test.
    - **Fix:** frames with a hand within 35 cm of an item don't count as misses, and an item gone after a hand was at it is `picked_up`. `hand_proximity` (the steady tone) falls back to the knuckles when the back of the hand hides the fingertip.
