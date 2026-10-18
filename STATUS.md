@@ -228,7 +228,6 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
 5. **Dashboard:** live data through the adapter (step 1); until then, the stub plus `tools/replay.py` give real feeds on `/v1/dashboard`.
 6. **Proposed, waiting for a go-ahead:**
    - two agreeing sightings before an item's first placement, so one false-alarm frame can't place it;
-   - "Marco, remember this as my wallet": registration from the vest camera's live frame (server, contract and app);
    - OWLv2-large on a CUDA GPU (Vultr);
    - half precision on the Mac.
 7. **Caretaker voice notes:** `photon/` already sends them as m4a. Server-side conversion is only needed for other clients that post `.caf`.
@@ -254,8 +253,8 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
    - **Fallback (server on the venue Mac), measured on this M2 Pro:** upload start to dashboard `frame` median 428 ms with real OWLv2 (408 ms of it detection), 16 ms in stub mode; pose to `world` 1.2 ms. Put the Mac on the iPhone's Personal Hotspot so the link stays direct.
    - **Test data on `marco-gpu`:** the connection test posted 6 copies of the Swift contract fixture frame (session `ios-contract`, map `ios-map`) on 2026-10-17. No items were registered, so item memory is untouched. Clear it before the demo by deleting that recording on the box and restarting `marco`.
    - **Phone straight to the dashboard** (no server): not useful. Boxes, positions and events come from the server, and the server-to-dashboard hop is 3 ms.
-   - **Server issues found (not fixed; Vedant's code):**
-     - one stalled dashboard socket blocks the whole server. `hub.send` awaits each socket in turn, inside the frame handler and the phone loop; in a test only 3 of 38 frames got through and a `find` answer never arrived. Fix: a per-socket queue that drops the oldest, and send to the phone first;
+   - **Server issues found (Vedant's code):**
+     - **fixed 2026-10-17 (Utkarsh, in `marco/hub.py`):** one stalled dashboard socket blocked the whole server, because `hub.send` awaited each socket in turn inside the frame route and the phone loop. Every socket now has its own outbox and writer (see the section at the end);
      - the frame `202` is returned after detection, not straight away as §3.1 says, so the phone's single upload slot is held for about 0.43 s;
      - OWLv2 runs in fp32 on MPS (POC measured 392 ms fp32 vs 276 ms fp16);
      - `map_points` goes every frame, not every 5 s as §6 says;
@@ -365,3 +364,40 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
 - `docs/architecture.html` now colours every box, module, wire and demo step by progress: green **End to end** (integration-tested on loopback, replayed real data or from the Mac), teal **Live** (also verified with the real device or service), blue **Built** (code + unit tests only) and red **Not built**. Each element carries a hover note with its evidence from this file, and a summary bar and a "next to turn green" list sit at the top.
 - Snapshot (rechecked at `c6eca2f`, which adds the built-only LiDAR view): parts 15/26 end to end (6 live); wires 6/9 end to end (2 live; the dashboard wire is not built); demo steps 6/14 end to end (1 live). The phone app has not run on the iPhone, so the on-body boxes stay Built.
 - To update, change the element's `data-status` (`live`, `e2e`, `built`, `todo`) or the wire list in the page's script. Documentation only; no code or contract changed.
+
+## Find: keep looking when not found, and the hub fix (October 17, 2026, Utkarsh)
+
+- **Not found, but keep looking (phone only, no contract change):** when a Find can't guide yet, Marco says why, asks the user to turn slowly (the chest camera sweeps the room), and keeps watching for 60 s (`Lookout` in `ios/Marco/Core/NavigationContext.swift`, wired in `AppModel`).
+  - **Covers:** `never_seen`, `not_where_last_seen`, and found answers whose state the phone won't guide to (`stale` after a new map, `picked_up`, `missing`). Those used to say "Position unavailable, wait for tracking", which blamed tracking.
+  - **The item's next `seen`, `moved` or `put_down` event** starts guidance with "Polo! I see your keys. At two o'clock, three steps, on the table." It is held until the pose is fresh in the same scope.
+  - **Ends on** a new Find, Stop, capture start or stop, or a new scope (silently). When 60 s pass with no sighting: "I still haven't spotted your keys. Ask me again any time."
+  - **Not registered:** no watch ("Send me a photo of them").
+  - **Verified:** 20 new Swift checks (334 in all); the MarcoPolo app builds for iOS with no errors or warnings. Not run on the phone.
+- **Server hub fix (`server/marco/hub.py`, taken over while Vedant is away):** every socket has its own outbox and writer task, so `send` never waits on a socket.
+  - A full outbox drops its oldest message: 1000 for the phone, 200 for Photon, 30 for a dashboard.
+  - A send stuck for over 10 s drops that socket; the clients reconnect.
+  - `send`'s signature is unchanged, so `app.py` needed no edit.
+  - **Verified:** `tests/test_hub.py` (3 tests) includes a live uvicorn server with a dashboard that handshakes and never reads, so TCP backpressure is real. Before the fix, 1 of 40 frames got through in 3 s and the phone's `find` answer never came. After it, all 40 went through and the answer arrived. Server suite: 90 passed, 1 skipped.
+- **Removed from the docs:** voice registration from the vest camera ("remember this as my wallet"). It is not being built.
+- **Registration, open problem (not fixed; `brain.py` is being changed by another agent):** registering a name twice adds a second item with the same name, and `find` answers with the first, older one. Retaking a photo should replace the item, not add one.
+- **Demo note:** walk the vest past each prop once before asking, so the item is placed. The watch above is the fallback, not the plan.
+
+## Phone to AirPods: how spatial audio commands reach the ears (October 17, 2026, Utkarsh)
+
+- **The model, now written down** (`ios/README.md`, "How the server's messages reach the AirPods"):
+  - the AirPods take no commands: the phone renders everything binaurally and streams stereo; the AirPods send head motion back;
+  - each server message becomes a sound plus a `SoundAnchor` (`ios/Marco/Core/SoundScene.swift`): ahead, or a point in the room;
+  - room points are re-projected through the fused head yaw every tick.
+- **Gaps closed (phone only; no contract change):**
+  - **Labels come from the jar:** a touched known item's label (voice memo or text) and the `what_is_this` answer play from `touch.position`. Before, they played from in front of the face.
+  - **Other lines from their place:** "You left your keys" plays from where the keys are; `label_ready` from where the item was last seen. Marco's own lines stay ahead.
+  - **Room points outside guidance:** they are now kept in place as the head turns. Before, positions were only updated while guiding.
+  - **The guided item's beacon and a line from elsewhere no longer fight over one position:** the voice has its own point (`SpatialAudio.say(_:at:)`, `playFile(_:at:)`, `moveVoice`). The older `place`, `say(_:atItem:)` and `playFile(_:atItem:)` are unchanged, which Sandeep's local spatial tools use.
+  - **AirPods drop-out:** `RouteWatch` checks that the output is headphones with 2 channels, settled over 1.5 s against route flaps. If not, the beacon and tone go quiet and Marco says so; when they return, "Headphones connected." Before, beeps went to the chest speaker silently (STATUS records the AirPods falling back to the Mac speakers in a Mac test).
+- **Not possible on iOS:** opting out of the system's own spatialization (`setIntendedSpatialExperience(.bypassed)` is visionOS only). Spatialize Stereo stays off by hand.
+- **Checked, not built (per the user):** iPhone to Vultr and Vultr to iPhone.
+  - Every §4 message is sent by the real server and decoded by the phone, contract-tested.
+  - WSS round trip 67 ms and frames 202 in 83–118 ms, measured from the Mac with the app's bytes.
+  - Not yet from the phone itself.
+- **Verified:** 14 new Swift checks (348 in all); the MarcoPolo app builds for iOS with no errors or warnings; `test_ios_contract.py` 5 passed. Nothing here has run on the phone: hour-one test 8 in `ios/README.md`.
+- **Not done (perception, other owners):** head pitch is not used (yaw only), and there is no motion prediction for the ~150 ms Bluetooth latency.

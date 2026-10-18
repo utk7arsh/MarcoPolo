@@ -11,7 +11,7 @@ Use the free **Stray Scanner** app on the iPhone 16 Pro. It records the video, t
 
    Put them where they'll be in the demo (jar lids at counter height, for touch).
 2. **Registration, from the vest's view.** Register the way the product will: with the phone in the harness, about 1 m from the item, at the angle the vest sees it.
-   - Until the app has "remember this", record a few seconds per item with Stray Scanner, and use a frame of that clip: `eval_detection.py --register-frame "wallet=data/sessions/reg-place-a:3:1005,1065"` (frame 3, sensor pixel on the item).
+   - Record a few seconds per item with Stray Scanner, and use a frame of that clip: `eval_detection.py --register-frame "wallet=data/sessions/reg-place-a:3:1005,1065"` (frame 3, sensor pixel on the item).
    - Photos from the Camera app also work (`--register`). On the first recordings, top-down close-ups matched video crops badly. The server reads JPEG, not HEIC: set Camera > Formats > Most Compatible.
    - **Register in a different place from the tests:** a different table or room, other light, another time. Registering and testing at the same table makes the item look the same in both (same light, angle and background), and the score comes out higher than it will be in the demo.
 3. **Recording A, "find" (2–3 min):**
