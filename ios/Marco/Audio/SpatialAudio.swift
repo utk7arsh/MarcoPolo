@@ -3,9 +3,13 @@ import Foundation
 import simd
 
 /// Spatial audio for guidance (docs/INTERFACES.md §7): beeps, dings, the steady tone, Marco's voice and label
-/// playback, all placed at the item and rendered with Apple's HRTF. Positions are listener-relative (x right, y up,
-/// -z ahead; Geo.listenerRelative with the fused head yaw), so the listener node itself never turns and there is no
-/// AVAudio yaw-sign convention to get wrong.
+/// playback, rendered with Apple's HRTF into the stereo the AirPods play (Core/SoundScene.swift). Positions are
+/// listener-relative (x right, y up, -z ahead; Geo.listenerRelative with the fused head yaw), so the listener node
+/// itself never turns and there is no AVAudio yaw-sign convention to get wrong.
+///
+/// Two places: the guided item (`place`, every tick: the beacon, the tone, and the voice when `atItem`), and the
+/// voice's own point (`say(_:at:)`, `playFile(_:at:)`, then `moveVoice` every tick), for a line from somewhere else
+/// in the room, such as a touched jar.
 final class SpatialAudio {
     enum PlaybackError: Error { case unreadableAudio }
     let engine = AVAudioEngine()
@@ -21,7 +25,8 @@ final class SpatialAudio {
     private let synth = AVSpeechSynthesizer()
     private var speechConverter: AVAudioConverter?
     private lazy var blip = Tones.blip(format)
-    private var voiceAtItem = false
+    private enum VoiceSpot { case ahead, item, point }
+    private var voiceSpot = VoiceSpot.ahead
     private var observers: [NSObjectProtocol] = []
     private static let ahead = AVAudio3DPoint(x: 0, y: 0, z: -1)
     private var itemPosition = SpatialAudio.ahead
@@ -115,10 +120,27 @@ final class SpatialAudio {
 
     /// "Marco" alone was heard: a soft blip ahead, then say the rest.
     func listening() {
-        voice.position = Self.ahead
-        voiceAtItem = false
+        aim(.ahead)
         voice.scheduleBuffer(blip, at: nil, options: [], completionHandler: nil)
     }
+
+    /// No headphones (Core/RouteWatch): beeps and the tone from the chest speaker can't point anywhere and only
+    /// startle, so they go quiet. Marco keeps talking.
+    func setBeaconAudible(_ on: Bool) {
+        beacon.volume = on ? 1 : 0
+        tone.volume = on ? 1 : 0
+    }
+
+    #if os(iOS)
+    static func outputRoute() -> OutputRoute {
+        let s = AVAudioSession.sharedInstance()
+        let outs = s.currentRoute.outputs
+        let phones: Set<AVAudioSession.Port> = [.headphones, .bluetoothA2DP, .bluetoothLE, .bluetoothHFP]
+        return OutputRoute(name: outs.map(\.portName).joined(separator: ", "),
+                           headphones: !outs.isEmpty && outs.allSatisfy { phones.contains($0.portType) },
+                           channels: s.outputNumberOfChannels)
+    }
+    #endif
 
     func stop() {
         synth.stopSpeaking(at: .immediate)
@@ -135,7 +157,22 @@ final class SpatialAudio {
         itemPosition = pt
         beacon.position = pt
         tone.position = pt
-        voice.position = voiceAtItem ? pt : Self.ahead
+        if voiceSpot == .item { voice.position = pt }
+    }
+
+    /// Where the voice's own point is now, listener-relative. Call every tick after `say(_:at:)` or `playFile(_:at:)`.
+    func moveVoice(_ p: SIMD3<Float>) {
+        guard voiceSpot == .point else { return }
+        voice.position = AVAudio3DPoint(x: p.x, y: p.y, z: p.z)
+    }
+
+    private func aim(_ spot: VoiceSpot, _ p: SIMD3<Float>? = nil) {
+        voiceSpot = spot
+        switch spot {
+        case .ahead: voice.position = Self.ahead
+        case .item: voice.position = itemPosition
+        case .point: if let p { voice.position = AVAudio3DPoint(x: p.x, y: p.y, z: p.z) }
+        }
     }
 
     /// Sound cues. .say, .playLabel and .haptic are routed by the app (speech needs a place, labels the cache).
@@ -165,8 +202,17 @@ final class SpatialAudio {
 
     /// Marco's voice, rendered in 3D: at the guided item ("Polo!") or straight ahead.
     func say(_ text: String, atItem: Bool) {
-        voiceAtItem = atItem
-        voice.position = atItem ? itemPosition : Self.ahead
+        aim(atItem ? .item : .ahead)
+        speak(text)
+    }
+
+    /// Marco's voice from a point in the room (listener-relative now; keep it current with `moveVoice`).
+    func say(_ text: String, at p: SIMD3<Float>) {
+        aim(.point, p)
+        speak(text)
+    }
+
+    private func speak(_ text: String) {
         let u = AVSpeechUtterance(string: text)
         u.voice = AVSpeechSynthesisVoice(language: "en-US")
         synth.write(u) { [weak self] buffer in
@@ -181,6 +227,19 @@ final class SpatialAudio {
 
     /// A label voice memo (any format AVAudioFile reads, such as the server's m4a), at the item or ahead.
     func playFile(_ url: URL, atItem: Bool) throws {
+        let mono = try monoBuffer(url)
+        aim(atItem ? .item : .ahead)
+        voice.scheduleBuffer(mono, at: nil, options: [.interrupts], completionHandler: nil)
+    }
+
+    /// A label voice memo from a point in the room: the jar the hand is on.
+    func playFile(_ url: URL, at p: SIMD3<Float>) throws {
+        let mono = try monoBuffer(url)
+        aim(.point, p)
+        voice.scheduleBuffer(mono, at: nil, options: [.interrupts], completionHandler: nil)
+    }
+
+    private func monoBuffer(_ url: URL) throws -> AVAudioPCMBuffer {
         let file = try AVAudioFile(forReading: url)
         guard let pcm = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: AVAudioFrameCount(file.length)) else {
             throw PlaybackError.unreadableAudio
@@ -190,9 +249,7 @@ final class SpatialAudio {
               let mono = Self.convert(pcm, with: conv, to: format, endOfStream: true) else {
             throw PlaybackError.unreadableAudio
         }
-        voiceAtItem = atItem
-        voice.position = atItem ? itemPosition : Self.ahead
-        voice.scheduleBuffer(mono, at: nil, options: [.interrupts], completionHandler: nil)
+        return mono
     }
 
     /// Any PCM buffer -> mono 48 kHz float, the format the 3D sources are connected with.

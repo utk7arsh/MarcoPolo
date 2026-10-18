@@ -7,6 +7,8 @@ enum Lines {
     static let notUnderstood = "Sorry, I didn't catch that."
     static let noServer = "I can't reach the server."
     static let positionUnavailable = "Position unavailable. Wait for tracking to recover, then ask me again."
+    static let headphonesLost = "Your headphones aren't connected. I'll keep talking, but the beacon needs them."
+    static let headphonesBack = "Headphones connected."
 
     static func number(_ n: Int) -> String {
         let words = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"]
@@ -26,25 +28,51 @@ enum Lines {
 
     /// §7 step 2: "Polo! Behind you, two steps, on the table."
     static func polo(relAzimuthDeg: Double, distanceM: Double, surface: String?) -> String {
+        "Polo! " + whereItIs(relAzimuthDeg: relAzimuthDeg, distanceM: distanceM, surface: surface)
+    }
+
+    /// Seen at last, after a not-found answer: "Polo! I see your keys. At two o'clock, three steps, on the table."
+    static func spotted(name: String, relAzimuthDeg: Double, distanceM: Double, surface: String?) -> String {
+        "Polo! I see your \(name). " + whereItIs(relAzimuthDeg: relAzimuthDeg, distanceM: distanceM, surface: surface)
+    }
+
+    private static func whereItIs(relAzimuthDeg: Double, distanceM: Double, surface: String?) -> String {
         let dir = direction(clock: Geo.clockPosition(relAzimuthDeg))
         let on = surface.map { ", on the \($0)" } ?? ""
         if distanceM <= Guidance.withinReachM {
-            return "Polo! Within reach, \(dir)\(on)."
+            return "Within reach, \(dir)\(on)."
         }
         let n = Geo.steps(distanceM)
-        return "Polo! \(capitalized(dir)), \(number(n)) \(n == 1 ? "step" : "steps")\(on)."
+        return "\(capitalized(dir)), \(number(n)) \(n == 1 ? "step" : "steps")\(on)."
     }
 
+    /// A find that can't guide yet. Unless the item isn't registered, Marco keeps watching for it (Lookout), and the
+    /// user helps by turning, so the chest camera sweeps the room.
     static func notFound(_ a: FindAnswer, asked: String) -> String {
         let name = a.name ?? asked
-        switch a.reason {
-        case "not_registered": return "I don't know your \(name) yet. Send me a photo of it."
-        case "never_seen": return "I haven't seen your \(name) yet."
-        case "not_where_last_seen":
-            return "Your \(name) isn't where I last saw it" + (a.surface.map { ", on the \($0)." } ?? ".")
+        let it = pronoun(name), isnt = isPlural(name) ? "aren't" : "isn't"
+        let watching = " Turn slowly and I'll tell you when I spot \(it)."
+        switch a.found ? a.state : a.reason {
+        case "not_registered": return "I don't know your \(name) yet. Send me a photo of \(it)."
+        case "never_seen", "registered": return "I haven't seen your \(name) yet." + watching
+        case "not_where_last_seen", "missing":
+            return "Your \(name) \(isnt) where I last saw \(it)" + (a.surface.map { ", on the \($0)." } ?? ".") + watching
+        case "stale": return "I haven't seen your \(name) since I got my bearings again." + watching
+        case "picked_up": return "I last saw your \(name) when you picked \(it) up." + watching
         default: return "I can't find your \(name)."
         }
     }
+
+    /// The watch for it ran out.
+    static func stillNotSeen(_ name: String) -> String { "I still haven't spotted your \(name). Ask me again any time." }
+
+    /// "keys", "glasses": them. "glasses case", "cumin": it.
+    static func isPlural(_ name: String) -> Bool {
+        let last = name.lowercased().split(separator: " ").last.map(String.init) ?? ""
+        return last.count > 2 && last.hasSuffix("s") && !["ss", "us", "is"].contains(where: { last.hasSuffix($0) })
+    }
+
+    static func pronoun(_ name: String) -> String { isPlural(name) ? "them" : "it" }
 
     /// The caretaker's words, unless they were just the name: then "That's the cumin."
     static func spokenLabel(name: String?, labelText: String?) -> String? {

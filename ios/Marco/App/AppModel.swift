@@ -90,6 +90,10 @@ final class AppModel: ObservableObject {
     private var uiGate = Throttle(hz: 10)
     private var timer: Timer?
     private var finds = FindRequests()
+    private var lookout = Lookout()                                    // a find not seen yet: still watching for it
+    private var voiceAnchor = SoundAnchor.ahead                        // where Marco's voice is coming from now
+    private var lastTouch: (id: String, position: SIMD3<Float>)?       // the jar a "what is this" is about
+    private var routeWatch = RouteWatch()                              // are the AirPods the output?
     private var guidanceScope: NavigationScope?
     private var labels: [String: (text: String?, url: String?)] = [:]  // item_id -> its label
     private var audioCache: [String: URL] = [:]                        // label_audio_url -> local file
@@ -141,16 +145,26 @@ final class AppModel: ObservableObject {
         voiceStatus = .starting
         audioProblem = nil
         finds.cancel()
+        lookout.cancel()
         guidanceScope = nil
         live.write { $0 = Live(generation: ticket) }
         UIApplication.shared.isIdleTimerDisabled = true          // ARKit stops when the screen locks
 
-        audio.onRoute = { [weak self] route in DispatchQueue.main.async { self?.micInfo = route } }
+        audio.onRoute = { [weak self] route in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.micInfo = route
+                self.routeWatch.observe(SpatialAudio.outputRoute(), now: self.now)
+            }
+        }
         do { try audio.start() } catch {
             audioProblem = "Navigation audio could not start. Stop and restart the camera to try again."
             note("audio: \(error.localizedDescription)")
         }
         micInfo = SpatialAudio.routeDescription()
+        routeWatch = RouteWatch()
+        audio.setBeaconAudible(true)
+        routeWatch.observe(SpatialAudio.outputRoute(), now: now)
 
         let up = Uploader(base: url)
         up.onResult = { [weak self] code, body, ms in DispatchQueue.main.async {
@@ -190,6 +204,7 @@ final class AppModel: ObservableObject {
         listener.onWake = { [weak self] in DispatchQueue.main.async {
             guard let self, self.running, self.control.generation == ticket else { return }
             self.heard = "Marco... (listening)"
+            self.voiceAnchor = .ahead
             self.audio.listening()
         } }
         listener.onError = { [weak self] e in DispatchQueue.main.async { self?.note("listener: \(e)") } }
@@ -263,6 +278,7 @@ final class AppModel: ObservableObject {
         live.write { $0.generation = nil; $0.pose = nil }
         if recorder.isRecording { toggleRecording() }
         finds.cancel()
+        lookout.cancel()
         timer?.invalidate(); timer = nil
         UIApplication.shared.isIdleTimerDisabled = false
         guard wasRunning else { return }
@@ -461,6 +477,13 @@ final class AppModel: ObservableObject {
             losePosition()
         }
         if guidance.active, guidanceScope != l.scope { losePosition() }
+        watchForLookout(t, l)
+        if let change = routeWatch.settle(now: t) { headphonesChanged(change) }
+        // A line from a point in the room stays there while the head turns, guiding or not.
+        if case .world = voiceAnchor, let pose = l.pose, pose.usable(now: t, in: l.scope) {
+            let ear = Geo.position(pose.transform) + SIMD3<Float>(0, Config.earAboveChestM, 0)
+            audio.moveVoice(voiceAnchor.listenerRelative(ear: ear, headYawDeg: l.headYaw))
+        }
         if let pose = l.pose, pose.usable(now: t, in: guidanceScope), guidance.active {
             let T = pose.transform
             let chest = Geo.position(T)
@@ -531,7 +554,7 @@ final class AppModel: ObservableObject {
             labels[l.item_id] = (text, l.label_audio_url)
             guidance.updateLabel(itemId: l.item_id, name: l.name, text: text, audioURL: l.label_audio_url)
             cache(l.label_audio_url)
-            speak(Lines.labelReady(l))
+            say(Lines.labelReady(l), from: anchor(item: l.item_id, touch: nil))
         case .error(let e): note("server: \(e.detail)")
         case .other(let type): note("unhandled \(type)")
         }
@@ -543,38 +566,51 @@ final class AppModel: ObservableObject {
         guard let pose = l.pose, pose.usable(now: now, in: request.scope) else {
             return speak(Lines.positionUnavailable)
         }
-        guard a.found, let id = a.item_id, let p = Geo.vec(a.position) else {
+        let name = a.name ?? request.name
+        guard a.found, !["stale", "missing", "picked_up", "registered"].contains(a.state ?? ""),
+              let id = a.item_id, let p = Geo.vec(a.position) else {
+            // Not seen, or not trusted where it was: say so, and keep watching for its next sighting.
+            if let id = a.item_id, a.reason != "not_registered" {
+                lookout.watch(itemId: id, name: name, scope: request.scope, now: now)
+            }
             return speak(Lines.notFound(a, asked: request.name))
         }
-        guard !["stale", "missing", "picked_up", "registered"].contains(a.state ?? "") else {
-            return speak(Lines.positionUnavailable)
-        }
+        guide(itemId: id, name: name, position: p, surface: a.surface, pose: pose, headYaw: l.headYaw, scope: request.scope)
+    }
+
+    /// Starts the §7 guidance and says where the item is, relative to the body: "Polo! Behind you, two steps, on
+    /// the table." spotted: it was just seen after a not-found answer ("Polo! I see your keys. ...").
+    private func guide(itemId id: String, name: String, position p: SIMD3<Float>, surface: String?, pose: NavigationPose,
+                       headYaw yaw: Double, scope: NavigationScope, spotted: Bool = false) {
         let T = pose.transform
         let chest = Geo.position(T)
-        let yaw = l.headYaw
         let bodyAz = Geo.relativeAzimuthDeg(from: chest, headingDeg: Geo.headingDeg(T), to: p)   // "behind you" means the body
+        let d = Geo.horizontalDistance(chest, p)
         let label = labels[id]
         play(guidance.stop())
         audio.play(.silence)
-        guidanceScope = request.scope
-        guidance.start(GuidanceTarget(itemId: id, name: a.name ?? request.name, position: p, surface: a.surface,
+        guidanceScope = scope
+        guidance.start(GuidanceTarget(itemId: id, name: name, position: p, surface: surface,
                                       labelText: label?.text, labelAudioURL: label?.url), now: now)
         let ear = chest + SIMD3<Float>(0, Config.earAboveChestM, 0)
         audio.place(Geo.listenerRelative(ear: ear, headYawDeg: yaw, target: p))
-        audio.say(Lines.polo(relAzimuthDeg: bodyAz, distanceM: Geo.horizontalDistance(chest, p), surface: a.surface), atItem: true)
-        note("find \(request.name): \(a.surface ?? "?"), \(Int(bodyAz)) deg, \(String(format: "%.1f", Geo.horizontalDistance(chest, p))) m")
+        say(spotted ? Lines.spotted(name: name, relAzimuthDeg: bodyAz, distanceM: d, surface: surface)
+                    : Lines.polo(relAzimuthDeg: bodyAz, distanceM: d, surface: surface), from: .world(p))
+        note("\(spotted ? "spotted" : "find") \(name): \(surface ?? "?"), \(Int(bodyAz)) deg, \(String(format: "%.1f", d)) m")
     }
 
     private func whatIsThis(_ a: WhatAnswer) {
+        let from = anchor(item: a.item_id, touch: a.touch_id)          // the jar under the hand answers
         if a.status == "known", let url = a.label_audio_url {
-            if let file = audioCache[url], (try? audio.playFile(file, atItem: false)) != nil { return }
+            if let file = audioCache[url], playLabel(file, from: from) { return }
             cache(url)
         }
-        if let line = Lines.whatIsThis(a) { speak(line) }
+        if let line = Lines.whatIsThis(a) { say(line, from: from) }
     }
 
     /// On the guided item: the end of guidance. Otherwise name what the hand is on (telling identical jars apart).
     private func touched(_ tm: TouchMsg) {
+        if let p = Geo.vec(tm.position) { lastTouch = (tm.touch_id, p) }
         let l = live.read { $0 }
         if guidance.active, l.pose?.usable(now: now, in: guidanceScope) != true || l.scope != guidanceScope {
             losePosition()
@@ -584,18 +620,20 @@ final class AppModel: ObservableObject {
         if !cues.isEmpty { return play(cues) }
         guard let id = tm.item_id else { return }
         let label = labels[id]
-        if let url = label?.url, let file = audioCache[url], (try? audio.playFile(file, atItem: false)) != nil { return }
-        if let line = Lines.touchedKnown(name: tm.name, labelText: label?.text) { speak(line) }
+        let from = SoundAnchor.at(tm.position)                         // the label comes from the jar itself
+        if let url = label?.url, let file = audioCache[url], playLabel(file, from: from) { return }
+        if let line = Lines.touchedKnown(name: tm.name, labelText: label?.text) { say(line, from: from) }
     }
 
     private func worldEvent(_ e: WorldEventMsg) {
         markItem(e)
+        lookout.sighted(e)
         switch e.kind {
         case "moved", "put_down", "seen":
             if let p = Geo.vec(e.position) { guidance.retarget(itemId: e.item_id, position: p, surface: e.surface) }
         case "left_behind":
             haptic.impactOccurred()
-            speak(Lines.leftBehind(e))
+            say(Lines.leftBehind(e), from: .at(e.position))            // from where the keys still are
         default:
             break
         }
@@ -618,13 +656,14 @@ final class AppModel: ObservableObject {
     }
 
     private func play(_ cues: [Cue]) {
+        let guided = guidance.target.map { SoundAnchor.world($0.position) } ?? .ahead
         for c in cues {
             switch c {
             case .haptic: haptic.impactOccurred()
-            case .say(let s): audio.say(s, atItem: true)
+            case .say(let s): say(s, from: guided)
             case .playLabel(let url, let fallback):
-                if let f = audioCache[url], (try? audio.playFile(f, atItem: true)) != nil { continue }
-                audio.say(fallback, atItem: true)
+                if let f = audioCache[url], playLabel(f, from: guided) { continue }
+                say(fallback, from: guided)
             default: audio.play(c)
             }
         }
@@ -645,6 +684,7 @@ final class AppModel: ObservableObject {
 
     func stopGuidance() {
         finds.cancel()
+        lookout.cancel()
         guidanceScope = nil
         let was = guidance.active
         play(guidance.stop())
@@ -654,6 +694,19 @@ final class AppModel: ObservableObject {
     }
 
     /// Tracking recovery requires a fresh Find; old target coordinates never resume automatically.
+    /// The item a find couldn't guide to was just seen: guide to it now. Or the watch ran out: say so.
+    private func watchForLookout(_ t: Double, _ l: Live) {
+        guard lookout.watching else { return }
+        guard lookout.scope == l.scope else { return lookout.cancel() }        // a new capture run or map
+        if lookout.spot != nil {
+            guard let pose = l.pose, let scope = lookout.scope, pose.usable(now: t, in: scope), let s = lookout.take() else { return }
+            guide(itemId: s.itemId, name: s.name, position: s.position, surface: s.surface, pose: pose,
+                  headYaw: l.headYaw, scope: scope, spotted: true)
+        } else if let name = lookout.expired(now: t) {
+            speak(Lines.stillNotSeen(name))
+        }
+    }
+
     private func losePosition() {
         guard guidance.active || finds.pending != nil else { return }
         stopGuidance()
@@ -750,9 +803,45 @@ final class AppModel: ObservableObject {
         }
     }
 
-    private func speak(_ line: String) {
-        audio.say(line, atItem: false)
+    /// Marco's own lines, from straight ahead.
+    private func speak(_ line: String) { say(line, from: .ahead) }
+
+    /// Every line Marco says goes through here, with where it comes from (Core/SoundScene.swift). A room point is
+    /// placed now and kept current every tick; with no fresh pose to place it, the line comes from ahead.
+    private func say(_ line: String, from anchor: SoundAnchor) {
+        voiceAnchor = anchor
+        if let p = voicePoint() { audio.say(line, at: p) } else { audio.say(line, atItem: false) }
         note("says: \(line)")
+    }
+
+    /// A label voice memo, from where it belongs. False if the file can't be played.
+    private func playLabel(_ file: URL, from anchor: SoundAnchor) -> Bool {
+        voiceAnchor = anchor
+        if let p = voicePoint() { return (try? audio.playFile(file, at: p)) != nil }
+        return (try? audio.playFile(file, atItem: false)) != nil
+    }
+
+    private func voicePoint() -> SIMD3<Float>? {
+        guard case .world = voiceAnchor else { return nil }
+        let l = live.read { $0 }
+        guard let pose = l.pose, pose.usable(now: now, in: l.scope) else { return nil }
+        let ear = Geo.position(pose.transform) + SIMD3<Float>(0, Config.earAboveChestM, 0)
+        return voiceAnchor.listenerRelative(ear: ear, headYawDeg: l.headYaw)
+    }
+
+    /// Where a line about an item comes from: the touch it answers, else where the item was last seen, else ahead.
+    private func anchor(item itemId: String?, touch touchId: String?) -> SoundAnchor {
+        if let t = lastTouch, let touchId, t.id == touchId { return .world(t.position) }
+        if let itemId, let m = itemMarks.first(where: { $0.id == itemId }), m.shown { return .world(m.position) }
+        return .ahead
+    }
+
+    /// The AirPods dropped, handed off, or came back (settled by RouteWatch). Without two ears the beacon can't point
+    /// anywhere, so it goes quiet and Marco says so; speech carries on from the iPhone.
+    private func headphonesChanged(_ c: RouteWatch.Change) {
+        audio.setBeaconAudible(c.binaural)
+        note("output: \(SpatialAudio.outputRoute().name), \(c.binaural ? "binaural" : "not binaural")")
+        if !c.binaural { speak(Lines.headphonesLost) } else if c.was == false { speak(Lines.headphonesBack) }
     }
 
     private func note(_ s: String) {

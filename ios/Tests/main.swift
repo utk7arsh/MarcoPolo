@@ -494,6 +494,31 @@ do {
     let nf = FindAnswer(query_id: "q", found: false, item_id: nil, name: "cat", position: nil, surface: nil, seen_ago_s: nil,
                         confidence: nil, state: nil, reason: "not_registered", last_position: nil)
     check(Lines.notFound(nf, asked: "cat") == "I don't know your cat yet. Send me a photo of it.", "not registered")
+
+    // Not found yet: say why, and that Marco keeps watching (Lookout).
+    func answer(found: Bool, name: String, state: String? = nil, reason: String? = nil, surface: String? = nil) -> FindAnswer {
+        FindAnswer(query_id: "q", found: found, item_id: "i", name: name, position: found ? [0, 0, -1] : nil, surface: surface,
+                   seen_ago_s: nil, confidence: nil, state: state, reason: reason, last_position: nil)
+    }
+    let notYet: [(FindAnswer, String)] = [
+        (answer(found: false, name: "keys", reason: "never_seen"),
+         "I haven't seen your keys yet. Turn slowly and I'll tell you when I spot them."),
+        (answer(found: false, name: "mug", reason: "not_where_last_seen", surface: "shelf"),
+         "Your mug isn't where I last saw it, on the shelf. Turn slowly and I'll tell you when I spot it."),
+        (answer(found: false, name: "keys", reason: "not_where_last_seen"),
+         "Your keys aren't where I last saw them. Turn slowly and I'll tell you when I spot them."),
+        (answer(found: true, name: "wallet", state: "stale"),
+         "I haven't seen your wallet since I got my bearings again. Turn slowly and I'll tell you when I spot it."),
+        (answer(found: true, name: "glasses", state: "picked_up"),
+         "I last saw your glasses when you picked them up. Turn slowly and I'll tell you when I spot them."),
+        (answer(found: false, name: "cat", reason: "not_registered"), "I don't know your cat yet. Send me a photo of it."),
+        (answer(found: false, name: "keys", reason: "not_registered"), "I don't know your keys yet. Send me a photo of them.")]
+    for (a, want) in notYet { check(Lines.notFound(a, asked: "thing") == want, "notFound: \(Lines.notFound(a, asked: "thing"))") }
+    check(Lines.spotted(name: "keys", relAzimuthDeg: 60, distanceM: 3.0, surface: "table")
+          == "Polo! I see your keys. At two o'clock, four steps, on the table.", "spotted")
+    check(Lines.stillNotSeen("keys") == "I still haven't spotted your keys. Ask me again any time.", "the watch ran out")
+    check(Lines.isPlural("keys") && Lines.isPlural("Glasses") && !Lines.isPlural("glasses case") && !Lines.isPlural("cumin")
+          && !Lines.isPlural("bus") && !Lines.isPlural("glass"), "them or it")
     check(!Lines.bearings.lowercased().contains("marco"), "Marco never says its own wake word")
     check(Lines.spokenLabel(name: "turmeric", labelText: "Turmeric") == "That's the turmeric.", "a bare name gets a sentence")
     check(Lines.spokenLabel(name: "cumin", labelText: "That's the cumin, love") == "That's the cumin, love", "the caretaker's words")
@@ -565,6 +590,74 @@ do {
     check(Words.editDistance("cumin", "kumin") == 1 && Words.editDistance("", "abc") == 3 && Words.editDistance("abc", "abc") == 0,
           "edit distance")
     check(Words.content("My Mom's glasses") == ["mom", "glass"] && Words.stem("batteries") == "battery", "stems")
+}
+
+// MARK: - Lookout: a find that hasn't been seen yet keeps watching
+
+do {
+    let scope = NavigationScope(captureGeneration: 1, mapId: "m", revision: 0)
+    func ev(_ kind: String, _ id: String = "keys-1", at p: [Float]? = [1, 0.8, -2]) -> WorldEventMsg {
+        WorldEventMsg(kind: kind, item_id: id, name: "keys", position: p, from_position: nil, surface: "table", t_wall: nil)
+    }
+    var w = Lookout()
+    check(!w.watching && w.expired(now: 1e9) == nil, "idle")
+    w.watch(itemId: "keys-1", name: "keys", scope: scope, now: 100)
+    w.sighted(ev("seen", "wallet-1"))
+    w.sighted(ev("missing"))
+    w.sighted(ev("seen", at: nil))
+    check(w.watching && w.spot == nil, "another item, a missing event or no position: still watching")
+    check(w.expired(now: 100 + Lookout.windowS - 1) == nil, "not yet expired")
+    w.sighted(ev("seen"))
+    check(w.spot == Lookout.Spot(itemId: "keys-1", name: "keys", position: SIMD3(1, 0.8, -2), surface: "table"), "seen: spot kept")
+    check(w.expired(now: 1e9) == nil, "a spot waiting for a pose never expires")
+    check(w.take()?.itemId == "keys-1" && !w.watching && w.take() == nil, "taken once, then the watch is over")
+    w.watch(itemId: "keys-1", name: "keys", scope: scope, now: 0)
+    w.sighted(ev("put_down"))
+    check(w.spot != nil, "put_down counts")
+    w.watch(itemId: "keys-1", name: "keys", scope: scope, now: 0)
+    check(w.spot == nil, "a new watch starts empty")
+    check(w.expired(now: Lookout.windowS) == "keys" && !w.watching && w.expired(now: 1e9) == nil, "expires once")
+    w.watch(itemId: "keys-1", name: "keys", scope: scope, now: 0)
+    w.cancel()
+    w.sighted(ev("seen"))
+    check(!w.watching && w.spot == nil, "cancelled: a later sighting does nothing")
+}
+
+// MARK: - Sound scene: where each sound comes from, and whether it reaches two ears
+
+do {
+    let ear = SIMD3<Float>(0, 1.6, 0)
+    check(SoundAnchor.ahead.listenerRelative(ear: ear, headYawDeg: 75) == SIMD3(0, 0, -1), "ahead is fixed to the head")
+    let jar = SoundAnchor.world(SIMD3(1, 0.9, -1))
+    check(jar.listenerRelative(ear: ear, headYawDeg: 30) == Geo.listenerRelative(ear: ear, headYawDeg: 30, target: SIMD3(1, 0.9, -1)),
+          "a room point uses the server's geometry")
+    let facing = jar.listenerRelative(ear: ear, headYawDeg: 0), turned = jar.listenerRelative(ear: ear, headYawDeg: 90)
+    check(facing.x > 0 && facing.z < 0 && turned.x < 0 && turned.z < 0,
+          "front-right; after a 90 degree right turn, front-left: \(facing) \(turned)")
+    check(abs(turned.y - (0.9 - 1.6)) < 1e-6, "height below the ear is kept")
+    check(SoundAnchor.at(nil) == .ahead && SoundAnchor.at([1, 2]) == .ahead && SoundAnchor.at([1, 2, 3]) == .world(SIMD3(1, 2, 3)),
+          "a message position, or ahead")
+
+    let airpods = OutputRoute(name: "AirPods Pro", headphones: true, channels: 2)
+    let speaker = OutputRoute(name: "Speaker", headphones: false, channels: 2)
+    let mono = OutputRoute(name: "AirPods Pro", headphones: true, channels: 1)
+    check(airpods.binaural && !speaker.binaural && !mono.binaural, "two ears: headphones with 2 channels")
+    var w = RouteWatch()
+    w.observe(airpods, now: 0)
+    check(w.settle(now: 1) == nil, "not settled yet")
+    check(w.settle(now: 1.5) == RouteWatch.Change(was: nil, binaural: true) && w.binaural == true, "first state")
+    w.observe(speaker, now: 10)
+    w.observe(airpods, now: 10.5)
+    check(w.settle(now: 20) == nil && w.binaural == true, "a flap shorter than settleS is ignored")
+    w.observe(speaker, now: 30)
+    w.observe(speaker, now: 31)
+    check(w.settle(now: 31.4) == nil, "the clock runs from the first sighting of the change")
+    check(w.settle(now: 31.5) == RouteWatch.Change(was: true, binaural: false), "lost")
+    check(w.settle(now: 40) == nil, "reported once")
+    w.observe(airpods, now: 50)
+    check(w.settle(now: 52) == RouteWatch.Change(was: false, binaural: true), "back")
+    check(!Lines.headphonesLost.lowercased().contains("marco") && !Lines.headphonesBack.lowercased().contains("marco"),
+          "no wake word in the new lines")
 }
 
 // MARK: - Server messages (§4), as the server sends them

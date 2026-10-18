@@ -87,6 +87,8 @@ A free Apple ID works. Apps signed with a free Personal Team expire after 7 days
 | `Core/Guidance.swift` | the §7 sequence as pure logic (`Guidance`) and the POC 4 head fusion (`HeadFusion`) | yes, unit-tested |
 | `Core/Messages.swift`, `Wire.swift`, `Geometry.swift` | every message of the contract, the byte formats, the server's angle conventions | yes, contract-tested |
 | `Core/Lines.swift` | everything Marco says, and voice-to-intent parsing | yes, unit-tested |
+| `Core/SoundScene.swift` | where each sound comes from (`SoundAnchor`: ahead, or a point in the room re-projected through the head yaw every tick), and `RouteWatch`: are the AirPods (two ears) really the output | yes, unit-tested |
+| `Core/NavigationContext.swift` | which Find may start guidance (scope, fresh pose), and `Lookout`: a Find the camera hasn't seen yet keeps watching for 60 s and guides on the item's next sighting | yes, unit-tested |
 | `Core/Config.swift` | rates and tunables | yes |
 | `Core/Recorder.swift` | records what the phone sends, on the phone, in the server's own layout (`server/marco/recorder.py`) | yes, contract-tested |
 | `Core/Health.swift` | AirPods stream stats and the rate meters on the debug screen | yes, unit-tested |
@@ -99,6 +101,30 @@ Threads:
 - **Main thread:** the guidance tick at 60 Hz and the UI.
 
 ARFrames are only held while their data is copied out; ARKit stalls if they pile up.
+
+## How the server's messages reach the AirPods
+The AirPods take no commands; they don't talk to the server either. The server sends meaning to the phone (items, positions, touches; `docs/INTERFACES.md` §4). The phone renders every sound binaurally (`SpatialAudio`, Apple's HRTF) and sends finished stereo to the AirPods over Bluetooth. The AirPods send back head motion, which places those sounds.
+
+Each line Marco says has a `SoundAnchor`. A point in the room is re-projected through the fused head yaw every tick, guiding or not, so the sound stays put while the head turns.
+
+| From the server | What the wearer hears | From where |
+|---|---|---|
+| `answer find`, found | "Polo! Behind you, two steps, on the table", then the §7 beacon | the item |
+| `answer find`, not found yet; later a `seen` / `moved` / `put_down` event for it | why, and "turn slowly"; then "Polo! I see your keys..." | ahead; then the item |
+| `hand_proximity` (15/s while guiding) | the steady tone in the last 30 cm | the item |
+| `touch` on the guided item | silence, then its label or "Got it." | the item |
+| `touch` on another known item | its label (the caretaker's voice memo, or text) | the touched point (`touch.position`): the jar under your hand |
+| `answer what_is_this` | the label, or "I don't know this one yet..." | that touch's point, else where the item was last seen |
+| `event left_behind` | "You left your keys on the table." | where the keys are |
+| `label_ready` | "Your helper says that's the cumin." | where the item was last seen, else ahead |
+| `answer set_place`, errors, Marco's own lines | "Got it, this is the door." | ahead |
+
+**When the AirPods drop out:** `RouteWatch` reads the output route (headphones with 2 channels). The AirPods may disconnect, hand off to a Mac, or fall to mono. Once the change has held for 1.5 s:
+- the beacon and the tone go quiet (from the chest speaker they can't point anywhere);
+- Marco says "Your headphones aren't connected. I'll keep talking, but the beacon needs them."
+- When they're back: "Headphones connected."
+
+iOS has no way for an app to turn off the system's own spatialization (that API is visionOS only), so **Spatialize Stereo stays off by hand** (Set up, above).
 
 ## Test
 ```
@@ -143,5 +169,8 @@ Add tests in `Tests/main.swift` for any logic you add to `Core/`.
    - Say "Marco, where are my keys?" from 3 m away with the phone in the vest. Note how long it takes from your last word to "Polo!". The mode can add input latency; the listener answers 0.45 s after a whole registered name, 0.9 s otherwise.
    - Say "Marco", wait for the blip, then "where's my wallet". The window is 5 s.
    - Put the AirPods in after Start: the `mic` row should switch to them within a second or two.
+8. **Sound from the right place.**
+   - Touch a known jar at counter height: its label should come from your hand, not from in front of your face. Turn your head while it plays: it should stay at the jar.
+   - While being guided, put the AirPods in their case: within about 2 s the beeps stop and Marco says the headphones aren't connected (from the iPhone). Put them back in: "Headphones connected", and the beacon resumes.
 
 Without the app, you can still feed the pipeline real iPhone data: record with the free Stray Scanner app and convert it with `server/tools/stray_session.py`.
