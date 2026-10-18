@@ -154,8 +154,9 @@ final class LiDARRenderer: NSObject, MTKViewDelegate {
         if case .normal = frame.camera.trackingState { normal = true }
         let minConf: UInt32 = highConfidenceOnly ? 2 : 1
 
-        // The room cloud grows in every mode, so Points already shows the room when you switch to it.
-        if isNew, hasDepth, normal, gate.shouldAdd(frame.camera.transform), let enc = cmd.makeComputeCommandEncoder() {
+        // The room cloud is only built in Points mode, so the plain depth view costs no extra GPU work.
+        if mode == .points, isNew, hasDepth, normal, gate.shouldAdd(frame.camera.transform),
+           let enc = cmd.makeComputeCommandEncoder() {
             let K = frame.camera.intrinsics, res = frame.camera.imageResolution
             var u = LiDARUnprojectUniforms(cameraToWorld: frame.camera.transform,
                                            intrinsics: SIMD4(K.columns.0.x, K.columns.1.y, K.columns.2.x, K.columns.2.y),
@@ -179,7 +180,7 @@ final class LiDARRenderer: NSObject, MTKViewDelegate {
                                   viewToImageT: SIMD2(Float(inv.tx), Float(inv.ty)),
                                   overlay: mode == .depth && hasDepth ? overlay : 0, minConfidence: Float(minConf),
                                   nearM: DepthPalette.nearM, farM: DepthPalette.farM,
-                                  cameraBrightness: mode == .points ? 0.22 : 1)
+                                  cameraBrightness: mode == .points ? 0.22 : mode == .depth ? 0.3 : 1)   // dim where there's no depth
         enc.setRenderPipelineState(quadPipeline)
         enc.setDepthStencilState(quadDepth)
         enc.setFragmentBytes(&q, length: MemoryLayout<LiDARQuadUniforms>.stride, index: 0)
@@ -230,6 +231,7 @@ final class LiDARRenderer: NSObject, MTKViewDelegate {
     }
 
     private func updateReadout(_ frame: ARFrame, size: CGSize, display: CGAffineTransform, hasDepth: Bool, normal: Bool) {
+        guard onReadout != nil else { return }          // nothing on screen reads it: skip the CPU work
         let now = CACurrentMediaTime()
         drawTimes.append(now)
         drawTimes.removeAll { now - $0 > 1 }

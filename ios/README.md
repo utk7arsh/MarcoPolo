@@ -9,7 +9,7 @@ Open **`MarcoPolo.xcodeproj`**, select the **MarcoPolo** scheme and your signing
 
 Use the gear to set the server's Tailscale address. Start waits for camera permission, and **Running** appears after the first real AR frame. The Server row reflects the actual phone WebSocket, so it is **Not connected** before starting. The Audio row reports the active route and its OS spatial-audio flag; this does not identify a headphone model or certify active head tracking. This ARKit pipeline requires a LiDAR-capable phone.
 
-Stop cancels listening/guidance, pauses capture, closes the phone socket and releases the audio session. Backgrounding performs the same stop and saves the world map; returning does not auto-start. The running screen offers **Open LiDAR view** (`LiDAR/`): camera, a depth heat map or the room as a point cloud, tap-to-measure, and the server's remembered items in place. It only reads the existing AR session's frames. Debug builds retain the original tools under Connection → Developer tools; the main panel does not expose analytics or item setup.
+Stop cancels listening/guidance, pauses capture, closes the phone socket and releases the audio session. Backgrounding performs the same stop and saves the world map; returning does not auto-start. The running screen offers **Open LiDAR view** (`LiDAR/`): the live LiDAR depth, full screen (red near, blue far, dim camera past 5 m), with only a close button. It only reads the existing AR session's frames. Debug builds retain the original tools under Connection → Developer tools; the main panel does not expose analytics or item setup.
 
 See [VERIFICATION.md](VERIFICATION.md) for build/test results and device checks still required.
 
@@ -76,7 +76,7 @@ A free Apple ID works. Apps signed with a free Personal Team expire after 7 days
 | `Capture/FrameEncoder.swift` | sensor JPEG 960x720 (no rotation, no EXIF tag), depth/confidence maps as arrays (handles padded rows) | yes, tested |
 | `Capture/HandTracker.swift` | Vision hand pose (orientation `.up`), 21 joints in the server's order, the 9x9 depth patches | yes, contract-tested |
 | `Net/Uploader.swift` | `POST /v1/frames` multipart, latest frame wins; `POST /v1/items`; label audio fetch | yes, contract-tested |
-| `LiDAR/LiDARScreen.swift`, `LiDAR/LiDARRenderer.swift` | the LiDAR view: Metal camera + depth heat map + room point cloud from the shared AR session (read-only), tap-to-measure, remembered items in place | no (ARKit, MetalKit) |
+| `LiDAR/LiDARScreen.swift`, `LiDAR/LiDARRenderer.swift` | the LiDAR view: the live depth map, full screen, from the shared AR session (read-only). The renderer can also draw a room point cloud and item labels; the screen doesn't use them | no (ARKit, MetalKit) |
 | `Core/DepthVision.swift`, `Core/LiDARShaderSource.swift` | its maths (colour scale, depth probe, projection, item labels) and its shaders, compiled at runtime so the build needs no Metal Toolchain | yes, tested (shaders run on the Mac's GPU) |
 | `Net/ServerCheck.swift` | one `GET /v1/items` at Start, turned into a sentence that says what to fix | yes, unit-tested |
 | `Net/PhoneSocket.swift` | `/v1/phone` WebSocket: JSON both ways, reconnect with backoff, pings, holds map/query messages until connected | yes |
