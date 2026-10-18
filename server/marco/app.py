@@ -53,7 +53,7 @@ def make_brain():
 
 brain = make_brain()
 dash = Dashboard(brain)                 # the browser's API (frontend/), built from what the core publishes
-DASHBOARD_ONLY = {"command_ack"}        # phone messages for the dashboard adapter only, not the brain
+DASHBOARD_ONLY = {"command_ack", "sound", "sound_field"}   # phone messages for the dashboard adapter only, not the brain
 latest_frame: dict[str, int] = {}
 work_lock = asyncio.Lock()
 frame_tasks: set[asyncio.Task] = set()  # frames still on their way through the brain (held so they aren't collected)
@@ -314,21 +314,49 @@ def dashboard_snapshot(caller=Depends(require_caller)):
 @app.websocket("/events")
 @app.websocket("/api/events")
 async def dashboard_events(ws: WebSocket):
-    """A complete snapshot at once, then after each change (at most 5/s) and at least once a second."""
+    """A complete snapshot at once, then after each change (at most 5/s) and at least once a second. In between, this
+    connection's dashboard.sound envelopes go out as they arrive (the latest field, if fresh, right after the first
+    snapshot). Every send on the socket happens here, one at a time: this loop waits for whichever comes first."""
     await ws.accept()
     if await ws_caller(ws) is None:
         return
-    while True:
-        snap = dash.snapshot()               # outside the try: a bug here must not look like a disconnect
-        try:
-            await ws.send_json(snap)
-        except Exception:                    # the browser went away
-            return
-        t0 = time.monotonic()
-        await dash.wait_change(1.0)
-        rest = MIN_PUSH_S - (time.monotonic() - t0)
-        if rest > 0:
-            await asyncio.sleep(rest)
+    sounds = dash.subscribe()
+    first = [m for m in (dash.fresh_field(),) if m is not None]   # taken with the subscription: none missed or repeated
+    getter = None
+    try:
+        while True:
+            snap = dash.snapshot()           # outside the try: a bug here must not look like a disconnect
+            try:
+                await ws.send_json(snap)
+                for m in first:
+                    await ws.send_json(m)
+            except Exception:                # the browser went away
+                return
+            first = []
+            t0 = time.monotonic()
+            change = dash.change_waiter(1.0)
+            try:
+                while True:
+                    rest = MIN_PUSH_S - (time.monotonic() - t0)
+                    if change.done() and rest <= 0:
+                        break                    # changed (or a second passed) and the 5/s limit allows it
+                    if getter is None:
+                        getter = asyncio.ensure_future(sounds.get())
+                    done, _ = await asyncio.wait({getter} if change.done() else {getter, change},
+                                                 timeout=rest if change.done() else None,
+                                                 return_when=asyncio.FIRST_COMPLETED)
+                    if getter in done:
+                        msg, getter = getter.result(), None
+                        try:
+                            await ws.send_json(msg)
+                        except Exception:
+                            return
+            finally:
+                change.cancel()
+    finally:
+        dash.unsubscribe(sounds)
+        if getter is not None:
+            getter.cancel()
 
 
 @app.post("/dashboard/commands")

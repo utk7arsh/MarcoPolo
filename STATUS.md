@@ -837,3 +837,35 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
   - Not yet from the phone itself.
 - **Verified:** 14 new Swift checks (348 in all); the MarcoPolo app builds for iOS with no errors or warnings; `test_ios_contract.py` 5 passed. Nothing here has run on the phone: hour-one test 8 in `ios/README.md`.
 - **Not done (perception, other owners):** head pitch is not used (yaw only), and there is no motion prediction for the ~150 ms Bluetooth latency.
+
+## What the wearer hears, made visible (and audible) for the judges (October 18, 2026, Utkarsh)
+
+- **The idea:** judges can't hear the AirPods, so what the wearer hears runs through every dashboard view. There is no separate tab: a first version had one, and the user asked for it to be part of every view.
+  - **Map:** each sound ripples from where it is in the room to the wearer, muffled grey behind the head.
+    - The wearer has a head (nose, ears lit per sound) and a ring that turns with it, with the facing wedge and the sound's clock hour.
+    - The room stays put while the head turns: the spatial-audio idea in one picture.
+  - **Camera:** a sound from the item ripples on its detection box; otherwise it pulses on the edge it is beyond (bottom for behind). The camera faces where the body does.
+  - **Guidance panel:**
+    - the arrow is now a listening head: the sound on its rim, a ripple into the head, the nearer ear lit;
+    - "Playing in AirPods: beacon, muffled / steady tone / Marco's voice";
+    - the phone's actual words, with where they came from ("Marco, from behind, on the right").
+  - **Objects page:** a pill shows the line playing in the AirPods.
+- **Listen in** (off until clicked; it carries across pages) plays the same sounds on the laptop from the same directions, with Web Audio's HRTF panner. Headphones give the 3D effect.
+  - Marco's lines come from `POST /v1/speech`, the same cached ElevenLabs voice the phone plays, placed in 3D; the browser's own voice is the fallback, and Demo mode uses it.
+- **Nothing is reconstructed in the browser.**
+  - **Phone:** `Core/SoundScene.swift` `SoundReporter` sends `sound` (each cue as it starts) and `sound_field` (10/s while audible), from the exact listener-relative points `SpatialAudio` was given (`docs/INTERFACES.md` §3.2).
+  - **Server:** relays them on `/events` as `dashboard.sound`, not throttled, and fills `navigation.spokenInstruction` (§6; `marco/dashboard.py`, `app.py`).
+  - **Dashboard:** `frontend/src/lib/sound.ts` (model), `lib/hearing.ts` (hooks), `components/Hearing.tsx`, with layers in `MapView` and `CameraView`; `lib/listen.ts`; `soundSchema`, exported as `frontend/docs/dashboard.sound.schema.json`.
+- **Demo mode:**
+  - "Finding keys" has a quiet sound loop matching its still frame.
+  - **"Finding keys, start to finish"** plays the whole find in about 22 s (Polo, turn, ding, approach, Within reach, steady tone, touch, label), with the wearer walking on the map consistently with the sounds.
+  - `server/tools/sound_demo.py` is a SIMULATED phone that plays the same story into a real server, for rehearsal.
+- **Verified:**
+  - Swift 417 checks; the MarcoPolo app builds for iOS.
+  - Server 132 passed, 1 skipped (the ARKitScenes download).
+  - Frontend: 82 unit tests, browser tests 25 of 25 (axe at 1440/768/390, no overflow), format, schema and build.
+  - **New contract test:** the app's own Swift-encoded sound messages, through the server's converters, validate against the dashboard's exported schema.
+  - **End to end on this Mac,** with the first version: stub server, simulated phone, and the dashboard in API mode through the Vite proxy. That run was the separate view; the integrated views have been checked in Demo mode and the browser tests only.
+  - **Not verified:** the real iPhone and AirPods sending these; Listen in heard through headphones; the Vultr box (it still runs `6f4c0ee`, without the dashboard adapter, the hub fix or this).
+- **Merged mid-task:** another session pulled `a8261b4` (ElevenLabs speech) and resolved the conflicts in `AppModel.swift`. Labels are now spoken text, so a label cue carries its words and no memo URL.
+- **Landed on its own** (October 18, after a stash pop): only this sound work is in the commit. The uncommitted beacon-sound redesign (`Guidance.swift`, `SpatialAudio.swift`, `BeaconWarp`, §7) stays in the working tree for its owner. When it lands, `AppModel.reportBeacon` must map its new cues (`.beacon`, `.handPing`, `.arrive`) to `beep`/`ding`, as the working tree already does.

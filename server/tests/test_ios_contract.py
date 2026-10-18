@@ -159,3 +159,28 @@ def test_a_recording_made_on_the_phone_reads_like_a_server_recording(fx):
     assert problems == [], problems
     stream = [kind for kind, _ in ses.stream()]                              # what replay.py and run_offline.py walk
     assert stream.count("frame") == 3 and stream.count("phone") == len(ses.phone)
+
+
+def test_swift_sound_messages_reach_the_dashboard_in_its_schema(fx):
+    """What the wearer hears, end to end: the app's own SoundReporter output, through the server's converters, matches
+    the dashboard's exported contract (frontend/docs/dashboard.sound.schema.json)."""
+    import jsonschema
+
+    from marco.dashboard import sound_cue, sound_field
+    schema = json.loads((Path(__file__).resolve().parents[2] / "frontend" / "docs" / "dashboard.sound.schema.json").read_text())
+    validator = jsonschema.validators.validator_for(schema)(schema, format_checker=jsonschema.FormatChecker())
+    msgs = [json.loads(l) for l in (fx / "sound.jsonl").read_text().splitlines()]
+    assert [m["type"] for m in msgs].count("sound") == 7 and [m["type"] for m in msgs].count("sound_field") == 2
+    for m in msgs:
+        assert m["session_id"] == "ios-contract"
+        converted = (sound_cue if m["type"] == "sound" else sound_field)(m)
+        assert converted is not None, m
+        env = dict(type="dashboard.sound", schemaVersion=1, streamId="s", sentAt="2026-10-18T01:00:00.000Z", sound=converted)
+        errors = sorted(validator.iter_errors(env), key=str)
+        assert errors == [], (m, [e.message for e in errors])
+    beep = sound_cue(msgs[1])
+    assert beep["muffled"] is True and beep["source"] == "beacon" and 150 < beep["azimuthDeg"] < 155
+    label = sound_cue(msgs[4])
+    assert label["audioUrl"] == "/media/audio/abc123" and label["anchor"] == "room" and label["elevationDeg"] < -40
+    assert sound_field(msgs[-1])["beacon"] is None and sound_field(msgs[-1])["voice"] is None
+

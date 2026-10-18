@@ -1,8 +1,11 @@
-import type { Command, Snapshot } from '../lib/schema'
+import type { Command, Snapshot, Sound } from '../lib/schema'
 import type { Transport } from '../lib/transport'
+import { guidingLoop, walkthrough } from './soundScript'
+import type { Step } from './soundScript'
 
 export const scenarios = [
   ['guiding', 'Finding keys'],
+  ['walkthrough', 'Finding keys, start to finish'],
   ['near', 'Within reach'],
   ['found', 'Object found'],
   ['moved', 'Keys moved'],
@@ -191,6 +194,68 @@ export function createDemoTransport(initial: Scenario = 'guiding') {
   let snapshot = demoSnapshot()
   let emit: ((value: Snapshot) => void) | undefined
   let ack: ReturnType<typeof setTimeout> | undefined
+  // What the wearer would hear in this scenario (soundScript.ts), played on a 50 ms clock.
+  let hear: ((value: Sound) => void) | undefined
+  let script: { period: number; steps: Step[] } | null = null
+  let loopStart = 0
+  let cursor = 0
+  let lastPublish = 0
+  const play = (next: typeof script) => {
+    script = next
+    loopStart = Date.now()
+    cursor = 0
+    if (!next)
+      hear?.({
+        kind: 'field',
+        tDevice: Date.now() / 1000,
+        headYawDeg: 0,
+        beacon: null,
+        voice: null,
+      })
+  }
+  const soundTick = () => {
+    if (!script) return
+    let elapsed = Date.now() - loopStart
+    if (elapsed >= script.period) {
+      loopStart += script.period * Math.floor(elapsed / script.period)
+      elapsed = Date.now() - loopStart
+      cursor = 0
+    }
+    let moved = false
+    while (cursor < script.steps.length && script.steps[cursor].t <= elapsed) {
+      const step = script.steps[cursor++]
+      hear?.(step.sound)
+      if (step.navigation) {
+        Object.assign(snapshot.data.navigation, step.navigation)
+        moved = true
+      }
+      const wearer = snapshot.data.wearer
+      if (step.wearer && wearer) {
+        wearer.position.x = step.wearer.x
+        wearer.position.z = step.wearer.z
+        wearer.headYawDeg = step.wearer.headYawDeg
+        wearer.bodyYawDeg = step.wearer.bodyYawDeg
+        moved = true
+      }
+    }
+    if (moved && Date.now() - lastPublish >= 200) publish()
+  }
+  const scriptFor = (scenario: Scenario) => {
+    const keys = snapshot.data.items.find((item) => item.id === 'keys')
+    if (scenario === 'guiding') return guidingLoop()
+    if (scenario === 'walkthrough')
+      return walkthrough(
+        keys?.voiceLabel?.transcript ?? null,
+        keys?.voiceLabel?.audioUrl ?? null,
+        snapshot.data.wearer && keys?.lastSeen?.position
+          ? {
+              from: snapshot.data.wearer.position,
+              keys: keys.lastSeen.position,
+            }
+          : undefined,
+      )
+    return null
+  }
   const publish = () => {
     const time = new Date().toISOString()
     snapshot.sequence++
@@ -200,6 +265,7 @@ export function createDemoTransport(initial: Scenario = 'guiding') {
     snapshot.data.navigation.updatedAt = time
     if (snapshot.data.wearer) snapshot.data.wearer.at = time
     // The fixture represents a still frame, not a simulated live video stream.
+    lastPublish = Date.now()
     emit?.(structuredClone(snapshot))
   }
   const setScenario = (scenario: Scenario) => {
@@ -277,18 +343,23 @@ export function createDemoTransport(initial: Scenario = 'guiding') {
         surface: null,
       })
     }
+    play(scriptFor(scenario))
     publish()
   }
   const transport: Transport & { setScenario: typeof setScenario } = {
-    start(onSnapshot, onConnection) {
+    start(onSnapshot, onConnection, onSound) {
       emit = onSnapshot
+      hear = onSound
       setScenario(initial)
       onConnection('live')
       const heartbeat = setInterval(publish, 1000)
+      const sounds = setInterval(soundTick, 50)
       return () => {
         clearInterval(heartbeat)
+        clearInterval(sounds)
         clearTimeout(ack)
         emit = undefined
+        hear = undefined
       }
     },
     async send(command: Command) {
@@ -304,6 +375,7 @@ export function createDemoTransport(initial: Scenario = 'guiding') {
           status: 'accepted',
           reason: null,
         }
+        play(command.type === 'stop' ? null : scriptFor('walkthrough'))
         if (command.type === 'stop') {
           Object.assign(snapshot.data.navigation, {
             state: 'idle',

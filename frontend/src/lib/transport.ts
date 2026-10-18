@@ -1,11 +1,12 @@
-import { commandResponseSchema, snapshotSchema } from './schema'
-import type { Command, Snapshot } from './schema'
+import { commandResponseSchema, snapshotSchema, soundSchema } from './schema'
+import type { Command, Snapshot, Sound } from './schema'
 
 export type Connection = 'connecting' | 'live' | 'stale' | 'offline'
 export interface Transport {
   start: (
     snapshot: (value: Snapshot) => void,
     connection: (value: Connection, error?: string) => void,
+    sound?: (value: Sound) => void,
   ) => () => void
   send: (command: Command) => Promise<void>
 }
@@ -20,7 +21,7 @@ export function apiUrl(
 
 export function createApiTransport(base: string): Transport {
   return {
-    start(onSnapshot, onConnection) {
+    start(onSnapshot, onConnection, onSound) {
       let stopped = false
       let socket: WebSocket | undefined
       let retry: ReturnType<typeof setTimeout> | undefined
@@ -31,13 +32,17 @@ export function createApiTransport(base: string): Transport {
       let authFailed = false
       const receive = (raw: unknown) => {
         if (stopped || authFailed) return
-        if (
-          typeof raw === 'object' &&
-          raw &&
-          'type' in raw &&
-          raw.type !== 'dashboard.snapshot'
-        )
-          return
+        if (typeof raw === 'object' && raw && 'type' in raw) {
+          // What the wearer hears, between snapshots. It never counts as snapshot progress, and a malformed or
+          // other-stream message is dropped without marking the connection stale.
+          if (raw.type === 'dashboard.sound') {
+            const sound = soundSchema.safeParse(raw)
+            if (sound.success && sound.data.streamId === current?.streamId)
+              onSound?.(sound.data.sound)
+            return
+          }
+          if (raw.type !== 'dashboard.snapshot') return
+        }
         const parsed = snapshotSchema.safeParse(raw)
         if (!parsed.success) {
           onConnection(

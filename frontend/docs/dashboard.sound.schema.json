@@ -1,0 +1,233 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "dashboard.sound"
+    },
+    "schemaVersion": {
+      "type": "number",
+      "const": 1
+    },
+    "streamId": {
+      "type": "string"
+    },
+    "sentAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+    },
+    "sound": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "cue"
+            },
+            "tDevice": {
+              "type": "number"
+            },
+            "cue": {
+              "type": "string",
+              "enum": [
+                "beep",
+                "ding",
+                "tone_on",
+                "tone_off",
+                "say",
+                "label",
+                "blip",
+                "silence"
+              ]
+            },
+            "source": {
+              "type": "string",
+              "enum": [
+                "beacon",
+                "voice"
+              ]
+            },
+            "anchor": {
+              "type": "string",
+              "enum": [
+                "item",
+                "room",
+                "ahead"
+              ]
+            },
+            "azimuthDeg": {
+              "type": "number",
+              "minimum": -180,
+              "maximum": 180
+            },
+            "elevationDeg": {
+              "type": "number",
+              "minimum": -90,
+              "maximum": 90
+            },
+            "distanceM": {
+              "type": "number",
+              "minimum": 0
+            },
+            "muffled": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "text": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "durationS": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "audioUrl": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "tDevice",
+            "cue",
+            "source",
+            "anchor",
+            "azimuthDeg",
+            "elevationDeg",
+            "distanceM",
+            "muffled",
+            "text",
+            "durationS",
+            "audioUrl"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "field"
+            },
+            "tDevice": {
+              "type": "number"
+            },
+            "headYawDeg": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "beacon": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "azimuthDeg": {
+                      "type": "number",
+                      "minimum": -180,
+                      "maximum": 180
+                    },
+                    "elevationDeg": {
+                      "type": "number",
+                      "minimum": -90,
+                      "maximum": 90
+                    },
+                    "distanceM": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "muffled": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "azimuthDeg",
+                    "elevationDeg",
+                    "distanceM",
+                    "muffled"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "voice": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "azimuthDeg": {
+                      "type": "number",
+                      "minimum": -180,
+                      "maximum": 180
+                    },
+                    "elevationDeg": {
+                      "type": "number",
+                      "minimum": -90,
+                      "maximum": 90
+                    },
+                    "distanceM": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "anchor": {
+                      "type": "string",
+                      "enum": [
+                        "item",
+                        "room",
+                        "ahead"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "azimuthDeg",
+                    "elevationDeg",
+                    "distanceM",
+                    "anchor"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "tDevice",
+            "headYawDeg",
+            "beacon",
+            "voice"
+          ]
+        }
+      ]
+    }
+  },
+  "required": [
+    "type",
+    "schemaVersion",
+    "streamId",
+    "sentAt",
+    "sound"
+  ]
+}

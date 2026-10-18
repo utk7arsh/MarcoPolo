@@ -22,6 +22,9 @@ export type IconName =
   | 'phone'
   | 'refresh'
   | 'signal'
+  | 'headphones'
+  | 'expand'
+  | 'sound'
 const paths: Record<IconName, React.ReactNode> = {
   object: (
     <>
@@ -112,6 +115,24 @@ const paths: Record<IconName, React.ReactNode> = {
   signal: (
     <>
       <path d="M4 18v2m5-7v7m5-12v12m5-17v17" />
+    </>
+  ),
+  headphones: (
+    <>
+      <path d="M4 15v-3a8 8 0 0 1 16 0v3" />
+      <rect x="3" y="14" width="4.5" height="7" rx="2" />
+      <rect x="16.5" y="14" width="4.5" height="7" rx="2" />
+    </>
+  ),
+  expand: (
+    <>
+      <path d="M4 9V4h5M20 9V4h-5M4 15v5h5m11-5v5h-5" />
+    </>
+  ),
+  sound: (
+    <>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M6.3 6.3a8 8 0 0 0 0 11.4m11.4-11.4a8 8 0 0 1 0 11.4" />
     </>
   ),
 }

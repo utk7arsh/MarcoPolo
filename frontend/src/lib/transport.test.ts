@@ -252,3 +252,62 @@ describe('FastAPI transport', () => {
     stop()
   })
 })
+
+describe('what the wearer hears on /events', () => {
+  const beep = (streamId: string, extra = {}) => ({
+    type: 'dashboard.sound',
+    schemaVersion: 1,
+    streamId,
+    sentAt: '2026-10-18T01:00:00.000Z',
+    sound: {
+      kind: 'cue',
+      tDevice: 812.4,
+      cue: 'beep',
+      source: 'beacon',
+      anchor: 'item',
+      azimuthDeg: 145,
+      elevationDeg: -20,
+      distanceM: 2.2,
+      muffled: true,
+      text: null,
+      durationS: null,
+      audioUrl: null,
+      ...extra,
+    },
+  })
+  it('passes sounds of the current stream on, apart from snapshots, and drops the rest quietly', async () => {
+    const snapshots = vi.fn(),
+      connection = vi.fn(),
+      sounds = vi.fn()
+    const stop = createApiTransport('/api').start(snapshots, connection, sounds)
+    await vi.advanceTimersByTimeAsync(0)
+    const socket = Socket.instances[0]
+    const stream = demoSnapshot().streamId
+    socket.receive(beep(stream))
+    expect(sounds).toHaveBeenCalledTimes(1)
+    expect(sounds.mock.calls[0][0]).toMatchObject({
+      cue: 'beep',
+      azimuthDeg: 145,
+      muffled: true,
+    })
+    socket.receive(beep('another-server'))
+    socket.receive(beep(stream, { cue: 'whistle' }))
+    socket.receive(beep(stream, { azimuthDeg: 400 }))
+    expect(sounds).toHaveBeenCalledTimes(1)
+    expect(snapshots).toHaveBeenCalledTimes(1) // the GET snapshot only: a sound is never a snapshot
+    expect(connection).not.toHaveBeenCalledWith('stale', expect.anything())
+    stop()
+  })
+  it('does not count sounds as snapshot progress', async () => {
+    const connection = vi.fn()
+    const stop = createApiTransport('/api').start(vi.fn(), connection, vi.fn())
+    await vi.advanceTimersByTimeAsync(0)
+    const socket = Socket.instances[0]
+    for (let i = 0; i < 8; i++) {
+      socket.receive(beep(demoSnapshot().streamId))
+      await vi.advanceTimersByTimeAsync(500)
+    }
+    expect(connection).toHaveBeenLastCalledWith('stale')
+    stop()
+  })
+})

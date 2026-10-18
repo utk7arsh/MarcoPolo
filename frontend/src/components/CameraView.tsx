@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import type { DashboardData } from '../lib/schema'
 import { mediaUrl } from '../lib/format'
+import { fromBody, headYaw } from '../lib/sound'
 import { EmptyState } from './Shared'
+import { ripples } from '../lib/hearing'
+import type { Heard } from '../lib/hearing'
 
 export function CameraView({
   now,
@@ -9,12 +12,14 @@ export function CameraView({
   targetId,
   online,
   demo,
+  heard = null,
 }: {
   now: number
   data: DashboardData
   targetId: string | null
   online: boolean
   demo: boolean
+  heard?: Heard | null
 }) {
   const [loaded, setLoaded] = useState<string | null>(null)
   const [failed, setFailed] = useState<string | null>(null)
@@ -48,12 +53,40 @@ export function CameraView({
       box.boxPx[0] < camera.widthPx &&
       box.boxPx[1] < camera.heightPx,
   )
+  // What the wearer hears, in the picture: a sound from the item ripples on its box when the camera sees it, and
+  // otherwise pulses on the edge it is beyond (the bottom edge for behind). The camera faces where the body does.
+  const box = boxes[0]?.boxPx
+  const yaw = heard ? headYaw(heard.hearing, heard.now, data.wearer) : null
+  const heardHere = heard
+    ? ripples(heard).filter((r) => r.anchor !== 'ahead' && r.cue !== 'blip')
+    : []
+  const edge = (azimuthDeg: number) => {
+    const a = fromBody(azimuthDeg, yaw, data.wearer?.bodyYawDeg ?? null)
+    return Math.abs(a) > 120
+      ? 'behind'
+      : a > 25
+        ? 'right'
+        : a < -25
+          ? 'left'
+          : null
+  }
   return (
     <div className="camera-canvas">
       <div
         className="camera-frame"
         style={{ aspectRatio: `${camera.widthPx} / ${camera.heightPx}` }}
       >
+        {heardHere.map((r) => {
+          const side =
+            box && r.anchor === 'item' ? null : edge(r.from.azimuthDeg)
+          return side ? (
+            <span
+              key={r.id}
+              className={`sound-edge ${side} ${r.muffled ? 'muffled' : ''}`}
+              aria-hidden="true"
+            />
+          ) : null
+        })}
         <img
           key={id}
           src={src}
@@ -112,6 +145,20 @@ export function CameraView({
                 </g>
               )
             })}
+            {box &&
+              heardHere
+                .filter((r) => r.anchor === 'item')
+                .map((r) => (
+                  <g
+                    key={r.id}
+                    transform={`translate(${(box[0] + box[2]) / 2} ${(box[1] + box[3]) / 2})`}
+                  >
+                    <circle
+                      className={`sound-ripple camera ${r.muffled ? 'muffled' : ''} ${['say', 'label'].includes(r.cue) ? 'voice' : ''} ${r.cue}`}
+                      r={Math.max(box[2] - box[0], box[3] - box[1]) * 0.9}
+                    />
+                  </g>
+                ))}
           </svg>
         )}
       </div>

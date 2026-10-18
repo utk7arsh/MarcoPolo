@@ -89,7 +89,7 @@ A free Apple ID works. Apps signed with a free Personal Team expire after 7 days
 | `Core/Guidance.swift` | the §7 sequence as pure logic (`Guidance`) and the POC 4 head fusion (`HeadFusion`) | yes, unit-tested |
 | `Core/Messages.swift`, `Wire.swift`, `Geometry.swift` | every message of the contract, the byte formats, the server's angle conventions | yes, contract-tested |
 | `Core/Lines.swift` | everything Marco says, and voice-to-intent parsing | yes, unit-tested |
-| `Core/SoundScene.swift` | where each sound comes from (`SoundAnchor`: ahead, or a point in the room re-projected through the head yaw every tick), and `RouteWatch`: are the AirPods (two ears) really the output | yes, unit-tested |
+| `Core/SoundScene.swift` | where each sound comes from (`SoundAnchor`: ahead, or a point in the room re-projected through the head yaw every tick), `RouteWatch`: are the AirPods (two ears) really the output; and `SoundReporter`: what the wearer hears, told to the dashboard (`sound`, `sound_field`) | yes, unit-tested |
 | `Core/NavigationContext.swift` | which Find may start guidance (scope, fresh pose), and `Lookout`: a Find the camera hasn't seen yet keeps watching for 60 s and guides on the item's next sighting | yes, unit-tested |
 | `Core/Config.swift` | rates and tunables | yes |
 | `Core/Recorder.swift` | records what the phone sends, on the phone, in the server's own layout (`server/marco/recorder.py`) | yes, contract-tested |
@@ -135,6 +135,12 @@ Each line Marco says has a `SoundAnchor`. A point in the room is re-projected th
 - When they're back: "Headphones connected."
 
 iOS has no way for an app to turn off the system's own spatialization (that API is visionOS only), so **Spatialize Stereo stays off by hand** (Set up, above).
+
+**And back out to the dashboard, so judges can see what the wearer hears** (`docs/INTERFACES.md` §3.2; the dashboard draws them on the map, the camera and the guidance panel):
+- every sound sends a `sound` the moment it starts: the cue, its direction relative to the head (from the exact point the sound was placed at), the spoken words, and a label memo's URL;
+- `sound_field` goes out 10 times a second while anything is audible, giving where the beacon and the voice are now.
+
+The server only relays them. Recordings keep them, so a replayed walk drives the dashboard's sound too.
 
 ## Test
 ```
@@ -182,5 +188,6 @@ Add tests in `Tests/main.swift` for any logic you add to `Core/`.
 8. **Sound from the right place.**
    - Touch a known jar at counter height: its label should come from your hand, not from in front of your face. Turn your head while it plays: it should stay at the jar.
    - While being guided, put the AirPods in their case: within about 2 s the beeps stop and Marco says the headphones aren't connected (from the iPhone). Put them back in: "Headphones connected", and the beacon resumes.
+9. **The judges' view.** Open the dashboard's Live page on the laptop while you're guided. Turn your head: the beacon dot should swing the opposite way, and the ear on the item's side should light with each beep. Say "Marco, where are my keys?" and the caption should show the line as you hear it. The 10/s `sound_field` should arrive with no lag you can notice.
 
 Without the app, you can still feed the pipeline real iPhone data: record with the free Stray Scanner app and convert it with `server/tools/stray_session.py`.

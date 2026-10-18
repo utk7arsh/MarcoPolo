@@ -61,3 +61,68 @@ struct RouteWatch {
         return c
     }
 }
+
+/// Where a sound is, as the wearer hears it, from a listener-relative point (x right, y up, -z ahead): azimuth 0
+/// ahead, +90 right, ±180 behind; elevation + up; distance ear to source. Rounded as the contract sends it.
+struct HeardDirection: Equatable {
+    var azDeg: Double
+    var elDeg: Double
+    var distanceM: Double
+
+    init(_ p: SIMD3<Float>) {
+        let x = Double(p.x), y = Double(p.y), z = Double(p.z)
+        let flat = (x * x + z * z).squareRoot()
+        azDeg = (atan2(x, -z) * 1800 / .pi).rounded() / 10
+        elDeg = (atan2(y, flat) * 1800 / .pi).rounded() / 10
+        distanceM = ((flat * flat + y * y).squareRoot() * 100).rounded() / 100
+    }
+}
+
+/// What the wearer is hearing, told to the dashboard (docs/INTERFACES.md §3.2 `sound` and `sound_field`). Only the
+/// phone knows: every sound is rendered here, at the point each source was placed, so the judges' view is the real
+/// thing, not a reconstruction.
+struct SoundReporter {
+    static let fieldHz = 10.0
+    let sessionId: String
+    private var gate = Throttle(hz: SoundReporter.fieldHz)
+    private var voiceUntil = -Double.infinity
+    private var audible = false
+
+    init(sessionId: String) { self.sessionId = sessionId }
+
+    /// One sound, the moment it starts. `p`: where it comes from, listener-relative.
+    mutating func cue(_ cue: String, at p: SIMD3<Float>, anchor: String, t: Double, muffled: Bool? = nil,
+                      text: String? = nil, duration: Double? = nil, audioURL: String? = nil) -> SoundMsg {
+        let voice = ["say", "label", "blip"].contains(cue)
+        if cue == "silence" { voiceUntil = -Double.infinity }
+        if voice, let duration { voiceUntil = max(voiceUntil, t + duration) }
+        let d = HeardDirection(p)
+        return SoundMsg(session_id: sessionId, t_device: t, cue: cue, source: voice ? "voice" : "beacon", anchor: anchor,
+                        az_deg: d.azDeg, el_deg: d.elDeg, distance_m: d.distanceM, muffled: muffled, text: text,
+                        duration_s: duration.map { ($0 * 10).rounded() / 10 }, audio_url: audioURL)
+    }
+
+    /// The field at 10/s while the beacon is placed or the voice is speaking, then once more when it goes quiet; nil
+    /// otherwise. beacon: its point and whether it's muffled; voice: its point and anchor.
+    mutating func field(t: Double, headYawDeg: Double, beacon: (SIMD3<Float>, muffled: Bool)?,
+                        voice: (SIMD3<Float>, anchor: String)) -> SoundFieldMsg? {
+        let speaking = t < voiceUntil
+        let now = beacon != nil || speaking
+        guard now || audible else { return nil }                 // quiet, and already said so
+        guard !now || gate.ready(t) else { return nil }          // going quiet goes out at once
+        audible = now
+        func source(_ p: SIMD3<Float>, muffled: Bool? = nil, anchor: String? = nil) -> SoundFieldMsg.Source {
+            let d = HeardDirection(p)
+            return .init(az_deg: d.azDeg, el_deg: d.elDeg, distance_m: d.distanceM, muffled: muffled, anchor: anchor)
+        }
+        return SoundFieldMsg(session_id: sessionId, t_device: t, head_yaw_deg: (headYawDeg * 10).rounded() / 10,
+                             beacon: beacon.map { source($0.0, muffled: $0.muffled) },
+                             voice: speaking ? source(voice.0, anchor: voice.anchor) : nil)
+    }
+
+    /// How long a spoken line takes at AVSpeechUtterance's default rate: about 2.6 words a second.
+    static func speechSeconds(_ text: String) -> Double {
+        let words = text.split(whereSeparator: { $0 == " " }).count
+        return (Double(words) / 2.6 + 0.3)
+    }
+}

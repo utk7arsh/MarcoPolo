@@ -3,9 +3,10 @@ payload is frontend/src/lib/schema.ts, exported as frontend/docs/dashboard.snaps
 
 It runs no perception. It watches what the core already publishes (the dashboard feed: frame, world, timeline,
 map_points; label_request to Photon; label_ready to the phone), the phone's own messages (pose, guidance, map,
-command_ack) and the phone socket's lifecycle, and keeps a small read model. From it, app.py serves:
+command_ack, sound, sound_field) and the phone socket's lifecycle, and keeps a small read model. From it, app.py serves:
   GET  /dashboard/snapshot   one complete `dashboard.snapshot` envelope
-  WS   /events               a snapshot at once, then after each change (at most 5/s) and at least once a second
+  WS   /events               a snapshot at once, then after each change (at most 5/s) and at least once a second; in
+                             between, `dashboard.sound` (what the wearer hears) the moment the phone reports it
   POST /dashboard/commands   Find and Stop for the phone (dashboard_commands.py)
   GET  /media/...            the recent upright frames, item photos, label audio and touch crops
 all behind the same auth gate as /v1, and also under /api/... (the browser's default base path).
@@ -39,6 +40,16 @@ PHASES = {"behind": "guiding", "turning": "guiding", "facing": "guiding", "appro
           "reach": "within_reach", "touched": "found"}
 PATTERNS = {"guiding": "beacon", "within_reach": "steady", "found": "confirmation"}
 MEMORY_KINDS = {"seen": "seen", "moved": "moved", "put_down": "moved", "label_added": "label_saved"}
+# What the wearer hears (INTERFACES.md §3.2 sound / sound_field, §6 dashboard.sound)
+CUES = {"beep", "ding", "tone_on", "tone_off", "say", "label", "blip", "silence"}
+SOURCES = {"beacon", "voice"}
+ANCHORS = {"item", "room", "ahead"}
+SOUND_QUEUE = 300            # dashboard.sound envelopes waiting per /events connection before the oldest is dropped
+SOUND_TEXT_MAX = 300
+SOUND_DISTANCE_MAX_M = 50.0
+SOUND_DURATION_MAX_S = 60.0
+FIELD_FRESH_S = 1.0          # a new /events connection gets the latest sound field if it is younger than this
+SPOKEN_AFTER_S = 3.0         # navigation.spokenInstruction stays this long after the line ends
 
 
 def wall_or(value, fallback):
@@ -51,6 +62,78 @@ def audio_alias(url):
         return None
     m = re.match(r"^/v1/audio/([A-Za-z0-9_.-]+)$", url)
     return f"/media/audio/{m.group(1)}" if m else None
+
+
+def _num(v):
+    """A finite JSON number (not a bool) as a float, else None."""
+    if isinstance(v, bool) or not isinstance(v, (int, float)):
+        return None
+    try:
+        f = float(v)
+    except OverflowError:                                # a huge JSON integer
+        return None
+    return f if math.isfinite(f) else None
+
+
+def _enum(v, allowed):
+    return v if isinstance(v, str) and v in allowed else None
+
+
+def _direction(m):
+    """az_deg, el_deg, distance_m (head-relative) -> azimuthDeg wrapped into [-180, 180) and elevationDeg clamped to
+    +-90, both to 0.1, and distanceM (0 to 50 m) to 0.01. None if any is missing or not a finite number."""
+    az, el, d = _num(m.get("az_deg")), _num(m.get("el_deg")), _num(m.get("distance_m"))
+    if az is None or el is None or d is None or not 0.0 <= d <= SOUND_DISTANCE_MAX_M:
+        return None
+    az = round((round(az, 1) + 180.0) % 360.0 - 180.0, 1)
+    return dict(azimuthDeg=az - 360.0 if az >= 180.0 else az + 0.0,
+                elevationDeg=round(min(max(el, -90.0), 90.0), 1) + 0.0, distanceM=round(d, 2) + 0.0)
+
+
+def sound_cue(msg):
+    """The phone's `sound` (one per sound, as it starts) -> the browser's cue, or None if it is malformed."""
+    t, where = _num(msg.get("t_device")), _direction(msg)
+    cue, source, anchor = _enum(msg.get("cue"), CUES), _enum(msg.get("source"), SOURCES), _enum(msg.get("anchor"), ANCHORS)
+    muffled, text, dur, url = msg.get("muffled"), msg.get("text"), msg.get("duration_s"), msg.get("audio_url")
+    if t is None or where is None or cue is None or source is None or anchor is None:
+        return None
+    if not (muffled is None or isinstance(muffled, bool)) or not (text is None or isinstance(text, str)):
+        return None
+    if dur is not None:
+        dur = _num(dur)
+        if dur is None or not 0.0 <= dur <= SOUND_DURATION_MAX_S:
+            return None
+    return dict(kind="cue", tDevice=t, cue=cue, source=source, anchor=anchor, **where, muffled=muffled,
+                text=text[:SOUND_TEXT_MAX] if text is not None else None, durationS=dur,
+                audioUrl=audio_alias(url) if isinstance(url, str) else None)
+
+
+def sound_field(msg):
+    """The phone's `sound_field` (10/s while anything is audible) -> the browser's field, or None if it is malformed.
+    A source that is null or absent is null; the beacon may say muffled, the voice says its anchor."""
+    t, hy = _num(msg.get("t_device")), msg.get("head_yaw_deg")
+    if t is None or (hy is not None and _num(hy) is None):
+        return None
+    out = dict(kind="field", tDevice=t, headYawDeg=round(_num(hy), 1) if hy is not None else None)
+    for name in ("beacon", "voice"):
+        s = msg.get(name)
+        if s is None:
+            out[name] = None
+            continue
+        where = _direction(s) if isinstance(s, dict) else None
+        if where is None:
+            return None
+        if name == "beacon":
+            muffled = s.get("muffled")
+            if not (muffled is None or isinstance(muffled, bool)):
+                return None
+            out[name] = dict(**where, muffled=muffled)
+        else:
+            anchor = _enum(s.get("anchor"), ANCHORS)
+            if anchor is None:
+                return None
+            out[name] = dict(**where, anchor=anchor)
+    return out
 
 
 class Dashboard:
@@ -80,6 +163,10 @@ class Dashboard:
         self.memory_keys = set()
         self.memory_counter = 0
         self.registrations: OrderedDict[str, dict] = OrderedDict()
+        self.sound_subs: set[asyncio.Queue] = set()   # one queue of dashboard.sound envelopes per /events connection
+        self.sound_dropped = 0        # malformed sound / sound_field messages, or ones from no bound session
+        self.field = None             # (latest sound field envelope, monotonic)
+        self.spoken = None            # (the latest `say` line, monotonic until which it is shown)
         self._changed = asyncio.Event()
 
     # ---------------------------------------------------------------- observations
@@ -87,12 +174,35 @@ class Dashboard:
         self._changed.set()
         self._changed = asyncio.Event()
 
-    async def wait_change(self, timeout=1.0):
-        ev = self._changed
+    @staticmethod
+    async def _wait(ev, timeout):
         try:
             await asyncio.wait_for(ev.wait(), timeout)
         except asyncio.TimeoutError:
             pass
+
+    async def wait_change(self, timeout=1.0):
+        await self._wait(self._changed, timeout)
+
+    def change_waiter(self, timeout=1.0):
+        """A task that ends at the next change or after `timeout` s. It watches the change event current at the call,
+        like wait_change, so a change made before the task first runs still counts."""
+        return asyncio.ensure_future(self._wait(self._changed, timeout))
+
+    def subscribe(self):
+        """A new /events connection: its own queue of dashboard.sound envelopes."""
+        q = asyncio.Queue(maxsize=SOUND_QUEUE)
+        self.sound_subs.add(q)
+        return q
+
+    def unsubscribe(self, q):
+        self.sound_subs.discard(q)
+
+    def fresh_field(self):
+        """The latest sound field envelope if it is younger than FIELD_FRESH_S, else None (for a new /events)."""
+        if self.field is not None and time.monotonic() - self.field[1] < FIELD_FRESH_S:
+            return self.field[0]
+        return None
 
     def _set_map(self, map_id, reset=False):
         if map_id and (reset or map_id != self.map_id):
@@ -108,6 +218,7 @@ class Dashboard:
             if self.session_id is not None:
                 self.relay.session_replaced()
                 self.pose, self.guidance, self.fusion = None, None, None
+                self.field, self.spoken = None, None     # the old session's sounds and line aren't playing now
             self.session_id = session_id
         if ws is not None and session_id:
             self.phone_ws = ws
@@ -125,6 +236,9 @@ class Dashboard:
         self._bind(ws, msg.get("session_id"))
         self.last_phone = (now, mono)
         kind = msg.get("type")
+        if kind in ("sound", "sound_field"):
+            self._sound(kind, msg, now, mono)
+            return
         if kind == "map":
             self._set_map(msg.get("map_id"), reset=msg.get("event") == "new_map")
         elif msg.get("map_id"):
@@ -146,6 +260,24 @@ class Dashboard:
         elif kind == "command_ack":
             self.relay.ack(msg)
         self._bump()
+
+    def _sound(self, kind, msg, now, mono):
+        """sound / sound_field from the bound session -> a dashboard.sound envelope for every /events connection.
+        Malformed ones are dropped. The 10/s field doesn't bump the snapshot; a `say` does (the caption changed)."""
+        sound = sound_cue(msg) if kind == "sound" else sound_field(msg)
+        if sound is None or not self.session_id or msg.get("session_id") != self.session_id:
+            self.sound_dropped += 1
+            return
+        env = dict(type="dashboard.sound", schemaVersion=1, streamId=self.stream_id, sentAt=iso(now), sound=sound)
+        if kind == "sound_field":
+            self.field = (env, mono)
+        elif sound["cue"] == "say":
+            self.spoken = (sound["text"] or None, mono + (sound["durationS"] or 0.0) + SPOKEN_AFTER_S)
+            self._bump()
+        for q in list(self.sound_subs):
+            if q.full():
+                q.get_nowait()                           # a stalled browser loses the oldest, never blocks the phone
+            q.put_nowait(env)
 
     def phone_closed(self, ws):
         if ws is self.phone_ws:
@@ -385,9 +517,10 @@ class Dashboard:
         active = state in ("guiding", "within_reach", "found")
         dist = msg.get("distance_m") if fresh and active else None
         bearing = msg.get("rel_azimuth_deg") if fresh and active else None
+        spoken = self.spoken[0] if self.spoken is not None and mono < self.spoken[1] else None
         return dict(state=state, targetItemId=msg.get("item_id") if fresh and active else None,
                     distanceM=max(0.0, float(dist)) if isinstance(dist, (int, float)) else None,
                     bearingDeg=float(bearing) if isinstance(bearing, (int, float)) else None,
                     bearingReference="head" if isinstance(bearing, (int, float)) else None,
-                    audioPattern=PATTERNS.get(state, "off"), spokenInstruction=None,
+                    audioPattern=PATTERNS.get(state, "off"), spokenInstruction=spoken,
                     updatedAt=iso(wall) if wall else iso(self.started))

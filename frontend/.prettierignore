@@ -4,3 +4,4 @@ playwright-report
 test-results
 package-lock.json
 docs/dashboard.snapshot.schema.json
+docs/dashboard.sound.schema.json

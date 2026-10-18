@@ -1,4 +1,6 @@
-import type { Command, Snapshot } from './schema'
+import type { Command, Snapshot, Sound } from './schema'
+import { hear, initialHearing } from './sound'
+import type { Hearing } from './sound'
 import type { Connection, Transport } from './transport'
 
 export type DashboardState = {
@@ -22,6 +24,13 @@ export class DashboardStore {
     failed: null,
   }
   private listeners = new Set<() => void>()
+  // What the wearer hears arrives up to 10 times a second: its listeners get each sound directly, outside the app
+  // state, so the rest of the dashboard doesn't re-render for it.
+  // The store folds every sound into `hearing`, so a view opened mid-sentence (or after a reconnect) starts from what
+  // is audible now, not from silence.
+  private soundListeners = new Set<(sound: Sound) => void>()
+  private hearing: Hearing = initialHearing
+  getHearing = () => this.hearing
   private timeout?: ReturnType<typeof setTimeout>
   private commandScope: CommandScope | null = null
   constructor(private transport: Transport) {}
@@ -30,6 +39,12 @@ export class DashboardStore {
     this.listeners.add(listener)
     return () => {
       this.listeners.delete(listener)
+    }
+  }
+  subscribeSound = (listener: (sound: Sound) => void) => {
+    this.soundListeners.add(listener)
+    return () => {
+      this.soundListeners.delete(listener)
     }
   }
   private update(change: Partial<DashboardState>) {
@@ -85,6 +100,10 @@ export class DashboardStore {
             error ||
             (connection === 'live' ? null : this.state.connectionError),
         }),
+      (sound) => {
+        this.hearing = hear(this.hearing, sound, Date.now())
+        this.soundListeners.forEach((listener) => listener(sound))
+      },
     )
     return () => {
       stop()

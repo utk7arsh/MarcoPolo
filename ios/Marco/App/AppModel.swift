@@ -94,6 +94,9 @@ final class AppModel: ObservableObject {
     private var voiceAnchor = SoundAnchor.ahead                        // where Marco's voice is coming from now
     private var lastTouch: (id: String, position: SIMD3<Float>)?       // the jar a "what is this" is about
     private var routeWatch = RouteWatch()                              // are the AirPods the output?
+    private lazy var sounds = SoundReporter(sessionId: sessionId)      // what the wearer hears, for the dashboard
+    private var beaconPoint: SIMD3<Float>?                             // the beacon, listener-relative, while guiding
+    private var voicePlaced = SoundAnchor.aheadPoint                   // the voice, listener-relative
     private var guidanceScope: NavigationScope?
     private var commandGate = CommandGate()               // dashboard Find/Stop (docs/INTERFACES.md §4)
     private var labels: [String: (text: String?, url: String?)] = [:]  // item_id -> its label
@@ -220,7 +223,9 @@ final class AppModel: ObservableObject {
             guard let self, self.running, self.control.generation == ticket else { return }
             self.heard = "Marco... (listening)"
             self.voiceAnchor = .ahead
+            self.voicePlaced = SoundAnchor.aheadPoint
             self.audio.listening()
+            self.report("blip", at: SoundAnchor.aheadPoint, anchor: "ahead", duration: 0.12)
         } }
         listener.onError = { [weak self] e in DispatchQueue.main.async { self?.note("listener: \(e)") } }
         Listener.requestPermissions { [weak self] ok in
@@ -502,7 +507,8 @@ final class AppModel: ObservableObject {
         // A line from a point in the room stays there while the head turns, guiding or not.
         if case .world = voiceAnchor, let pose = l.pose, pose.usable(now: t, in: l.scope) {
             let ear = Geo.position(pose.transform) + SIMD3<Float>(0, Config.earAboveChestM, 0)
-            audio.moveVoice(voiceAnchor.listenerRelative(ear: ear, headYawDeg: l.headYaw))
+            voicePlaced = voiceAnchor.listenerRelative(ear: ear, headYawDeg: l.headYaw)
+            audio.moveVoice(voicePlaced)
         }
         if let pose = l.pose, pose.usable(now: t, in: guidanceScope), guidance.active {
             let T = pose.transform
@@ -510,9 +516,14 @@ final class AppModel: ObservableObject {
             let ear = chest + SIMD3<Float>(0, Config.earAboveChestM, 0)
             play(guidance.tick(now: t, chest: chest, ear: ear, headYawDeg: l.headYaw))
             if let tg = guidance.target {
-                audio.place(Geo.listenerRelative(ear: ear, headYawDeg: l.headYaw, target: tg.position))
+                beaconPoint = Geo.listenerRelative(ear: ear, headYawDeg: l.headYaw, target: tg.position)
+                audio.place(beaconPoint!)
             }
             if guidanceGate.ready(t) || !guidance.active { sendGuidance() }
+        }
+        let beacon = guidance.active ? beaconPoint.map { ($0, muffled: guidance.phase == .behind) } : nil
+        if let m = sounds.field(t: t, headYawDeg: l.headYaw, beacon: beacon, voice: (voicePlaced, anchor: anchorName(voiceAnchor))) {
+            emit(m)
         }
         if uiGate.ready(t) {
             let target = guidance.active ? guidance.target?.itemId : nil
@@ -613,12 +624,13 @@ final class AppModel: ObservableObject {
         let d = Geo.horizontalDistance(chest, p)
         let label = labels[id]
         play(guidance.stop())
-        audio.play(.silence)
+        silence()
         guidanceScope = scope
         guidance.start(GuidanceTarget(itemId: id, name: name, position: p, surface: surface,
                                       labelText: label?.text, labelAudioURL: label?.url), now: now)
         let ear = chest + SIMD3<Float>(0, Config.earAboveChestM, 0)
-        audio.place(Geo.listenerRelative(ear: ear, headYawDeg: yaw, target: p))
+        beaconPoint = Geo.listenerRelative(ear: ear, headYawDeg: yaw, target: p)
+        audio.place(beaconPoint!)
         say(spotted ? Lines.spotted(name: name, relAzimuthDeg: bodyAz, distanceM: d, surface: surface)
                     : Lines.polo(relAzimuthDeg: bodyAz, distanceM: d, surface: surface), from: .world(p))
         note("\(spotted ? "spotted" : "find") \(name): \(surface ?? "?"), \(Int(bodyAz)) deg, \(String(format: "%.1f", d)) m")
@@ -657,7 +669,7 @@ final class AppModel: ObservableObject {
 
     private func whatIsThis(_ a: WhatAnswer) {
         let from = anchor(item: a.item_id, touch: a.touch_id)          // the jar under the hand answers
-        if let line = Lines.whatIsThis(a) { say(line, from: from) }
+        if let line = Lines.whatIsThis(a) { say(line, from: from, cue: a.status == "known" ? "label" : "say") }
     }
 
     /// On the guided item: the end of guidance. Otherwise name what the hand is on (telling identical jars apart).
@@ -673,7 +685,7 @@ final class AppModel: ObservableObject {
         guard let id = tm.item_id else { return }
         let label = labels[id]
         let from = SoundAnchor.at(tm.position)                         // the label comes from the jar itself
-        if let line = Lines.touchedKnown(name: tm.name, labelText: label?.text) { say(line, from: from) }
+        if let line = Lines.touchedKnown(name: tm.name, labelText: label?.text) { say(line, from: from, cue: "label") }
     }
 
     private func worldEvent(_ e: WorldEventMsg) {
@@ -713,8 +725,10 @@ final class AppModel: ObservableObject {
             case .haptic: haptic.impactOccurred()
             case .say(let s): say(s, from: guided)
             case .playLabel(_, let fallback):
-                say(fallback, from: guided)
-            default: audio.play(c)
+                say(fallback, from: guided, cue: "label")
+            default:
+                audio.play(c)
+                reportBeacon(c)
             }
         }
     }
@@ -738,7 +752,7 @@ final class AppModel: ObservableObject {
         guidanceScope = nil
         let was = guidance.active
         play(guidance.stop())
-        audio.play(.silence)
+        silence()
         if was { sendGuidance() }
         phase = .off
     }
@@ -866,10 +880,47 @@ final class AppModel: ObservableObject {
 
     /// Every line Marco says goes through here, with where it comes from (Core/SoundScene.swift). A room point is
     /// placed now and kept current every tick; with no fresh pose to place it, the line comes from ahead.
-    private func say(_ line: String, from anchor: SoundAnchor) {
+    /// cue: "label" for an item's label (same voice, no memo), so the dashboard can still tell it apart.
+    private func say(_ line: String, from anchor: SoundAnchor, cue: String = "say") {
         voiceAnchor = anchor
-        if let p = voicePoint() { audio.say(line, at: p) } else { audio.say(line, atItem: false) }
+        let p = voicePoint()
+        if let p { audio.say(line, at: p) } else { audio.say(line, atItem: false) }
+        voicePlaced = p ?? SoundAnchor.aheadPoint
+        report(cue, at: voicePlaced, anchor: p == nil ? "ahead" : anchorName(anchor), text: line,
+               duration: SoundReporter.speechSeconds(line))
         note("says: \(line)")
+    }
+
+    /// Stop every sound (and tell the dashboard).
+    private func silence() {
+        audio.play(.silence)
+        reportBeacon(.silence)
+    }
+
+    // MARK: - What the wearer hears, for the dashboard (docs/INTERFACES.md §3.2 sound, sound_field)
+
+    private func report(_ cue: String, at p: SIMD3<Float>, anchor: String, muffled: Bool? = nil, text: String? = nil,
+                        duration: Double? = nil) {
+        emit(sounds.cue(cue, at: p, anchor: anchor, t: now, muffled: muffled, text: text, duration: duration))
+    }
+
+    /// The beacon's cues (the sound itself is SpatialAudio's).
+    private func reportBeacon(_ c: Cue) {
+        let at = beaconPoint ?? SoundAnchor.aheadPoint
+        switch c {
+        case .beep(let muffled): report("beep", at: at, anchor: "item", muffled: muffled)
+        case .ding: report("ding", at: at, anchor: "item")
+        case .steadyTone(let on): report(on ? "tone_on" : "tone_off", at: at, anchor: "item")
+        case .silence: report("silence", at: at, anchor: "item")
+        default: break
+        }
+    }
+
+    private func anchorName(_ a: SoundAnchor) -> String {
+        switch a {
+        case .ahead: return "ahead"
+        case .world(let p): return guidance.target?.position == p ? "item" : "room"
+        }
     }
 
     private func voicePoint() -> SIMD3<Float>? {

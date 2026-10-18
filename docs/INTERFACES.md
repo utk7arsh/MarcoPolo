@@ -112,6 +112,36 @@ Three owners, one contract. Change a message format only by updating this file, 
 ```
 `rel_azimuth_deg` is relative to the head; `distance_m` is horizontal, chest to item.
 
+**What the wearer hears, for the dashboard** (the server only relays these, §6). One `sound` message the moment each sound starts:
+```json
+{"type": "sound", "session_id": "…", "t_device": 81235.20, "cue": "beep", "source": "beacon", "anchor": "item",
+ "az_deg": -150.0, "el_deg": -12.0, "distance_m": 1.6, "muffled": true}
+{"type": "sound", "session_id": "…", "t_device": 81234.90, "cue": "say", "source": "voice", "anchor": "item",
+ "az_deg": -150.0, "el_deg": -12.0, "distance_m": 1.6, "text": "Polo! Behind you, two steps, on the table.", "duration_s": 2.9}
+{"type": "sound", "session_id": "…", "t_device": 81240.10, "cue": "label", "source": "voice", "anchor": "room",
+ "az_deg": 20.0, "el_deg": -35.0, "distance_m": 0.6, "text": "That's the cumin, love", "duration_s": 1.8}
+```
+- **`cue`:**
+  - `beep` (with `muffled` true while the item is behind the head), `ding` (facing), `tone_on` and `tone_off` (the steady tone);
+  - `say` (Marco's voice, with `text`), `label` (an item's label, spoken in the same voice, with its words in `text`; `audio_url` only if it is a recorded voice memo), `blip` (listening, after "Marco");
+  - `silence` (everything stopped).
+- **`source`:** `beacon` for beep, ding and tone; `voice` for say, label and blip.
+- **`anchor`:** `item` (the guided item), `room` (another point in the room, such as a touched jar) or `ahead` (Marco's own lines, fixed to the head).
+- **Direction, relative to the head at that moment:**
+  - `az_deg`: 0 ahead, +90 right, ±180 behind;
+  - `el_deg`: + is up;
+  - `distance_m`: ear to source, in metres;
+  - `ahead` is 0, 0, 1.
+- **`duration_s`:** for `say` and `label`, estimated from the words (exact for a voice memo).
+
+**Sound field, 10 per second while anything is audible:** where each source is now, relative to the head. Send one last message with both sources null when it goes quiet:
+```json
+{"type": "sound_field", "session_id": "…", "t_device": 81235.30, "head_yaw_deg": 12.3,
+ "beacon": {"az_deg": -150.0, "el_deg": -12.0, "distance_m": 1.6, "muffled": true},
+ "voice": {"az_deg": 0.0, "el_deg": 0.0, "distance_m": 1.0, "anchor": "ahead"}}
+```
+`beacon` is set while guiding and `voice` while Marco is speaking; each is null (or absent) otherwise.
+
 **Queries:**
 ```json
 {"type": "query", "session_id": "…", "query_id": "…", "kind": "find", "name": "keys"}
@@ -260,7 +290,7 @@ speech. It uses the same fail-closed Tailscale authentication as every other rou
 | Route | What it does |
 |---|---|
 | `GET /dashboard/snapshot` | one complete `dashboard.snapshot` envelope: `schemaVersion` 1, `streamId`, a strictly increasing `sequence` shared with `/events`, and `sentAt` |
-| `WS /events` | a snapshot at once, then after each change (at most 5 per second) and at least once a second |
+| `WS /events` | a snapshot at once, then after each change (at most 5 per second) and at least once a second; in between, `dashboard.sound` messages as they happen (below) |
 | `POST /dashboard/commands` | Find (`{commandId, deviceId, type: "find", itemId}`) or Stop (`{commandId, deviceId, type: "stop"}`) |
 | `GET /media/frames/<token>.jpg`, `/media/items/<item_id>.jpg`, `/media/audio/<id>`, `/media/touch/<touch_id>.jpg` | the recent upright frames (the last 30), item photos, label audio and touch crops |
 | `GET /app/…` | the built dashboard, when `MARCO_DASHBOARD_DIR` points at `frontend/dist` (one origin with the API) |
@@ -291,6 +321,22 @@ speech. It uses the same fail-closed Tailscale authentication as every other rou
 
     The layout is display only. It's LiDAR geometry, so it can be wrong (a doorway the scan hasn't seen through yet can show as a wall). It's dropped when the map changes. Without a layout, `walls` is null and `landmarks` is absent.
 - **Room name:** `MARCO_ROOM_ID` and `MARCO_ROOM_NAME`.
+- **What the wearer hears:** the phone's `sound` and `sound_field` (§3.2) go out on `/events` at once, between snapshots, not throttled:
+  ```json
+  {"type": "dashboard.sound", "schemaVersion": 1, "streamId": "…", "sentAt": "…",
+   "sound": {"kind": "cue", "tDevice": 81235.2, "cue": "beep", "source": "beacon", "anchor": "item",
+             "azimuthDeg": -150.0, "elevationDeg": -12.0, "distanceM": 1.6, "muffled": true,
+             "text": null, "durationS": null, "audioUrl": null}}
+  {"type": "dashboard.sound", "schemaVersion": 1, "streamId": "…", "sentAt": "…",
+   "sound": {"kind": "field", "tDevice": 81235.3, "headYawDeg": 12.3,
+             "beacon": {"azimuthDeg": -150.0, "elevationDeg": -12.0, "distanceM": 1.6, "muffled": true}, "voice": null}}
+  ```
+  - Only the bound phone session's are sent. A malformed one is dropped.
+  - `audioUrl` is a voice memo's `/media/audio/<id>`, when there is one. Field sources carry `anchor` (`voice`) or `muffled` (`beacon`).
+  - A new `/events` connection gets the latest field at once if it is under 1 s old.
+  - Dashboards that don't know `dashboard.sound` ignore it.
+  - **`navigation.spokenInstruction`** in the snapshot is the phone's latest `say` line, while it plays and for 3 s after.
+  - The dashboard (`frontend/`) draws these in every view: the room map, the camera and the guidance panel. The schema is `frontend/docs/dashboard.sound.schema.json`.
 
 **The raw feed**, WebSocket `/v1/dashboard` (read-only), which the adapter itself is built from:
 
@@ -397,3 +443,4 @@ If an `event moved` (or `put_down`) arrives for the target, retarget to its new 
   - a new raw-feed message, `room_layout`;
   - in the snapshot, `map.walls` is filled, and there is a new optional `map.landmarks`;
   - a new `map_id` on a frame now starts a fresh room map (old-frame voxels used to stay).
+- **What the wearer hears:** new phone messages `sound` and `sound_field` (§3.2), relayed to the dashboard as `dashboard.sound` on `/events`; `navigation.spokenInstruction` now carries the phone's spoken line (§6).

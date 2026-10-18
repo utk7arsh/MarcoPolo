@@ -660,6 +660,48 @@ do {
           "no wake word in the new lines")
 }
 
+// MARK: - What the wearer hears, for the dashboard (§3.2 sound, sound_field)
+
+do {
+    let ahead = HeardDirection(SoundAnchor.aheadPoint), right = HeardDirection(SIMD3(2, 0, 0))
+    let behind = HeardDirection(SIMD3(0, 0, 1.5)), low = HeardDirection(SIMD3(0, -0.8, -0.8))
+    check(ahead.azDeg == 0 && ahead.elDeg == 0 && ahead.distanceM == 1, "ahead: \(ahead)")
+    check(right.azDeg == 90 && right.distanceM == 2 && abs(behind.azDeg) == 180, "right and behind: \(right) \(behind)")
+    check(low.elDeg == -45 && low.distanceM == 1.13, "below the ear: \(low)")
+    check(HeardDirection(SIMD3(-1, 0, -1)).azDeg == -45, "front-left is negative")
+
+    var r = SoundReporter(sessionId: "s")
+    let beep = r.cue("beep", at: SIMD3(1, 0, 1), anchor: "item", t: 10, muffled: true)
+    check(beep.source == "beacon" && beep.az_deg == 135 && beep.muffled == true && beep.text == nil, "beep: \(beep)")
+    let say = r.cue("say", at: SIMD3(0, 0, -1), anchor: "ahead", t: 10, text: "Polo!", duration: 1.04)
+    check(say.source == "voice" && say.duration_s == 1 && say.text == "Polo!", "say: \(say)")
+    if let json = try? JSONEncoder().encode(beep), let o = try? JSONSerialization.jsonObject(with: json) as? [String: Any] {
+        check(o["type"] as? String == "sound" && o["cue"] as? String == "beep" && o["az_deg"] as? Double == 135
+              && o["text"] == nil && o["session_id"] as? String == "s", "sound encodes the contract's keys: \(o)")
+    } else { check(false, "sound encodes") }
+
+    // The field: 10/s while anything is audible, once more when it goes quiet, then nothing.
+    var f = SoundReporter(sessionId: "s")
+    let v = (SoundAnchor.aheadPoint, anchor: "ahead")
+    check(f.field(t: 0, headYawDeg: 0, beacon: nil, voice: v) == nil, "quiet: no field")
+    let b = (SIMD3<Float>(0, -0.8, 1.6), muffled: true)
+    var sent = 0
+    for i in 0..<60 where f.field(t: Double(i) / 60, headYawDeg: 12.34, beacon: b, voice: v) != nil { sent += 1 }
+    check((9...11).contains(sent), "10/s while guiding: \(sent)")
+    let one = f.field(t: 1.2, headYawDeg: 12.34, beacon: b, voice: v)
+    check(one?.beacon?.muffled == true && one?.voice == nil && one?.head_yaw_deg == 12.3, "beacon only: \(String(describing: one))")
+    let quiet = f.field(t: 1.21, headYawDeg: 0, beacon: nil, voice: v)
+    check(quiet != nil && quiet?.beacon == nil && quiet?.voice == nil, "going quiet goes out at once")
+    check(f.field(t: 1.5, headYawDeg: 0, beacon: nil, voice: v) == nil, "then nothing")
+    _ = f.cue("say", at: SoundAnchor.aheadPoint, anchor: "ahead", t: 2, text: "Got it.", duration: 1)
+    check(f.field(t: 2.2, headYawDeg: 0, beacon: nil, voice: v)?.voice?.anchor == "ahead", "the voice while it speaks")
+    check(f.field(t: 3.05, headYawDeg: 0, beacon: nil, voice: v)?.voice == nil, "and the last field after it ends")
+    _ = f.cue("say", at: SoundAnchor.aheadPoint, anchor: "ahead", t: 4, text: "Got it.", duration: 5)
+    _ = f.cue("silence", at: SoundAnchor.aheadPoint, anchor: "item", t: 4.5)
+    check(f.field(t: 4.6, headYawDeg: 0, beacon: nil, voice: v)?.voice == nil, "silence ends the voice")
+    check(abs(SoundReporter.speechSeconds("Polo! Behind you, two steps, on the table.") - (8 / 2.6 + 0.3)) < 1e-9, "speech length")
+}
+
 // MARK: - Server messages (§4), as the server sends them
 
 do {
@@ -1183,6 +1225,30 @@ if let i = CommandLine.arguments.firstIndex(of: "--emit"), i + 1 < CommandLine.a
     ]
     write("phone.jsonl", lines.reduce(into: Data()) { $0.append($1); $0.append(0x0A) })
     lines.removeAll()
+
+    // What the wearer hears (§3.2), made by the app's own SoundReporter, for the server and the dashboard schema.
+    var heard = SoundReporter(sessionId: sid)
+    let behind = SIMD3<Float>(0.9, -0.8, 1.6), jar = SIMD3<Float>(0.2, -0.45, -0.35)
+    var sounds: [Data] = [
+        json(heard.cue("say", at: behind, anchor: "item", t: 1001.0, text: "Polo! Behind you, two steps, on the table.",
+                       duration: SoundReporter.speechSeconds("Polo! Behind you, two steps, on the table."))),
+        json(heard.cue("beep", at: behind, anchor: "item", t: 1004.0, muffled: true)),
+        json(heard.cue("ding", at: SIMD3(0, -0.8, -1.2), anchor: "item", t: 1006.0)),
+        json(heard.cue("tone_on", at: SIMD3(0, -0.6, -0.3), anchor: "item", t: 1010.0)),
+        json(heard.cue("label", at: jar, anchor: "room", t: 1012.0, text: "That's the cumin, love", duration: 1.8,
+                       audioURL: "/v1/audio/abc123")),
+        json(heard.cue("blip", at: SoundAnchor.aheadPoint, anchor: "ahead", t: 1013.0, duration: 0.12)),
+        json(heard.cue("silence", at: behind, anchor: "item", t: 1014.0)),
+    ]
+    var fields = SoundReporter(sessionId: sid)
+    _ = fields.cue("say", at: SoundAnchor.aheadPoint, anchor: "ahead", t: 1020.0, text: "Got it.", duration: 1)
+    if let f = fields.field(t: 1020.1, headYawDeg: 12.34, beacon: (behind, muffled: true), voice: (SoundAnchor.aheadPoint, anchor: "ahead")) {
+        sounds.append(json(f))
+    }
+    if let quiet = fields.field(t: 1022.0, headYawDeg: 0, beacon: nil, voice: (SoundAnchor.aheadPoint, anchor: "ahead")) {
+        sounds.append(json(quiet))
+    }
+    write("sound.jsonl", sounds.reduce(into: Data()) { $0.append($1); $0.append(0x0A) })
 
     // A short walk recorded on the phone (Core/Recorder.swift), for server/tools/check_recording.py and
     // marco.session.Session: 3 frames at 1/s, 21 poses at 10/s, a hand and a map event.

@@ -403,3 +403,67 @@ test('a newly saved Photon registration joins the library with no invented locat
   )
   await expect(page.getByText('Label saved', { exact: true })).toBeVisible()
 })
+
+test('what the wearer hears arrives between snapshots and shows in the guidance panel', async ({
+  page,
+}) => {
+  const api = await mockApi(page)
+  await page.goto('/#live')
+  const panel = page.getByRole('complementary', { name: 'Navigation guidance' })
+  await expect(panel.getByLabel('2.1 meters')).toBeVisible()
+  const sound = (value: object, streamId = api.value.streamId) =>
+    api.socket.send(
+      JSON.stringify({
+        type: 'dashboard.sound',
+        schemaVersion: 1,
+        streamId,
+        sentAt: new Date().toISOString(),
+        sound: value,
+      }),
+    )
+  const cue = {
+    kind: 'cue',
+    tDevice: 10,
+    source: 'beacon',
+    anchor: 'item',
+    azimuthDeg: -90,
+    elevationDeg: 0,
+    distanceM: 1.5,
+    muffled: false,
+    text: null,
+    durationS: null,
+    audioUrl: null,
+  }
+  api.publish()
+  sound({ ...cue, cue: 'beep' })
+  await expect(panel.getByText('Playing in AirPods: beacon')).toBeVisible()
+  await expect(
+    panel.getByRole('img', {
+      name: 'Sound at -90 degrees from where the wearer faces',
+    }),
+  ).toBeVisible()
+  api.publish()
+  sound({
+    ...cue,
+    cue: 'say',
+    source: 'voice',
+    muffled: null,
+    text: 'Polo! On your left, two steps.',
+    durationS: 2.4,
+  })
+  await expect(panel.getByText('Polo! On your left, two steps.')).toBeVisible()
+  await expect(panel.getByText('Marco, from the left')).toBeVisible()
+  sound(
+    {
+      ...cue,
+      cue: 'say',
+      source: 'voice',
+      text: 'Not from this server.',
+      durationS: 2,
+    },
+    'another-stream',
+  )
+  sound({ ...cue, cue: 'whistle' })
+  api.publish()
+  await expect(panel.getByText('Not from this server.')).toHaveCount(0)
+})

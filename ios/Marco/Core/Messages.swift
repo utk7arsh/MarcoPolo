@@ -63,6 +63,41 @@ struct GuidanceMsg: Codable, Equatable {
     var distance_m: Double           // horizontal, chest to item
 }
 
+/// §3.2: what the wearer hears, for the dashboard. One per sound, the moment it starts; the server only relays it.
+struct SoundMsg: Codable, Equatable {
+    var type = "sound"
+    var session_id: String
+    var t_device: Double
+    var cue: String                  // beep | ding | tone_on | tone_off | say | label | blip | silence
+    var source: String               // beacon | voice
+    var anchor: String               // item | room | ahead
+    var az_deg: Double               // relative to the head: 0 ahead, +90 right, ±180 behind
+    var el_deg: Double               // + up
+    var distance_m: Double           // ear to source
+    var muffled: Bool?
+    var text: String?
+    var duration_s: Double?
+    var audio_url: String?
+}
+
+/// §3.2: where each audible source is now, relative to the head; 10/s while anything is audible, then one with both
+/// sources absent when it goes quiet.
+struct SoundFieldMsg: Codable, Equatable {
+    struct Source: Codable, Equatable {
+        var az_deg: Double
+        var el_deg: Double
+        var distance_m: Double
+        var muffled: Bool?           // beacon
+        var anchor: String?          // voice
+    }
+    var type = "sound_field"
+    var session_id: String
+    var t_device: Double
+    var head_yaw_deg: Double
+    var beacon: Source?
+    var voice: Source?
+}
+
 /// §3.2: the phone's answer to a dashboard `command` (status accepted | applied | rejected, with a reason).
 struct CommandAckMsg: Codable, Equatable {
     var type = "command_ack"

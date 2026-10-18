@@ -189,3 +189,59 @@ export const commandResponseSchema = z.object({
   commandId: z.string(),
   status: z.literal('pending'),
 })
+
+// What the wearer hears (docs/INTERFACES.md §6, `dashboard.sound` on /events): the phone reports every sound as it
+// starts (a cue) and, 10 times a second while anything is audible, where each source is (a field). Directions are
+// relative to the wearer's head: azimuth 0 ahead, +90 right, ±180 behind; elevation + up.
+const azimuth = z.number().finite().min(-180).max(180)
+const elevation = z.number().finite().min(-90).max(90)
+const meters = z.number().finite().nonnegative()
+const anchor = z.enum(['item', 'room', 'ahead'])
+const soundCue = z.object({
+  kind: z.literal('cue'),
+  tDevice: z.number().finite(),
+  cue: z.enum([
+    'beep',
+    'ding',
+    'tone_on',
+    'tone_off',
+    'say',
+    'label',
+    'blip',
+    'silence',
+  ]),
+  source: z.enum(['beacon', 'voice']),
+  anchor,
+  azimuthDeg: azimuth,
+  elevationDeg: elevation,
+  distanceM: meters,
+  muffled: z.boolean().nullable(),
+  text: z.string().nullable(),
+  durationS: z.number().finite().nonnegative().nullable(),
+  audioUrl: z.string().nullable(),
+})
+const fieldSource = {
+  azimuthDeg: azimuth,
+  elevationDeg: elevation,
+  distanceM: meters,
+}
+const soundField = z.object({
+  kind: z.literal('field'),
+  tDevice: z.number().finite(),
+  headYawDeg: z.number().finite().nullable(),
+  beacon: z
+    .object({ ...fieldSource, muffled: z.boolean().nullable() })
+    .nullable(),
+  voice: z.object({ ...fieldSource, anchor }).nullable(),
+})
+export const soundSchema = z.object({
+  type: z.literal('dashboard.sound'),
+  schemaVersion: z.literal(1),
+  streamId: z.string(),
+  sentAt: timestamp,
+  sound: z.discriminatedUnion('kind', [soundCue, soundField]),
+})
+export type SoundMessage = z.infer<typeof soundSchema>
+export type Sound = SoundMessage['sound']
+export type SoundCue = z.infer<typeof soundCue>
+export type SoundField = z.infer<typeof soundField>

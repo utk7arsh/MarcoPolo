@@ -9,6 +9,8 @@ import { Icon } from './components/Icon'
 import { Dialog } from './components/Dialog'
 import { Photon } from './components/Photon'
 import { EmptyState } from './components/Shared'
+import { SoundPill } from './components/Hearing'
+import { useHearing, useListenIn } from './lib/hearing'
 
 export function App({
   store,
@@ -19,6 +21,9 @@ export function App({
 }) {
   const now = useNow()
   const state = useSyncExternalStore(store.subscribe, store.getSnapshot)
+  // What the wearer hears, for every page: the Live views draw it, Objects shows the line being spoken.
+  const heard = useHearing(store.subscribeSound, store.getHearing)
+  const listen = useListenIn(store.subscribeSound)
   const [page, setPage] = useState(() =>
     window.location.hash === '#live' ? 'live' : 'objects',
   )
@@ -165,8 +170,11 @@ export function App({
                 }
                 onStop={() => void store.command('stop')}
                 onObjects={() => navigate('objects')}
+                heard={heard}
+                listen={{ on: listen.on, onToggle: listen.toggle }}
               />
             )}
+            {page === 'objects' && <SoundPill heard={heard} />}
           </>
         ) : (
           <div className="panel initial-state">

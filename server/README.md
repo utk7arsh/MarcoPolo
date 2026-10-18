@@ -94,6 +94,12 @@ Stream any session into a running server, as if the phone were live (for the das
 python tools/replay.py data/sessions/fake --server http://127.0.0.1:8000 --speed 4
 ```
 
+Rehearse the dashboard's "what the wearer hears" view without the iPhone. This is a SIMULATED phone: a scripted 30 s
+"find the keys" run (poses, guidance, `sound` and `sound_field`, §3.2), aimed at the stub's own keys:
+```
+python tools/sound_demo.py --server http://127.0.0.1:8000 --loop
+```
+
 **Test detection on real video:** [docs/TESTING.md](../docs/TESTING.md).
 - `inspect_session.py` checks that video, depth and poses agree.
 - `label_truth.py` takes one click per item.

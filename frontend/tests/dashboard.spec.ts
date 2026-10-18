@@ -219,5 +219,57 @@ for (const width of [1440, 768, 390]) {
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true)
+    await page.getByRole('button', { name: 'Map', exact: true }).click()
+    await expect(
+      page.getByRole('img', { name: /Sound at 145 degrees/ }),
+    ).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Listen in' })).toBeVisible()
   })
 }
+
+test('what the wearer hears runs through the map and the guidance panel, from Polo to the label', async ({
+  page,
+}) => {
+  test.setTimeout(45000)
+  const errors: string[] = []
+  page.on('pageerror', (error) => errors.push(error.message))
+  await page.goto('/#live')
+  await scenario(page, 'Finding keys, start to finish')
+  const panel = page.getByRole('complementary', { name: 'Navigation guidance' })
+  await expect(
+    panel.getByText('Polo! Behind you, two steps, on the table.'),
+  ).toBeVisible()
+  await expect(
+    panel.getByText('Marco, from behind, on the right'),
+  ).toBeVisible()
+  await expect(page.locator('.map-head.sounding')).toBeVisible()
+  await expect(panel.getByText('Playing in AirPods: beacon')).toBeVisible({
+    timeout: 8000,
+  })
+  await expect(panel.getByText('Within reach, on the table.')).toBeVisible({
+    timeout: 15000,
+  })
+  await expect(panel.getByText('Your house keys.')).toBeVisible({
+    timeout: 12000,
+  })
+  const listen = page.getByRole('button', { name: 'Listen in' })
+  await expect(listen).toHaveAttribute('aria-pressed', 'false')
+  await listen.click()
+  await expect(listen).toHaveAttribute('aria-pressed', 'true')
+  await listen.click()
+  await expect(listen).toHaveAttribute('aria-pressed', 'false')
+  await expect(
+    page.getByRole('button', { name: 'Sound', exact: true }),
+  ).toHaveCount(0)
+  expect(errors).toEqual([])
+})
+
+test('away from Live, the line in the AirPods still shows', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await scenario(page, 'Finding keys, start to finish')
+  await expect(
+    page.getByRole('status').filter({ hasText: 'In the AirPods' }),
+  ).toContainText('Polo! Behind you, two steps, on the table.')
+})

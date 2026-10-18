@@ -11,6 +11,9 @@ import { Icon } from './Icon'
 import { EmptyState, ItemImage } from './Shared'
 import { MapView } from './MapView'
 import { CameraView } from './CameraView'
+import { ListenButton, ListeningHead, SoundCaption } from './Hearing'
+import { captionOf, playing } from '../lib/hearing'
+import type { Heard } from '../lib/hearing'
 
 export function Live({
   now,
@@ -21,6 +24,8 @@ export function Live({
   onStop,
   onObjects,
   demo,
+  heard,
+  listen,
 }: {
   now: number
   data: DashboardData
@@ -30,6 +35,8 @@ export function Live({
   onStop: () => void
   onObjects: () => void
   demo: boolean
+  heard: Heard
+  listen: { on: boolean; onToggle: () => void }
 }) {
   const [view, setView] = useState<'map' | 'camera'>('map')
   const nav = data.navigation
@@ -73,6 +80,31 @@ export function Live({
     active &&
     data.devices.airpods.state === 'connected' &&
     nav.audioPattern !== 'off'
+  // What the wearer hears runs through every view: the map, the camera and this panel draw the same stream.
+  const caption = captionOf(heard, active ? nav.spokenInstruction : null)
+  const nowPlaying = playing(heard, caption)
+  const sound = (
+    <div className="spoken-guidance">
+      <div className="spoken-guidance-row">
+        <span className="label">
+          <Icon
+            name="speaker"
+            size={15}
+            className={heard.speaking ? 'speaking' : ''}
+          />
+          {data.devices.airpods.state !== 'connected'
+            ? 'AirPods disconnected'
+            : nowPlaying
+              ? `Playing in AirPods: ${nowPlaying}`
+              : audioActive
+                ? 'Playing in AirPods'
+                : 'Nothing playing in AirPods'}
+        </span>
+        <ListenButton on={listen.on} onToggle={listen.onToggle} />
+      </div>
+      <SoundCaption caption={caption} speaking={heard.speaking} />
+    </div>
+  )
   return (
     <>
       <div className="page-heading">
@@ -113,7 +145,12 @@ export function Live({
             </span>
           </div>
           {view === 'map' ? (
-            <MapView data={data} live={mapLive} targetId={item?.id || null} />
+            <MapView
+              data={data}
+              live={mapLive}
+              targetId={item?.id || null}
+              heard={heard}
+            />
           ) : (
             <CameraView
               now={now}
@@ -121,6 +158,7 @@ export function Live({
               online={online && data.devices.phone.state === 'connected'}
               targetId={item?.id || null}
               demo={demo}
+              heard={heard}
             />
           )}
         </section>
@@ -154,16 +192,11 @@ export function Live({
                   </>
                 ) : active ? (
                   <>
-                    <span className="direction-circle">
-                      {nav.bearingDeg !== null ? (
-                        <Icon
-                          name="arrow"
-                          size={48}
-                          style={{ transform: `rotate(${nav.bearingDeg}deg)` }}
-                        />
-                      ) : (
-                        <Icon name="recenter" size={40} />
-                      )}
+                    <span className="direction-circle listening">
+                      <ListeningHead
+                        heard={heard}
+                        bearingDeg={nav.bearingDeg}
+                      />
                     </span>
                     {nav.distanceM !== null && (
                       <div
@@ -202,19 +235,7 @@ export function Live({
                   </>
                 )}
               </div>
-              {active && (
-                <div className="spoken-guidance">
-                  <span className="label">
-                    <Icon name="speaker" size={15} />
-                    {audioActive
-                      ? 'Playing in AirPods'
-                      : data.devices.airpods.state !== 'connected'
-                        ? 'AirPods disconnected'
-                        : 'Audio paused'}
-                  </span>
-                  {nav.spokenInstruction && <p>{nav.spokenInstruction}</p>}
-                </div>
-              )}
+              {(active || found || caption) && sound}
               <div className="guidance-actions">
                 {found ? (
                   <button className="button secondary" onClick={onObjects}>
@@ -242,6 +263,7 @@ export function Live({
               <button className="button primary" onClick={onObjects}>
                 Choose an object
               </button>
+              {caption && sound}
             </div>
           )}
         </aside>

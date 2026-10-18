@@ -6,12 +6,12 @@ See [the implementation plan](backend-integration-plan.md) for preparing to add 
 
 The frontend is implemented in the repository’s `frontend/` folder. The backend is not implemented by this change. Start by serving [the example fixture](dashboard.snapshot.example.json) through these three interfaces, then replace its data with real observations. The [full contract](frontend-backend-contract.md) defines all fields; the [generated JSON Schema](dashboard.snapshot.schema.json) and [TypeScript/Zod source](../src/lib/schema.ts) agree on the payload shape.
 
-| Interface                  | Required behavior                                                                     |
-| -------------------------- | ------------------------------------------------------------------------------------- |
-| `GET /dashboard/snapshot`  | Return one complete `dashboard.snapshot` envelope.                                    |
-| `WS /events`               | Immediately send a fresh complete snapshot; send another at least every second.       |
-| `POST /dashboard/commands` | Accept Find / Stop, return **202** `{ "commandId": "same-id", "status": "pending" }`. |
-| Media URLs in snapshots    | Serve upright images and playable audio to the same browser session.                  |
+| Interface                  | Required behavior                                                                                                                          |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `GET /dashboard/snapshot`  | Return one complete `dashboard.snapshot` envelope.                                                                                         |
+| `WS /events`               | Immediately send a fresh complete snapshot; send another at least every second. In between, relay the phone's sounds as `dashboard.sound`. |
+| `POST /dashboard/commands` | Accept Find / Stop, return **202** `{ "commandId": "same-id", "status": "pending" }`.                                                      |
+| Media URLs in snapshots    | Serve upright images and playable audio to the same browser session.                                                                       |
 
 1. **Full snapshots only.** Each envelope has `schemaVersion: 1`, `streamId`, increasing `sequence`, UTC `sentAt`, and complete `data`. New arrays replace old arrays. Change `streamId` when sequence numbers reset. Socket reconnect must receive current state, including events missed during the disconnect.
 2. **One coordinate convention.** Meters; world X goes right, Z goes down in the map. Y is height. Yaw is clockwise from −Z. Every usable position belongs to a `worldMapId`. The session, displayed map and wearer must share a non-null map ID before the browser shows a live position, target line or enabled Recenter. Unknown map, pose, location, camera or label is `null`. Never send mock geometry in live mode. Optional `map.fixtures` supplies known furniture rectangles (`id`, `name`, `kind: table | sofa | storage`, `x`, `z`, positive `width`, positive `depth`); omit it if unavailable.

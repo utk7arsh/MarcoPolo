@@ -38,7 +38,7 @@ flowchart LR
 | Backend   | Detection, persistent metadata/history, Photon adapter, media access, current session snapshot, command relay       | Infer 3D locations from a 2D box alone                                    |
 | Dashboard | Objects / Live views, selected item, Map / Camera switch, visual overlays, connection feedback                      | Run LiDAR, detect touch, calculate spatial audio, or invent a found event |
 
-The browser mirrors the phone's spoken instruction; it does not automatically play a second copy. Playing a family voice label on the dashboard is an explicit user action.
+The browser mirrors the phone's spoken instruction; it does not automatically play a second copy. Playing a family voice label on the dashboard is an explicit user action, and so is **Listen in** on the Live page, which plays what the phone reports in `dashboard.sound` (below), from the same directions. Captions are always the phone's own words.
 
 ## 3. What exists versus what needs building
 
@@ -58,13 +58,15 @@ The prototype's authentication gate currently rejects requests until a verifier 
 
 Use these unversioned paths for the hackathon to stay consistent with the existing prototype. Payloads carry `schemaVersion: 1`.
 
-| Method | Path                  | Purpose                                        |
-| ------ | --------------------- | ---------------------------------------------- |
-| GET    | `/dashboard/snapshot` | Get the complete current dashboard state       |
-| WS     | `/events`             | Receive complete `dashboard.snapshot` messages |
-| POST   | `/dashboard/commands` | Request Find or Stop on the phone              |
+| Method | Path                  | Purpose                                                                            |
+| ------ | --------------------- | ---------------------------------------------------------------------------------- |
+| GET    | `/dashboard/snapshot` | Get the complete current dashboard state                                           |
+| WS     | `/events`             | Receive complete `dashboard.snapshot` messages, and `dashboard.sound` between them |
+| POST   | `/dashboard/commands` | Request Find or Stop on the phone                                                  |
 
 Image/audio URLs are returned in the snapshot. The frontend treats those URLs as opaque and does not construct storage paths.
+
+**What the wearer hears:** between snapshots, `/events` also carries `dashboard.sound` (`soundSchema` in `src/lib/schema.ts`; the server side is `docs/INTERFACES.md` §6). Each one is either a `cue` (one sound as it starts: `beep`, `ding`, `tone_on`, `tone_off`, `say`, `label`, `blip` or `silence`) or a `field` (10 times a second while anything is audible: where the beacon and the voice are now). Directions are relative to the wearer's head: `azimuthDeg` 0 ahead, +90 right, ±180 behind; `elevationDeg` up; `distanceM` ear to source. They come only from the phone, which renders the sound. A sound from another `streamId`, or a malformed one, is dropped without marking the connection stale, and sounds never count as snapshot progress. `navigation.spokenInstruction` carries the phone's latest `say` line while it plays and for 3 s after.
 
 **Connection sequence:** fetch the snapshot, render it, then connect the WebSocket. The server immediately sends a fresh full snapshot when a socket connects or reconnects. This closes the gap between the initial fetch and live updates. No event replay system is needed for this build.
 

@@ -14,7 +14,15 @@ npm run dev
 
 Open http://127.0.0.1:5173. The default is **Demo** mode and needs no server. The Demo button switches between guiding, within reach, found, moved keys, a saved Photon label, phone disconnection, relocalization, no map, and an empty library. These are simulated observations. The demo camera is one still frame; it does not claim to stream a device.
 
-Objects supports search, selection, last-seen history, explicit voice-label playback, Find, and a read-only Photon request drawer. Live supports Map / Camera, selected-object detection boxes, Recenter, direction / distance / spoken instruction, Stop, and session details. The frontend never detects touch, produces spatial navigation audio, registers an object, or sends a Photon message. The iPhone and future backend own those actions.
+Objects supports search, selection, last-seen history, explicit voice-label playback, Find, and a read-only Photon request drawer. Live supports Map / Camera, selected-object detection boxes, Recenter, direction / distance / spoken instruction, Stop, and session details. **What the wearer hears runs through every view**, drawn from the phone's own `dashboard.sound` reports (`docs/frontend-backend-contract.md`), never reconstructed:
+
+- **Map:** each sound ripples from where it is in the room to the wearer. The wearer has a head (nose, ears) with a ring that turns with it and marks the sound's clock hour, so the room stays put while the head turns.
+- **Camera:** a sound from the item ripples on its box, or pulses on the edge it is beyond.
+- **Guidance panel:** a small listening head points at the sound and lights the ear that hears it most. It shows what is playing and the actual spoken line.
+- **Objects:** the line in the AirPods shows briefly.
+- **Listen in** (off until clicked) plays the same sounds on this computer from the same directions. Marco's lines use the wearer's own voice from `POST /v1/speech`. Headphones give the 3D effect.
+
+The frontend never detects touch, plays sound on its own, registers an object, or sends a Photon message. The iPhone and backend own those actions.
 
 ## Connect FastAPI
 

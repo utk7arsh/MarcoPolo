@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { demoSnapshot } from '../data/demo'
 import type { DashboardData } from '../lib/schema'
+import { audible, initialHearing } from '../lib/sound'
 import { Live } from './Live'
 import { MapView } from './MapView'
 import { CameraView } from './CameraView'
@@ -19,6 +20,8 @@ function renderLive(data: DashboardData, online = true) {
       onStop() {},
       onObjects() {},
       demo: false,
+      heard: { ...audible(initialHearing, now), hearing: initialHearing, now },
+      listen: { on: false, onToggle() {} },
     }),
   )
 }

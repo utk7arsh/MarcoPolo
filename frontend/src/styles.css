@@ -1572,6 +1572,341 @@ dd {
     min-height: 220px;
   }
 }
+/* What the wearer hears, in every view (Hearing.tsx): the room map, the camera and the guidance panel draw the same
+   sounds. One idea carries it: each sound ripples from where it is to the wearer's head and lights the ear that hears
+   it most; behind the head is shaded, where beeps are muffled. */
+.listen-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: white;
+  font-size: 14px;
+  font-weight: 500;
+  transition:
+    background 0.14s,
+    color 0.14s,
+    border-color 0.14s;
+}
+.listen-button:hover {
+  background: #fafafa;
+}
+.listen-button[aria-pressed='true'] {
+  background: #202124;
+  border-color: #202124;
+  color: white;
+}
+.sound-behind {
+  fill: #f6f6f3;
+}
+.sound-ring {
+  fill: none;
+  stroke: var(--border);
+  stroke-width: 1.5;
+}
+.sound-facing {
+  fill: var(--blue);
+  opacity: 0.045;
+  transition: opacity 0.25s ease-out;
+}
+.sound-facing.on {
+  opacity: 0.13;
+}
+.sound-tick {
+  stroke: #c9ccd2;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+.sound-tick.active {
+  stroke: var(--blue);
+  stroke-width: 2.5;
+}
+.sound-numeral {
+  font-size: 13px;
+  fill: #8c919a;
+  text-anchor: middle;
+  dominant-baseline: central;
+  font-variant-numeric: tabular-nums;
+}
+.sound-numeral.active {
+  font-size: 15px;
+  font-weight: 600;
+  fill: #202124;
+}
+.sound-path {
+  stroke: #9cb8d8;
+  stroke-width: 1.5;
+  stroke-dasharray: 4 7;
+}
+.sound-beacon,
+.sound-voice {
+  transition: transform 0.12s linear;
+}
+.sound-beacon-dot {
+  fill: var(--blue);
+}
+.sound-beacon.muffled .sound-beacon-dot {
+  fill: #8fa9d9;
+}
+.sound-tone {
+  fill: var(--blue);
+  opacity: 0.14;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sound-hold 0.9s ease-in-out infinite alternate;
+}
+.sound-ripple {
+  fill: none;
+  stroke: var(--blue);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sound-ripple 0.9s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+.sound-ripple.muffled {
+  stroke: #9a9ea6;
+  stroke-dasharray: 3 5;
+  animation-duration: 1.3s;
+}
+.sound-ripple.voice {
+  stroke: #202124;
+  stroke-width: 1.5;
+}
+.sound-ripple.ding {
+  stroke-width: 2.5;
+}
+.sound-ripple.ding.second {
+  animation-delay: 0.18s;
+}
+.sound-voice rect {
+  fill: #202124;
+}
+.sound-voice line {
+  stroke: white;
+  stroke-width: 2;
+  stroke-linecap: round;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.sound-voice.speaking line {
+  animation: sound-speak 0.36s ease-in-out infinite alternate;
+}
+.sound-face {
+  fill: white;
+  stroke: #202124;
+  stroke-width: 1.6;
+}
+.sound-nose {
+  fill: none;
+  stroke: #202124;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.sound-ear {
+  fill: var(--blue);
+  opacity: 0.14;
+}
+.sound-ear.flash {
+  animation: sound-ear 0.7s ease-out both;
+}
+.sound-ear.held {
+  animation: none;
+  opacity: var(--level);
+}
+.sound-caption {
+  margin: 10px 0 0;
+}
+.sound-caption.empty {
+  display: none;
+}
+.sound-caption blockquote {
+  margin: 0;
+  font-size: 19px;
+  line-height: 26px;
+  text-wrap: pretty;
+  transition: color 0.3s ease-out;
+}
+.sound-caption.spoken blockquote {
+  color: var(--secondary);
+}
+.sound-caption figcaption {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--secondary);
+}
+@keyframes sound-ripple {
+  from {
+    transform: scale(0.04);
+    opacity: 0.75;
+  }
+  to {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+@keyframes sound-ear {
+  from {
+    opacity: var(--level);
+  }
+  to {
+    opacity: 0.14;
+  }
+}
+@keyframes sound-hold {
+  from {
+    transform: scale(0.8);
+  }
+  to {
+    transform: scale(1.15);
+  }
+}
+@keyframes sound-speak {
+  from {
+    transform: scaleY(0.45);
+  }
+  to {
+    transform: scaleY(1.7);
+  }
+}
+.spoken-guidance-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.spoken-guidance-row .listen-button {
+  min-height: 36px;
+  padding: 0 14px;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.spoken-guidance .label svg.speaking {
+  animation: sound-talk 0.5s ease-in-out infinite alternate;
+}
+.direction-circle.listening {
+  width: 104px;
+  height: 104px;
+  border: 0;
+  background: none;
+  overflow: visible;
+  justify-self: end;
+}
+.listening-head .sound-ring {
+  stroke: #cfd2d6;
+}
+.listening-head .sound-face,
+.listening-head .sound-nose {
+  stroke-width: 2;
+}
+.listening-head .sound-path {
+  stroke-width: 2;
+}
+.listening-head {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.map-head {
+  opacity: 0;
+  transition: opacity 0.3s ease-out;
+}
+.map-head.sounding {
+  opacity: 1;
+}
+.map-head-ring {
+  fill: none;
+  stroke: #c3d2ef;
+  stroke-width: 1.5;
+}
+.map-head .sound-behind {
+  fill: #1559d6;
+  opacity: 0.035;
+}
+.map-nose {
+  fill: #1559d6;
+}
+.sound-ripple.camera {
+  stroke: white;
+  stroke-width: 3.5;
+  filter: drop-shadow(0 0 3px #1559d6aa);
+}
+.sound-edge {
+  position: absolute;
+  z-index: 1;
+  background: var(--blue);
+  border-radius: 3px;
+  pointer-events: none;
+  animation: sound-edge 0.9s ease-out both;
+}
+.sound-edge.left,
+.sound-edge.right {
+  top: 18%;
+  bottom: 18%;
+  width: 6px;
+}
+.sound-edge.left {
+  left: 6px;
+}
+.sound-edge.right {
+  right: 6px;
+}
+.sound-edge.behind {
+  left: 22%;
+  right: 22%;
+  bottom: 6px;
+  height: 6px;
+}
+.sound-edge.muffled {
+  background: #9a9ea6;
+  animation-duration: 1.3s;
+}
+.sound-pill {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(640px, calc(100vw - 40px));
+  padding: 12px 20px;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: white;
+  box-shadow: 0 12px 40px #0001;
+  font-size: 15px;
+  line-height: 21px;
+  transform: translateX(-50%);
+  transition: opacity 0.3s ease-out;
+}
+.sound-pill.spoken {
+  opacity: 0.55;
+}
+.sound-pill-label {
+  color: var(--secondary);
+}
+@keyframes sound-edge {
+  from {
+    opacity: 0.8;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes sound-talk {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 1;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -1579,5 +1914,26 @@ dd {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* The same information without movement: a ripple is a still ring for its lifetime, the ear holds its level. */
+  .sound-ripple {
+    animation: none;
+    opacity: 0.4;
+    transform: scale(0.22);
+  }
+  .sound-ear.flash {
+    animation: none;
+    opacity: var(--level);
+  }
+  .sound-tone,
+  .sound-voice.speaking line,
+  .spoken-guidance .label svg.speaking {
+    animation: none;
+  }
+  .sound-edge {
+    animation: none;
+    opacity: 0.5;
   }
 }
