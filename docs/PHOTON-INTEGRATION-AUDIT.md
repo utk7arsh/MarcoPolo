@@ -11,12 +11,31 @@ visibility recovered. Actual Chrome checks now render all 12 objects on the
 private `/app/` page and local port 5176. The earlier schema checks did not verify
 that saved items were present: an empty list is schema-valid. Restart regression
 tests reproduced the adapter's empty initial state in real and stub modes.
-The local fix seeds it from the restored core before any phone/world event.
+The fix seeds it from the restored core before any phone/world event.
 HTTP/WS snapshots, photos and labels now pass before connecting a phone.
 Also corrected the logo's root-relative asset URL for `/app/` deployment.
-Local verification: 122 server tests passed (one dataset skip), 53 frontend unit
-and 23 Chromium tests passed, plus the full frontend check. User authorized
-pushing and deploying the follow-up; post-deployment verification is pending.
+Pushed fix `2a07788`; preserved the subsequent iOS and room-map changes and fixed
+an exact floating-point comparison in the room-map test (`f56e7d6`). Combined
+verification: 134 server tests passed (one dataset skip), 61 frontend unit and
+23 Chromium tests passed, plus the full frontend check. Vultr's staged dashboard
+and room-layout suites passed all 22 tests. Both GitHub workflows pass:
+[server/Photon](https://github.com/utk7arsh/LAHacks-2026/actions/runs/39116888768),
+[frontend](https://github.com/utk7arsh/LAHacks-2026/actions/runs/39117020363).
+
+Deployed server and dashboard together as **`f56e7d6`** with the user's approval.
+All 71 release files match their hashes. The first post-restart snapshot contains
+all 12 saved objects with no camera frame or connected phone; IDs, names and
+typed labels are unchanged. Actual Chrome checks on private `/app/` and local
+port 5176 pass, including HTTP/WS schemas, all object rows/photos, the logo and
+reload. No HTTP or page errors. Find stays disabled without the phone. Photon
+automatically reconnected and remains healthy with zero pending/open questions.
+Loopback binding, HTTP 403 without authentication and root-owned 0600 secret
+files remain intact. No new shared item or caretaker message was created.
+
+Rollback copy: `/opt/marco/backups/dashboard-f56e7d6-20261018T095358Z`.
+Evidence and browser screenshots: `/private/tmp/marco-dashboard-deploy-20261018/`.
+The later `14a1d16` commit adds POC reports, without changing runtime code. Live
+room-map rendering still needs a streaming phone; this check used no sensors.
 
 ## Latest: live pre-mobile verification
 

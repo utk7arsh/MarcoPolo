@@ -14,10 +14,26 @@ Last updated: 2026-10-18. Keep this file current: update it whenever a decision 
 - Also fixed the logo's absolute root URL, which returned 404 under `/app/`.
   A browser regression checks subpath assets and a saved item with no position
   while the phone is disconnected; Find remains disabled.
-- Local checks: **122 server tests passed**, one external dataset skip;
-  **53 frontend unit and 23 Chromium tests passed**, plus formatting, lint,
-  schema and build. User authorized pushing and deploying these follow-up fixes;
-  deployment and post-restart browser verification are pending.
+- Fix `2a07788` is pushed. Preserved teammates' concurrent iOS (`be0e92c`) and
+  room-map (`50e03bb`) commits, then corrected the latter's exact floating-point
+  test comparison in `f56e7d6`. Combined checks: **134 server tests passed**, one
+  external dataset skip; **61 frontend unit and 23 Chromium tests passed**, plus
+  formatting, lint, schema and build. Staged Vultr/Linux checks: **22 passed**.
+- User authorized deployment: server and `/app/` build now run **`f56e7d6`**.
+  All **71** deployed source/schema/assets match the tested release. Restart
+  preserved all **12 IDs, names and typed labels**; its first dashboard snapshot
+  contained all 12 with no camera frame and the phone disconnected.
+- Actual Chrome checks on production and local port 5176 pass: 12 object rows,
+  photos and logo load, HTTP and WebSocket snapshots validate, reload retains
+  objects, and Find stays disabled with the phone off. No HTTP/page errors.
+  Photon reconnected with healthy status and zero pending/open questions.
+  Environment permissions remain root-owned 0600; listeners stay on loopback;
+  unauthenticated HTTP still returns 403. No item or caretaker message was added.
+- [Server/Photon CI passed](https://github.com/utk7arsh/LAHacks-2026/actions/runs/39116888768)
+  and [frontend CI passed](https://github.com/utk7arsh/LAHacks-2026/actions/runs/39117020363).
+  Rollback copy: `/opt/marco/backups/dashboard-f56e7d6-20261018T095358Z`.
+  Evidence: `/private/tmp/marco-dashboard-deploy-20261018/`. Subsequent main commit
+  `14a1d16` contains POC reports only; no additional runtime deployment is needed.
 
 ## Pre-mobile live integration audit (October 18, 2026)
 
@@ -573,11 +589,11 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
   - ARKitScenes: 5/17. Cabinet runs come out as walls, and the frames are sparse.
   - iPhone venue clips: the round table, the chairs around it (facing it) and the ledge as a bench. Stepping stones show up as low tables. No trees: they're beyond LiDAR range.
   - Previews: `poc/reports/figures/poc27_dash_*.png`.
-- **Not verified here:**
-  - `npm run check` (vitest, Playwright, lint) in `frontend/`. The changed TS passes Prettier and a TypeScript 6 check with real zod types.
-  - the live map in a browser.
-
-  Needed: Sandeep runs `npm run check` and looks at the map with `VITE_DATA_SOURCE=api`.
+- **Follow-up verification (Sandeep):** `npm run check` and GitHub frontend CI
+  pass after correcting the floating-point assertion: 61 unit and 23 browser
+  tests, lint, schema and build. Server/adapter and dashboard are deployed
+  together as `f56e7d6`. Actual API-mode browser checks pass with no phone;
+  the live scanned room map still needs a streaming phone.
 - **Next, if wanted:**
   - label the shapes with the camera: OWLv2 text queries reuse the frame's image pass, an extra head call;
   - indoors, Apple RoomPlan on the phone (Utkarsh; needs a device test).
