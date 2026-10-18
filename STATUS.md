@@ -171,7 +171,7 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
   - **Reloaded at start** by both brains. The real brain registers each saved photo with the detector again, so detection works at once. Positions are re-learned from the camera.
   - **`source`** on items (`app` / `photon` / `seed`), and **`DELETE /v1/items?source=…`**, which removes one source's items, labels, audio and files. `source` is required, and the route is behind the gate.
   - **Tests:** `tests/test_registry.py` (7): survives a restart (stub, and the real brain with the detector re-registered), delete-by-source, idempotence, validation, the gate. Full server suite: 87 passed, 1 skipped.
-  - **Not yet deployed to `marco-gpu`:** run `deploy/vultr/marco-vultr.sh deploy`.
+  - **Deployed to `marco-gpu`** on 2026-10-18 at 05:18 UTC: commit `6f4c0ee`, from a clean checkout, with the allow-list kept as it was. Verified live: `GET /v1/items` 200, `DELETE /v1/items` without a source 422, `?source=photon` 200. The bridge runs on this Mac against it.
 - **Verification totals:** server 79 passed on Vedant's Mac (with the ARKitScenes sample; 76 + 1 skipped where it's absent), Swift 314 (after merging Utkarsh's iOS work and the LiDAR view), Photon scaffold 8; `photon/` 39 (Utkarsh's run).
   - `photon-scaffold`'s `npm test` now runs `node --test test/*.test.js`, which works on Node 22 (thanks, Utkarsh).
 - **Teammates' code on `main`:** `frontend/` (Sandeep, the dashboard) was built against the earlier requirements, not this contract. See the next steps.
