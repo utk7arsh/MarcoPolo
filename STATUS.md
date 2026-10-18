@@ -2,7 +2,40 @@
 
 Last updated: 2026-10-18. Keep this file current: update it whenever a decision is made or a piece lands.
 
-## Dashboard Listen in cue fidelity (October 18, 2026, local)
+## Full-stack release and fresh demo (October 18, 2026, 15:32 UTC)
+
+- Pushed runtime release `e8de7f5` on latest main and deployed server, Photon and
+  the production `/app/` dashboard together. Both GitHub workflows pass. Vultr's
+  isolated server suite passes **241 tests, 7 platform skips**; Photon passes
+  **51 tests, 1 macOS-only skip**, including simulated typed-label/persistence/
+  reset integration. Installed dependencies are compatible and unchanged.
+- An additional real local HTTP/WebSocket run connects a simulated phone to the
+  server and production browser build: all 12 detailed cues render, including six
+  distinct reach pitches and the contact loop, with no browser errors. This is
+  software integration evidence, not a phone/AirPods listening test.
+- Live verification matches **170 deployed file hashes**, hydrates all four
+  saved objects and their detector crops, checks dashboard WebSockets and saved
+  photos, and retains unauthenticated HTTP 403 / WebSocket 1008. ElevenLabs returns
+  non-silent mono 24 kHz WAV in 0.297 s and an identical cached response. Photon's
+  read-only doctor verifies credentials, assigned line, provider event stream and
+  server socket; no new real iMessage exchange was performed for this release.
+- At the user's subsequent request, backed up and reset all four registrations
+  through `POST /v1/reset`, and cleared Photon's labels/questions using its own
+  store method with the bridge stopped. Backend, detector, dashboard and Photon
+  now report zero objects. Preserved caretaker/cursor/processed-message state and
+  all **13,378 recording files**. Environment files and private listeners remain
+  unchanged. Reset backup:
+  `/opt/marco/backups/demo-reset-e8de7f5-20261018T153213Z/`.
+- Release rollback backup:
+  `/opt/marco/backups/release-e8de7f5-20261018T153051Z/`; release/test/verification
+  receipts: `/opt/marco/deploy/release-e8de7f5/` and locally
+  `/private/tmp/marco-listen-release-20261018/`.
+- iOS passes its Release build but has not been installed or tested on the
+  physical phone for these additions. Install that build for detailed sound
+  reporting. The phone's ARKit map is local: use Developer tools' "Forget the
+  map and start a new one" before a fresh room-mapping demo.
+
+## Dashboard Listen in cue fidelity (October 18, 2026)
 
 - Confirmed the phone collapsed the newer beacon variants and reach pitch ladder
   into generic beep/ding messages, while the browser retained the old recipes.
@@ -22,9 +55,8 @@ Last updated: 2026-10-18. Keep this file current: update it whenever a decision 
   syntax checks pass. The full unsigned iOS Release build succeeds. Logs:
   `/private/tmp/marco-listen-{server,swift,xcode,photon,scaffold}.log` and
   `/private/tmp/marco-listen-release-20261018/frontend-check.log`.
-- Prepared for the user's authorized push and deployment. No device playback.
-  To use the additional details live,
-  rebuild/install iOS and deploy both the server relay and dashboard. Browser
+- Pushed and deployed with the full-stack release above. No device playback.
+  To use the additional details live, rebuild/install iOS. Browser
   HRTF and network timing remain an approximation of Apple's headphone output.
   Demo mode's older scripted sequence keeps its legacy sounds.
 
