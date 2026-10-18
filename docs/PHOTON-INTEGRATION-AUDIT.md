@@ -35,6 +35,12 @@ preserved. The running Photon service loads its file explicitly with
 - Active GitHub workflows are under repository-root `.github/workflows/`.
   They run frontend and server/Photon/Swift contract checks with isolated data,
   without production credentials or automatic deployment.
+  [Frontend run](https://github.com/utk7arsh/LAHacks-2026/actions/runs/39114740624)
+  passed for deployed server/bridge revision `7389d7c`.
+  [Integration run](https://github.com/utk7arsh/LAHacks-2026/actions/runs/39115115948)
+  passed for `d798c40` after an iOS optional-Boolean switch compatibility fix:
+  120 server tests, 52 Photon tests and 8 reference tests passed; one external
+  dataset test skipped. No server or bridge changes followed the deployment.
 - Isolated tests on the deployed Node/Linux runtime: 51 passed, one skipped
   because its HEIC fixture generator requires macOS `sips`. Generated that
   synthetic fixture on the Mac and separately verified HEIC-to-JPEG conversion

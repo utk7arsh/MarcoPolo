@@ -31,10 +31,13 @@ Last updated: 2026-10-18. Keep this file current: update it whenever a decision 
   formatting, builds, shell syntax and actionlint pass.
 - Added active root GitHub workflows for frontend and server/Photon/Swift
   integration. CI uses isolated data and no production keys or SSH credentials;
-  it does not deploy automatically. Frontend CI passed for `7389d7c`. The first
-  integration run exposed an older Swift compiler's exhaustiveness check for
-  `Bool?`; made its cases explicit, preserving all three existing status tests.
-  The corrected integration run must pass before the handoff is complete.
+  it does not deploy automatically. [Frontend CI passed](https://github.com/utk7arsh/LAHacks-2026/actions/runs/39114740624)
+  for `7389d7c`. The first integration run exposed an older Swift compiler's
+  exhaustiveness check for `Bool?`; made its cases explicit, preserving all
+  three existing status tests. [Integration CI passed](https://github.com/utk7arsh/LAHacks-2026/actions/runs/39115115948)
+  for `d798c40`: **120 server tests**, **52 Photon tests**, **8 reference tests**;
+  one external dataset test skipped. Deployed server/bridge source is `7389d7c`;
+  the follow-up changes only iOS compiler compatibility and these audit notes.
 - Isolated tests on Vultr's actual Node/Linux runtime: **51 pass, 1 skipped**.
   The skipped HEIC fixture generator needs macOS `sips`; separately generated a
   synthetic HEIC on the Mac and verified JPEG conversion on Vultr. The bundled
