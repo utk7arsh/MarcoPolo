@@ -78,6 +78,8 @@ struct SoundMsg: Codable, Equatable {
     var text: String?
     var duration_s: Double?
     var audio_url: String?
+    var variant: String?             // on_beam | off_beam | behind | here | hand_ping | arrive | contact
+    var hand_step: Int?              // hand_ping only, 0...5 (D5 to D6)
 }
 
 /// §3.2: where each audible source is now, relative to the head; 10/s while anything is audible, then one with both

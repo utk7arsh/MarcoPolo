@@ -170,7 +170,7 @@ def test_swift_sound_messages_reach_the_dashboard_in_its_schema(fx):
     schema = json.loads((Path(__file__).resolve().parents[2] / "frontend" / "docs" / "dashboard.sound.schema.json").read_text())
     validator = jsonschema.validators.validator_for(schema)(schema, format_checker=jsonschema.FormatChecker())
     msgs = [json.loads(l) for l in (fx / "sound.jsonl").read_text().splitlines()]
-    assert [m["type"] for m in msgs].count("sound") == 7 and [m["type"] for m in msgs].count("sound_field") == 2
+    assert [m["type"] for m in msgs].count("sound") == 19 and [m["type"] for m in msgs].count("sound_field") == 2
     for m in msgs:
         assert m["session_id"] == "ios-contract"
         converted = (sound_cue if m["type"] == "sound" else sound_field)(m)
@@ -182,5 +182,8 @@ def test_swift_sound_messages_reach_the_dashboard_in_its_schema(fx):
     assert beep["muffled"] is True and beep["source"] == "beacon" and 150 < beep["azimuthDeg"] < 155
     label = sound_cue(msgs[4])
     assert label["audioUrl"] == "/media/audio/abc123" and label["anchor"] == "room" and label["elevationDeg"] < -40
+    detailed = [sound_cue(m) for m in msgs if m.get("variant")]
+    assert {s["variant"] for s in detailed} == {"on_beam", "off_beam", "behind", "here", "hand_ping", "arrive", "contact"}
+    assert [s["handStep"] for s in detailed if s["variant"] == "hand_ping"] == list(range(6))
     assert sound_field(msgs[-1])["beacon"] is None and sound_field(msgs[-1])["voice"] is None
 

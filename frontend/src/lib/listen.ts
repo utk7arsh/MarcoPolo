@@ -1,16 +1,48 @@
-import type { Sound } from './schema'
+import type { Sound, SoundCue } from './schema'
 import { mediaUrl } from './format'
 import { apiUrl } from './transport'
 
 // Listen in: this computer plays what the wearer hears, from the same directions. The beacon's sounds are the
 // phone's own recipes (ios/Marco/Audio/SpatialAudio.swift, Tones), placed with Web Audio's HRTF panner the way
 // AVAudioEnvironmentNode places them, so headphones on this computer give the wearer's 3D picture and speakers give
-// at least left and right. Marco's lines come from the server's POST /v1/speech, the same cached voice the phone
+// at least left and right. Browser and Apple HRTFs differ: this mirrors the cues, not the exact headphone output.
+// Marco's lines come from the server's POST /v1/speech, the same cached voice the phone
 // plays (so they are placed too); in Demo mode, or if the server can't speak, this computer's own voice says them.
 // A caretaker's voice memo plays as recorded.
 // Opt-in only: the dashboard never makes a sound on its own (docs/frontend-backend-contract.md).
 
 type Placed = { source: AudioBufferSourceNode; panner: PannerNode }
+type ToneKind =
+  | NonNullable<SoundCue['variant']>
+  | 'beep'
+  | 'muffled'
+  | 'ding'
+  | 'tone'
+  | 'blip'
+const HAND_SCALE = [587.33, 659.26, 739.99, 880, 987.77, 1174.66]
+
+/** Missing detail means an older phone/demo; preserve its original recipe. */
+export function cueTone(sound: SoundCue): ToneKind | null {
+  switch (sound.cue) {
+    case 'beep':
+      if (
+        sound.variant &&
+        ['on_beam', 'off_beam', 'behind', 'here', 'hand_ping'].includes(
+          sound.variant,
+        )
+      )
+        return sound.variant
+      return sound.muffled ? 'muffled' : 'beep'
+    case 'ding':
+      return sound.variant === 'arrive' ? 'arrive' : 'ding'
+    case 'tone_on':
+      return sound.variant === 'contact' ? 'contact' : 'tone'
+    case 'blip':
+      return 'blip'
+    default:
+      return null
+  }
+}
 
 /** A head-relative direction as a Web Audio position: x right, y up, -z ahead (the listener's default). */
 export function position(
@@ -28,11 +60,9 @@ export function position(
   }
 }
 
-/** The phone's tones, sample for sample (Tones in SpatialAudio.swift). */
-export function toneSamples(
-  kind: 'beep' | 'muffled' | 'ding' | 'tone' | 'blip',
-  rate: number,
-) {
+/** The phone's current recipes (Tones in SpatialAudio.swift), plus the legacy beep/tone fallbacks.
+ * Noise is independently generated, so noisy waveforms are equivalent recipes rather than identical samples. */
+export function toneSamples(kind: ToneKind, rate: number, handStep = 0) {
   const make = (seconds: number, f: (t: number) => number) => {
     const out = new Float32Array(Math.round(seconds * rate))
     for (let i = 0; i < out.length; i++) out[i] = f(i / rate)
@@ -50,6 +80,43 @@ export function toneSamples(
   }
   if (kind === 'beep') return beep(880, 6, 70, 0.12)
   if (kind === 'muffled') return beep(440, 2, 110, 0)
+  if (kind === 'on_beam') return beep(1320, 7, 70, 0.2)
+  if (kind === 'off_beam') return beep(880, 11, 110, 0.12)
+  if (kind === 'behind') return beep(392, 2, 140, 0)
+  if (kind === 'here' || kind === 'hand_ping') {
+    const f =
+      kind === 'here' ? 1046.5 : HAND_SCALE[Math.min(Math.max(handStep, 0), 5)]
+    const amp = kind === 'here' ? 0.2 : 0.3
+    return make(kind === 'here' ? 0.09 : 0.06, (t) => {
+      const env = Math.min(1, t / 0.002) * Math.exp(-t / 0.018)
+      const click = t < 0.003 ? (Math.random() - 0.5) * (1 - t / 0.003) : 0
+      return (
+        amp *
+        (env *
+          (Math.sin(2 * Math.PI * f * t) +
+            0.25 * Math.sin(2 * Math.PI * 3 * f * t)) +
+          click)
+      )
+    })
+  }
+  if (kind === 'arrive')
+    return make(0.62, (t) => {
+      let sum = 0
+      for (const [f, t0] of [
+        [1046.5, 0],
+        [1318.5, 0.13],
+        [1568, 0.26],
+      ]) {
+        if (t < t0) continue
+        const u = t - t0
+        sum +=
+          Math.min(1, u / 0.003) *
+          Math.exp(-u / 0.09) *
+          (Math.sin(2 * Math.PI * f * u) +
+            0.3 * Math.sin(2 * Math.PI * 2.76 * f * u))
+      }
+      return 0.3 * sum
+    })
   if (kind === 'ding')
     return make(0.36, (t) => {
       const [f, t0] = t < 0.15 ? [1320, 0] : [1760, 0.18]
@@ -63,15 +130,17 @@ export function toneSamples(
           0.3 * Math.sin(2 * Math.PI * 2.76 * f * u))
       )
     })
-  if (kind === 'tone')
+  if (kind === 'tone' || kind === 'contact') {
+    const f = kind === 'contact' ? Math.round(HAND_SCALE[5]) : 660
     return make(
       1,
       (t) =>
         0.22 *
-        (Math.sin(2 * Math.PI * 660 * t) +
-          0.4 * Math.sin(4 * Math.PI * 660 * t) +
-          0.2 * Math.sin(6 * Math.PI * 660 * t)),
+        (Math.sin(2 * Math.PI * f * t) +
+          0.4 * Math.sin(4 * Math.PI * f * t) +
+          0.2 * Math.sin(6 * Math.PI * f * t)),
     )
+  }
   return make(0.12, (t) => {
     const f = 520 + 1400 * t
     const env = Math.min(1, t / 0.01) * Math.exp(-t / 0.05)
@@ -88,6 +157,7 @@ export class ListenIn {
   private buffers = new Map<string, AudioBuffer>()
   private tone?: Placed
   private label?: Placed
+  private shots = new Map<Placed, SoundCue['source']>()
   private closed = false
   private voiceTurn = 0 // a newer line or silence drops an older line still loading
 
@@ -99,6 +169,10 @@ export class ListenIn {
   play(sound: Sound) {
     if (this.closed) return
     if (sound.kind === 'field') {
+      for (const [shot, source] of this.shots) {
+        const at = source === 'beacon' ? sound.beacon : sound.voice
+        if (at) this.place(shot.panner, at)
+      }
       if (sound.beacon && this.tone) this.place(this.tone.panner, sound.beacon)
       if (sound.voice && this.label) this.place(this.label.panner, sound.voice)
       if (!sound.beacon) this.stopTone()
@@ -106,15 +180,15 @@ export class ListenIn {
     }
     switch (sound.cue) {
       case 'beep':
-        this.oneShot(sound.muffled ? 'muffled' : 'beep', sound)
-        break
       case 'ding':
       case 'blip':
-        this.oneShot(sound.cue, sound)
+        // The phone's facing/arrival notes interrupt a beacon still ringing.
+        if (sound.cue === 'ding') this.stopShots('beacon')
+        this.oneShot(cueTone(sound)!, sound)
         break
       case 'tone_on':
         this.stopTone()
-        this.tone = this.start('tone', sound, true)
+        this.tone = this.start(cueTone(sound)!, sound, true)
         break
       case 'tone_off':
         this.stopTone()
@@ -128,6 +202,7 @@ export class ListenIn {
         break
       case 'silence':
         this.voiceTurn++
+        this.stopShots()
         this.stopTone()
         this.stopLabel()
         window.speechSynthesis?.cancel()
@@ -137,19 +212,21 @@ export class ListenIn {
 
   close() {
     this.closed = true
+    this.stopShots()
     this.stopTone()
     this.stopLabel()
     window.speechSynthesis?.cancel()
     void this.context.close()
   }
 
-  private buffer(kind: Parameters<typeof toneSamples>[0]) {
-    let b = this.buffers.get(kind)
+  private buffer(kind: ToneKind, handStep = 0) {
+    const key = kind === 'hand_ping' ? `${kind}:${handStep}` : kind
+    let b = this.buffers.get(key)
     if (!b) {
-      const samples = toneSamples(kind, this.context.sampleRate)
+      const samples = toneSamples(kind, this.context.sampleRate, handStep)
       b = this.context.createBuffer(1, samples.length, this.context.sampleRate)
       b.copyToChannel(samples, 0)
-      this.buffers.set(kind, b)
+      this.buffers.set(key, b)
     }
     return b
   }
@@ -162,8 +239,8 @@ export class ListenIn {
     const p = new PannerNode(this.context, {
       panningModel: 'HRTF',
       distanceModel: 'inverse',
-      refDistance: 1,
-      rolloffFactor: 0.5,
+      refDistance: 0.6,
+      rolloffFactor: 0.35,
       maxDistance: 10,
     })
     this.place(p, at)
@@ -186,10 +263,11 @@ export class ListenIn {
     kind: Parameters<typeof toneSamples>[0],
     at: { azimuthDeg: number; elevationDeg: number; distanceM: number },
     loop = false,
+    handStep = 0,
   ): Placed {
     const panner = this.panner(at)
     const source = new AudioBufferSourceNode(this.context, {
-      buffer: this.buffer(kind),
+      buffer: this.buffer(kind, handStep),
       loop,
     })
     source.connect(panner)
@@ -202,7 +280,20 @@ export class ListenIn {
     kind: Parameters<typeof toneSamples>[0],
     at: Sound & { kind: 'cue' },
   ) {
-    this.start(kind, at)
+    const shot = this.start(kind, at, false, at.handStep ?? 0)
+    this.shots.set(shot, at.source)
+    shot.source.onended = () => {
+      shot.panner.disconnect()
+      this.shots.delete(shot)
+    }
+  }
+
+  private stopShots(source?: SoundCue['source']) {
+    for (const [shot, playing] of this.shots) {
+      if (source && source !== playing) continue
+      shot.source.stop()
+      this.shots.delete(shot)
+    }
   }
 
   private stopTone() {

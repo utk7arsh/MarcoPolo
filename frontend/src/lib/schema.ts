@@ -219,6 +219,20 @@ const soundCue = z.object({
   text: z.string().nullable(),
   durationS: z.number().finite().nonnegative().nullable(),
   audioUrl: z.string().nullable(),
+  // Optional additions: older phones keep the original generic cue recipes.
+  variant: z
+    .enum([
+      'on_beam',
+      'off_beam',
+      'behind',
+      'here',
+      'hand_ping',
+      'arrive',
+      'contact',
+    ])
+    .nullable()
+    .optional(),
+  handStep: z.number().int().min(0).max(5).nullable().optional(),
 })
 const fieldSource = {
   azimuthDeg: azimuth,

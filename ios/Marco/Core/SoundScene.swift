@@ -92,14 +92,41 @@ struct SoundReporter {
 
     /// One sound, the moment it starts. `p`: where it comes from, listener-relative.
     mutating func cue(_ cue: String, at p: SIMD3<Float>, anchor: String, t: Double, muffled: Bool? = nil,
-                      text: String? = nil, duration: Double? = nil, audioURL: String? = nil) -> SoundMsg {
+                      text: String? = nil, duration: Double? = nil, audioURL: String? = nil,
+                      variant: String? = nil, handStep: Int? = nil) -> SoundMsg {
         let voice = ["say", "label", "blip"].contains(cue)
         if cue == "silence" { voiceUntil = -Double.infinity }
         if voice, let duration { voiceUntil = max(voiceUntil, t + duration) }
         let d = HeardDirection(p)
         return SoundMsg(session_id: sessionId, t_device: t, cue: cue, source: voice ? "voice" : "beacon", anchor: anchor,
                         az_deg: d.azDeg, el_deg: d.elDeg, distance_m: d.distanceM, muffled: muffled, text: text,
-                        duration_s: duration.map { ($0 * 10).rounded() / 10 }, audio_url: audioURL)
+                        duration_s: duration.map { ($0 * 10).rounded() / 10 }, audio_url: audioURL,
+                        variant: variant, hand_step: handStep)
+    }
+
+    /// Keep the legacy cue names, with enough detail for Listen in to render the actual guidance sound.
+    /// This is the same mapping used by AppModel, including SpatialAudio's hand-step clamp.
+    mutating func beacon(_ c: Cue, at p: SIMD3<Float>, t: Double) -> SoundMsg? {
+        switch c {
+        case .beacon(let b):
+            let variant: String
+            switch b {
+            case .onBeam: variant = "on_beam"
+            case .offBeam: variant = "off_beam"
+            case .behind: variant = "behind"
+            case .here: variant = "here"
+            }
+            return cue("beep", at: p, anchor: "item", t: t, muffled: b == .behind, variant: variant)
+        case .handPing(let step):
+            return cue("beep", at: p, anchor: "item", t: t, variant: "hand_ping",
+                       handStep: min(max(step, 0), Guidance.handSteps - 1))
+        case .ding: return cue("ding", at: p, anchor: "item", t: t)
+        case .arrive: return cue("ding", at: p, anchor: "item", t: t, variant: "arrive")
+        case .steadyTone(let on):
+            return cue(on ? "tone_on" : "tone_off", at: p, anchor: "item", t: t, variant: on ? "contact" : nil)
+        case .silence: return cue("silence", at: p, anchor: "item", t: t)
+        default: return nil
+        }
     }
 
     /// The field at 10/s while the beacon is placed or the voice is speaking, then once more when it goes quiet; nil

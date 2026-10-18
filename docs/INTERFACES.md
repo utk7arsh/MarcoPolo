@@ -122,7 +122,7 @@ Three owners, one contract. Change a message format only by updating this file, 
  "az_deg": 20.0, "el_deg": -35.0, "distance_m": 0.6, "text": "That's the cumin, love", "duration_s": 1.8}
 ```
 - **`cue`:**
-  - `beep` (any beacon pulse or reach ping, with `muffled` true for the behind sound), `ding` (facing, and the stop notes), `tone_on` and `tone_off` (the steady tone);
+  - `beep` (any beacon pulse or reach ping, with `muffled` true for the behind sound), `ding` (facing, and the stop notes), `tone_on` and `tone_off` (the steady tone). The optional `variant` below distinguishes their current recipes;
   - `say` (Marco's voice, with `text`), `label` (an item's label, spoken in the same voice, with its words in `text`; `audio_url` only if it is a recorded voice memo), `blip` (listening, after "Marco");
   - `silence` (everything stopped).
 - **`source`:** `beacon` for beep, ding and tone; `voice` for say, label and blip.
@@ -133,6 +133,11 @@ Three owners, one contract. Change a message format only by updating this file, 
   - `distance_m`: ear to source, in metres;
   - `ahead` is 0, 0, 1.
 - **`duration_s`:** for `say` and `label`, estimated from the words (exact for a voice memo).
+- **Guidance sound detail (optional, compatible with older messages):** `variant` is `on_beam`, `off_beam`, `behind`, `here` or `hand_ping` for `beep`; `arrive` for `ding`; `contact` for `tone_on`. The source is `beacon`. A plain `ding` is the two-note facing confirmation; `arrive` is the three-note stop cue. A `hand_ping` must include integer `hand_step` 0–5 (D5, E5, F♯5, A5, B5, D6); no other variant carries a step. The contact tone is the rounded top note, 1175 Hz. Absent/null detail means the original generic beep/ding/660 Hz tone; do not infer a variant from direction or distance. The phone uses its actual cue and pitch step, including the playback clamp.
+  ```json
+  {"type": "sound", "session_id": "…", "t_device": 81240.2, "cue": "beep", "source": "beacon", "anchor": "item",
+   "az_deg": 5.0, "el_deg": -40.0, "distance_m": 0.6, "variant": "hand_ping", "hand_step": 4}
+  ```
 
 **Sound field, 10 per second while anything is audible:** where each source is now, relative to the head. Send one last message with both sources null when it goes quiet:
 ```json
@@ -343,6 +348,8 @@ speech. It uses the same fail-closed Tailscale authentication as every other rou
   ```
   - Only the bound phone session's are sent. A malformed one is dropped.
   - `audioUrl` is a voice memo's `/media/audio/<id>`, when there is one. Field sources carry `anchor` (`voice`) or `muffled` (`beacon`).
+  - Guidance cue detail is relayed unchanged as optional `variant` and `handStep` (§3.2); old messages omit them. Invalid variants, cue/source combinations or pitch steps are dropped. No schema-version change: old clients ignore these extra fields and new clients retain the old recipes when details are absent.
+  - **Listen in** synthesizes the reported current recipe, including all six reach pitches, the arrival triad and contact tone. Distance attenuation uses the phone's 0.6 m reference and 0.35 rolloff. This is an observer reconstruction with network timing and the browser's HRTF, not a recording of Apple's rendered output; haptics are not replayed. Opt-in remains required.
   - A new `/events` connection gets the latest field at once if it is under 1 s old.
   - Dashboards that don't know `dashboard.sound` ignore it.
   - **`navigation.spokenInstruction`** in the snapshot is the phone's latest `say` line, while it plays and for 3 s after.

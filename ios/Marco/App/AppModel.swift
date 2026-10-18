@@ -917,14 +917,7 @@ final class AppModel: ObservableObject {
     /// The beacon's cues (the sound itself is SpatialAudio's).
     private func reportBeacon(_ c: Cue) {
         let at = beaconPoint ?? SoundAnchor.aheadPoint
-        switch c {
-        case .beacon(let b): report("beep", at: at, anchor: "item", muffled: b == .behind)
-        case .handPing: report("beep", at: at, anchor: "item")
-        case .ding, .arrive: report("ding", at: at, anchor: "item")
-        case .steadyTone(let on): report(on ? "tone_on" : "tone_off", at: at, anchor: "item")
-        case .silence: report("silence", at: at, anchor: "item")
-        default: break
-        }
+        if let msg = sounds.beacon(c, at: at, t: now) { emit(msg) }
     }
 
     private func anchorName(_ a: SoundAnchor) -> String {

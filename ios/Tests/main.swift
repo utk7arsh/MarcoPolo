@@ -929,6 +929,20 @@ do {
               && o["text"] == nil && o["session_id"] as? String == "s", "sound encodes the contract's keys: \(o)")
     } else { check(false, "sound encodes") }
 
+    for (beacon, variant) in [(Beacon.onBeam, "on_beam"), (.offBeam, "off_beam"), (.behind, "behind"), (.here, "here")] {
+        let msg = r.beacon(.beacon(beacon), at: .zero, t: 11)
+        check(msg?.cue == "beep" && msg?.variant == variant && msg?.muffled == (beacon == .behind), "beacon variant \(variant)")
+    }
+    for step in -1...6 {
+        let msg = r.beacon(.handPing(step), at: .zero, t: 11)
+        check(msg?.variant == "hand_ping" && msg?.hand_step == min(max(step, 0), 5), "reach pitch clamped like playback: \(step)")
+    }
+    check(r.beacon(.ding, at: .zero, t: 11)?.variant == nil && r.beacon(.arrive, at: .zero, t: 11)?.variant == "arrive", "alignment and arrival stay distinct")
+    check(r.beacon(.steadyTone(true), at: .zero, t: 11)?.variant == "contact", "contact uses the reach ladder's top note")
+    check(r.beacon(.steadyTone(false), at: .zero, t: 11)?.cue == "tone_off", "tone stop stays compatible")
+    check(r.beacon(.haptic, at: .zero, t: 11) == nil && r.beacon(.say("Polo!"), at: .zero, t: 11) == nil, "non-beacon cues use their own reporting paths")
+    check(Tones.handScale.count == Guidance.handSteps && Tones.handScale.count == 6, "wire pitch steps cover the rendered scale")
+
     // The field: 10/s while anything is audible, once more when it goes quiet, then nothing.
     var f = SoundReporter(sessionId: "s")
     let v = (SoundAnchor.aheadPoint, anchor: "ahead")
@@ -1495,6 +1509,10 @@ if let i = CommandLine.arguments.firstIndex(of: "--emit"), i + 1 < CommandLine.a
         json(heard.cue("silence", at: behind, anchor: "item", t: 1014.0)),
     ]
     var fields = SoundReporter(sessionId: sid)
+    for c in [Cue.beacon(.onBeam), .beacon(.offBeam), .beacon(.behind), .beacon(.here), .arrive, .steadyTone(true)] +
+        (0..<Guidance.handSteps).map({ .handPing($0) }) {
+        if let msg = heard.beacon(c, at: jar, t: 1015) { sounds.append(json(msg)) }
+    }
     _ = fields.cue("say", at: SoundAnchor.aheadPoint, anchor: "ahead", t: 1020.0, text: "Got it.", duration: 1)
     if let f = fields.field(t: 1020.1, headYawDeg: 12.34, beacon: (behind, muffled: true), voice: (SoundAnchor.aheadPoint, anchor: "ahead")) {
         sounds.append(json(f))

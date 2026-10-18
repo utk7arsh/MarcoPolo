@@ -4,6 +4,71 @@
 unavailable for a live retest. The fixes were subsequently deployed with the
 user's authorization; the deployment evidence is recorded below.
 
+## Reply latency: read-only diagnosis, October 18, 2026
+
+This follow-up uses existing provider message history, bridge/server journals,
+saved state and installed SDK source. The user requested existing logs only.
+No outgoing messages, test registrations, configuration changes, service
+restarts, push or deployment were performed for this diagnosis. The library now
+contains the user's two new registrations, Pringles and Fanta, after the earlier
+explicit deletion of the old five objects.
+
+All timestamps in this table are UTC. Incoming times are the provider's recorded
+receipt times, not measured socket arrival at the bridge.
+
+| Existing exchange | Provider received | Bridge processed photo | Confirmation delivered | Elapsed |
+| --- | --- | --- | --- | --- |
+| First Pringles photo | 12:03:16.132 | 12:04:17.344 | 12:04:19.361 | 63.2 s |
+| Fanta photo | 12:05:16.480 | 12:06:17.715 | 12:06:19.454 | 63.0 s |
+| Caretaker restart | 12:04:30.282 | Command processed 12:04:30.684 | 12:04:31.971 | 1.7 s |
+
+The two photo paths lose about 61 s before photo processing. Registration and
+outgoing delivery then complete in roughly two seconds. Repeated read-only
+backend item requests take 1–10 ms; the server is idle with ample RAM and GPU
+capacity. Converting the same ready HEIC photos takes 52–56 ms. Provider history,
+ready attachment metadata and downloads return in about 65–210 ms when checked
+later. These later successful requests do not prove the attachments were ready
+during the original stall. Process configuration matches the environment files,
+and all 121 deployed source/schema/asset fingerprints match the release.
+
+### Confirmed code weaknesses and remaining uncertainty
+
+- `photon/src/photon.ts` constructs the SDK without explicit timeout/retry
+  settings. Installed `@photon-ai/api` 0.5.0 defaults to a 30 s per-attempt
+  timeout and up to three attempts. Retryable responses can honor Retry-After
+  up to 60 s. These internal attempts happen before the bridge's own
+  ATTACHMENT_NOT_READY retry loop sees an error.
+- The incoming event queue awaits the complete event handler. Photo handling
+  awaits the attachment download and conversion before saving the item. A slow
+  attachment therefore holds subsequent captions and commands in that queue.
+- An isolated test with a fake clock and a synthetic 429/Retry-After: 60 response
+  confirms that the SDK can hide a 60 s wait from the bridge. **The historical
+  live logs do not record the original response/status/header or actual socket
+  arrival time.** Provider event delivery and attachment retrieval cannot be
+  separated conclusively from these logs; the exact retry trigger is unproven.
+- A separate Pringles exchange confirms a caption ordering race. Provider event
+  sequence 15890 delivers the caption before photo sequence 15891, although the
+  photo's recorded receipt time is slightly earlier. The caption produces
+  generic help, then the photo asks for its name; the repeated name succeeds.
+- This shared line rejects reactions and threaded replies with
+  SPACE_NOT_SENDABLE (409). The plain reply fallback succeeds. In the inspected
+  exchanges these failed calls add fractions of a second, not the minute-long
+  delay. `PROMPT_DELAY_MS=2500` is also not the source of a 60 s delay.
+- ElevenLabs is absent from the bridge as intended. Caretaker replies here are
+  code templates, not an LLM or speech-generation request. Photon runtime source
+  was unchanged by the detector crop deployment.
+
+Proposed follow-up: add per-attempt timing and explicit bounded attachment
+timeouts/retries while respecting provider rate limits; buffer a caption that
+arrives just before its photo; avoid repeatedly trying unsupported reactions
+and threaded replies once capability is known. Any queue restructuring must
+preserve event order, durable cursor handling and idempotency. These changes are
+suggestions and have not been implemented in this diagnostic pass.
+
+Evidence: `/private/tmp/marco-full-release-20261018/slow-replies-journal.log`,
+`attachment-trace.log` (passive observation received no fresh photos), and
+`sdk-retry-probe.mjs` (isolated fake-clock test; no external requests).
+
 ## Detector crop persistence: fix after the audit
 
 Implemented on top of `651edc7`, pushed and deployed as **`b11519b`** after the

@@ -114,6 +114,35 @@ def test_malformed_sounds_are_dropped_and_counted(dash):
     assert len(heard(dash, BEEP, FIELD)) == 2 and dash.sound_dropped == len(bad)
 
 
+@pytest.mark.parametrize("variant,cue,step", [
+    ("on_beam", "beep", None), ("off_beam", "beep", None), ("behind", "beep", None), ("here", "beep", None),
+    ("arrive", "ding", None), ("contact", "tone_on", None), *[("hand_ping", "beep", i) for i in range(6)],
+])
+def test_sound_details_survive_the_relay(dash, variant, cue, step):
+    import json
+    import jsonschema
+    from pathlib import Path
+
+    (env,) = heard(dash, dict(BEEP, cue=cue, variant=variant, hand_step=step))
+    assert env["sound"]["variant"] == variant
+    if step is not None:
+        assert env["sound"]["handStep"] == step
+    schema = json.loads((Path(__file__).resolve().parents[2] / "frontend/docs/dashboard.sound.schema.json").read_text())
+    jsonschema.validate(env, schema)
+
+
+@pytest.mark.parametrize("detail", [
+    dict(variant="unknown"), dict(variant=[]), dict(variant="arrive"), dict(variant="contact"),
+    dict(variant="here", source="voice"), dict(variant="hand_ping"), dict(variant="hand_ping", hand_step=True),
+    dict(variant="hand_ping", hand_step=-1), dict(variant="hand_ping", hand_step=6),
+    dict(variant="hand_ping", hand_step=2.5), dict(variant="hand_ping", hand_step="2"),
+    dict(variant="here", hand_step=1), dict(hand_step=1),
+])
+def test_invalid_sound_details_are_dropped(dash, detail):
+    assert heard(dash, dict(BEEP, **detail)) == []
+    assert dash.sound_dropped == 1
+
+
 def test_a_sound_field_with_null_or_absent_sources(dash):
     quiet = dict(type="sound_field", session_id="s1", t_device=81236.0)            # no head yaw, no sources
     beacon_only = dict(FIELD, voice=None, head_yaw_deg=-12.34, beacon=dict(az_deg=-200.0, el_deg=-12.04, distance_m=1.6049))

@@ -2,6 +2,63 @@
 
 Last updated: 2026-10-18. Keep this file current: update it whenever a decision is made or a piece lands.
 
+## Dashboard Listen in cue fidelity (October 18, 2026, local)
+
+- Confirmed the phone collapsed the newer beacon variants and reach pitch ladder
+  into generic beep/ding messages, while the browser retained the old recipes.
+  The phone now reports optional `variant` and `hand_step`; the server validates
+  and relays `variant`/`handStep`. Existing cue names and old-message playback
+  remain compatible. Updated INTERFACES.md/DOCX and the exported browser schema.
+- Listen in reproduces the bright/off-beam/behind/here pulses, all six reach
+  pitches, arrival triad and 1175 Hz contact tone. Attenuation now uses the
+  phone's reference distance/rolloff; short cues follow field updates and stop
+  on silence/close. Facing and arrival interrupt ringing beacon pulses.
+- Verification: **244 server tests pass, 4 skip**, including the real Swift
+  reporter through the server and exported schema; **512 Swift checks pass**;
+  **96 frontend unit tests pass**, format/lint/schema/typecheck/build pass.
+  The complete Chromium suite passes **27 tests**, including opt-in/live-event
+  playback; Photon passes **52 tests** and typechecking, the reference client
+  passes **8 tests**, and audio/ARKit emulators pass **19 tests**. Deployment shell
+  syntax checks pass. The full unsigned iOS Release build succeeds. Logs:
+  `/private/tmp/marco-listen-{server,swift,xcode,photon,scaffold}.log` and
+  `/private/tmp/marco-listen-release-20261018/frontend-check.log`.
+- Prepared for the user's authorized push and deployment. No device playback.
+  To use the additional details live,
+  rebuild/install iOS and deploy both the server relay and dashboard. Browser
+  HRTF and network timing remain an approximation of Apple's headphone output.
+  Demo mode's older scripted sequence keeps its legacy sounds.
+
+## Registration framing and preprocessing evaluation (October 18, 2026)
+
+- Completed the read-only fixed-recording comparison and seven isolated automatic
+  registration calls. Cleaner framing fixes the demonstrated Bottle background
+  crop; square preprocessing trades fewer false matches against missed/new
+  matches. Neither is established as a general identity solution.
+- Results, method and limits: `docs/DETECTION-EVALUATION-20261018.md`. No detector
+  code, thresholds, live registry or configuration changed for this evaluation.
+  Future code-level registration/preprocessing fixes would apply to every object
+  and survive a data reset. Those fixes are not part of this release.
+
+## Read-only recording handoff (October 18, 2026)
+
+- Downloaded the four Vultr session folders matching the 10:50 UTC cutoff to
+  `~/marco-live/marco-live.tgz`, together with the current registry JSON, photos
+  and detector templates. The sessions contain 1,814 frames (10:54–13:17 UTC),
+  374,215,708 uncompressed session bytes; the archive is 322,565,843 bytes.
+- Recovered the five deleted morning items' registry/photos/templates from the
+  12:02 UTC backup and five earlier cached caretaker photos into the separate
+  `deleted-items.tgz`. The current and recovered registries must be extracted
+  separately. README, photo provenance, contact sheet, inventories, stream counts,
+  member hashes and archive SHA-256 checksums accompany the downloads.
+- Full gzip/member reads, all JSONL parsing, session byte/file counts, exact
+  frame/JPEG/depth/confidence matches, and 25 independently read remote photo/
+  registry checksums pass. No server files, services or configuration changed.
+- User ground truth: a nearby registered black bottle was missed while a farther
+  transparent coffee cup on another table was identified as Bottle. Preserve this
+  as one failure case for general false-positive reduction. The transparent cup's
+  registered identity, exact frame and movement history remain unconfirmed; do
+  not equate it with the Coffee reference or invent positions from predictions.
+
 ## Stable direction confirmation (October 18, 2026)
 
 - Implemented the user's approved fix on freshly fetched main `37b2e72`.
@@ -25,6 +82,34 @@ Last updated: 2026-10-18. Keep this file current: update it whenever a decision 
   iOS fix; no backend redeployment is required. Rebuild/install the phone app to
   use it. No device installation was performed. Evidence logs:
   `/private/tmp/marco-facing-confirmation-{swift,contract,xcode}.log`.
+
+## Photon reply-latency diagnosis (October 18, 2026)
+
+- Existing provider history, bridge journals and backend state show two photo
+  replies taking about 63 s, including about 61 s before the bridge saved and
+  processed the photo. Restart replies took about 1.7–1.9 s. Server resources,
+  active configuration and deployed source fingerprints are healthy.
+- Photo attachment work blocks the bridge's serial incoming-event queue. The
+  installed Photon SDK retries internally and can hide a 60 s Retry-After delay;
+  an isolated fake-clock test reproduces that behavior. Historical logs do not
+  record the original HTTP attempts or socket receipt times, so the precise
+  live trigger remains unproven. This is not evidence of a captured live 429.
+- Also confirmed a caption-before-photo ordering race and unsupported threaded
+  reply/reaction requests (HTTP 409, followed by a successful plain reply).
+  Details and proposed follow-up are in `docs/PHOTON-INTEGRATION-AUDIT.md`.
+- Read-only diagnostic: no messages, test registrations, service/configuration
+  changes, push or deployment. The user requested existing logs only. After the
+  earlier reset, the user registered two new items (Pringles and Fanta); those
+  items were preserved. Earlier zero-item and five-item counts are historical.
+
+## User-requested library reset (October 18, 2026, 12:02 UTC)
+
+- Backed up and deleted the five remaining app-tagged objects at the user's
+  explicit request. Backend, dashboard, detector and Photon now all contain zero
+  objects; the bridge stays connected. Earlier five-object counts below describe
+  the deployment checks before this reset.
+- Backup: `/opt/marco/backups/user-library-reset-20261018T120205Z/`.
+  No code, environment, caretaker configuration or Photon cursor was changed.
 
 ## Release validation (October 18, 2026)
 

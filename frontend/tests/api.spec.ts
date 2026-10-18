@@ -43,6 +43,92 @@ async function mockApi(page: Page) {
   }
 }
 
+test('Listen in preserves current phone cue variants through the live event feed', async ({
+  page,
+}) => {
+  // Observe real Web Audio buffers without playing sound from a browser test.
+  await page.addInitScript(() => {
+    const buffers: { length: number; loop: boolean; sample: number }[] = []
+    Object.assign(window, { testSoundBuffers: buffers })
+    const start = AudioBufferSourceNode.prototype.start
+    AudioBufferSourceNode.prototype.start = function () {
+      if (this.buffer)
+        buffers.push({
+          length: this.buffer.length,
+          loop: this.loop,
+          sample: this.buffer.getChannelData(0)[500],
+        })
+      this.disconnect()
+      start.call(this)
+    }
+  })
+  const api = await mockApi(page)
+  await page.goto('/#live')
+  const listen = page.getByRole('button', { name: 'Listen in', exact: true })
+  await expect(listen).toBeVisible()
+  const send = (cue: string, variant?: string, handStep?: number) =>
+    api.socket.send(
+      JSON.stringify({
+        type: 'dashboard.sound',
+        schemaVersion: 1,
+        streamId: api.value.streamId,
+        sentAt: new Date().toISOString(),
+        sound: {
+          kind: 'cue',
+          tDevice: 5,
+          cue,
+          source: 'beacon',
+          anchor: 'item',
+          azimuthDeg: 30,
+          elevationDeg: -20,
+          distanceM: 1.5,
+          muffled: variant === 'behind',
+          text: null,
+          durationS: null,
+          audioUrl: null,
+          variant,
+          handStep,
+        },
+      }),
+    )
+  const buffers = () =>
+    page.evaluate(
+      () =>
+        (
+          window as unknown as {
+            testSoundBuffers: {
+              length: number
+              loop: boolean
+              sample: number
+            }[]
+          }
+        ).testSoundBuffers,
+    )
+  send('beep', 'on_beam')
+  // Ensure the event has reached the store before enabling playback: no replay on opt-in.
+  await expect(page.locator('.sound-ripple').first()).toBeVisible()
+  expect(await buffers()).toEqual([])
+  await listen.click()
+  for (const variant of ['on_beam', 'off_beam', 'behind', 'here'])
+    send('beep', variant)
+  for (let step = 0; step < 6; step++) send('beep', 'hand_ping', step)
+  send('ding', 'arrive')
+  send('tone_on', 'contact')
+  await expect.poll(async () => (await buffers()).length).toBe(12)
+  const played = await buffers()
+  // Browser sample rates vary; compare lengths relative to the one-second contact buffer.
+  const rate = played[11].length
+  expect(played.map((b) => b.length)).toEqual(
+    [0.07, 0.11, 0.14, 0.09, ...Array(6).fill(0.06), 0.62, 1].map((s) =>
+      Math.round(s * rate),
+    ),
+  )
+  expect(new Set(played.slice(4, 10).map((b) => b.sample)).size).toBe(6)
+  expect(played[11].loop).toBe(true)
+  send('tone_off')
+  await listen.click()
+})
+
 test('real adapter fetches, receives snapshots and waits for a matching command acknowledgement', async ({
   page,
 }) => {

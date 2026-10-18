@@ -42,6 +42,8 @@ PATTERNS = {"guiding": "beacon", "within_reach": "steady", "found": "confirmatio
 MEMORY_KINDS = {"seen": "seen", "moved": "moved", "put_down": "moved", "label_added": "label_saved"}
 # What the wearer hears (INTERFACES.md §3.2 sound / sound_field, §6 dashboard.sound)
 CUES = {"beep", "ding", "tone_on", "tone_off", "say", "label", "blip", "silence"}
+SOUND_VARIANTS = {"on_beam": "beep", "off_beam": "beep", "behind": "beep", "here": "beep",
+                  "hand_ping": "beep", "arrive": "ding", "contact": "tone_on"}
 SOURCES = {"beacon", "voice"}
 ANCHORS = {"item", "room", "ahead"}
 SOUND_QUEUE = 300            # dashboard.sound envelopes waiting per /events connection before the oldest is dropped
@@ -103,7 +105,19 @@ def sound_cue(msg):
         dur = _num(dur)
         if dur is None or not 0.0 <= dur <= SOUND_DURATION_MAX_S:
             return None
-    return dict(kind="cue", tDevice=t, cue=cue, source=source, anchor=anchor, **where, muffled=muffled,
+    detail = {}
+    variant, step = msg.get("variant"), msg.get("hand_step")
+    if variant is not None:
+        if not isinstance(variant, str) or SOUND_VARIANTS.get(variant) != cue or source != "beacon":
+            return None
+        detail["variant"] = variant
+    if variant == "hand_ping":
+        if isinstance(step, bool) or not isinstance(step, int) or not 0 <= step <= 5:
+            return None
+        detail["handStep"] = step
+    elif step is not None:
+        return None
+    return dict(kind="cue", tDevice=t, cue=cue, source=source, anchor=anchor, **where, muffled=muffled, **detail,
                 text=text[:SOUND_TEXT_MAX] if text is not None else None, durationS=dur,
                 audioUrl=audio_alias(url) if isinstance(url, str) else None)
 
