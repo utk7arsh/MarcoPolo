@@ -68,7 +68,8 @@ class Dashboard:
         self.pose = None              # dict(T, t_device, head_yaw, head_source, wall, mono, map_id)
         self.fusion = None            # (wall, monotonic) of the last AirPods-fused pose
         self.guidance = None          # (message, wall, monotonic)
-        self.items = []               # the core's latest world items (public dicts)
+        # The core already restored its registry. Show saved items before any phone/world event arrives.
+        self.items = list(brain.items_public())
         self.frames: OrderedDict[str, dict] = OrderedDict()
         self.frame_meta = None
         self.frame_counter = 0

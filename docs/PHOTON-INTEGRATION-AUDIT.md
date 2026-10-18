@@ -4,6 +4,20 @@
 unavailable for a live retest. The fixes were subsequently deployed with the
 user's authorization; the deployment evidence is recorded below.
 
+## Dashboard visibility follow-up
+
+The user reported zero objects after the controlled restart, then confirmed
+visibility recovered. Actual Chrome checks now render all 12 objects on the
+private `/app/` page and local port 5176. The earlier schema checks did not verify
+that saved items were present: an empty list is schema-valid. Restart regression
+tests reproduced the adapter's empty initial state in real and stub modes.
+The local fix seeds it from the restored core before any phone/world event.
+HTTP/WS snapshots, photos and labels now pass before connecting a phone.
+Also corrected the logo's root-relative asset URL for `/app/` deployment.
+Local verification: 122 server tests passed (one dataset skip), 53 frontend unit
+and 23 Chromium tests passed, plus the full frontend check. User authorized
+pushing and deploying the follow-up; post-deployment verification is pending.
+
 ## Latest: live pre-mobile verification
 
 - Found and fixed a real outgoing-photo failure in `photon/src/photon.ts`:

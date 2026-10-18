@@ -73,7 +73,12 @@ export function App({
       </a>
       <header className="app-header">
         <a href="#objects" className="brand" aria-label="Marco Polo home">
-          <img src="/brand/marco-polo-mark.svg" width="32" height="32" alt="" />
+          <img
+            src={`${import.meta.env.BASE_URL}brand/marco-polo-mark.svg`}
+            width="32"
+            height="32"
+            alt=""
+          />
           <span>Marco Polo</span>
         </a>
         <nav className="main-nav" aria-label="Main navigation">

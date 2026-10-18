@@ -96,6 +96,50 @@ def test_before_any_phone_the_snapshot_is_valid_and_says_so(server):
         assert d["navigation"]["state"] == "unavailable" and d["navigation"]["audioPattern"] == "off"
 
 
+@pytest.mark.parametrize("mode", ["stub", "real"])
+def test_saved_items_are_visible_after_restart_without_a_phone(tmp_path, monkeypatch, mode):
+    monkeypatch.setenv("MARCO_DATA", str(tmp_path))
+    monkeypatch.setenv("MARCO_MODE", mode)
+    monkeypatch.setenv("AUTH_TEST_BYPASS", "1")
+    monkeypatch.delenv("MARCO_DASHBOARD_DIR", raising=False)
+    truth = tmp_path / "truth.json"
+    truth.write_text(json.dumps({"items": {"Diet Coke": {"position": [0, 0.8, -1], "size": 0.1}}}))
+    monkeypatch.setenv("MARCO_DETECTOR", "truth")
+    monkeypatch.setenv("MARCO_TRUTH", str(truth))
+    import marco.app
+
+    def boot():
+        return TestClient(importlib.reload(marco.app).app)
+
+    with boot() as c:
+        assert valid(c.get("/dashboard/snapshot").json())["items"] == []
+        r = c.post("/v1/items", data={"name": "Diet Coke", "source": "photon"},
+                   files={"photo": ("can.jpg", jpeg_bytes(), "image/jpeg")})
+        assert r.status_code == 200 and r.json()["quality"] == "ok"
+        iid = r.json()["item_id"]
+        assert c.post("/v1/labels", data={"item_id": iid, "name": "Diet Coke",
+                                          "text": "This is Diet Coke"}).status_code == 200
+
+    # Fresh core and adapter, same disk registry, no frame, pose or phone socket.
+    with boot() as c:
+        assert {it["item_id"] for it in c.get("/v1/items").json()} == {iid}
+        for path in ("/dashboard/snapshot", "/api/dashboard/snapshot"):
+            d = valid(c.get(path).json())
+            assert [(it["id"], it["name"]) for it in d["items"]] == [(iid, "Diet Coke")]
+            it = d["items"][0]
+            assert it["voiceLabel"]["transcript"] == "This is Diet Coke"
+            assert it["lastSeen"] is None
+            assert c.get("/api" + it["photoUrl"]).status_code == 200
+            assert d["devices"]["phone"]["state"] == "disconnected"
+            assert d["map"] is None and d["camera"] is None and d["wearer"] is None
+        for path in ("/events", "/api/events"):
+            with c.websocket_connect(path) as ev:
+                assert [it["id"] for it in valid(ev.receive_json())["items"]] == [iid]
+        # Startup hydration must not prevent subsequent world updates/deletions.
+        assert c.delete("/v1/items?source=photon").status_code == 200
+        assert valid(c.get("/dashboard/snapshot").json())["items"] == []
+
+
 def test_live_phone_state_maps_into_the_snapshot_and_media_loads(server):
     _, c = server
     with c.websocket_connect("/v1/phone") as ws:

@@ -32,5 +32,11 @@ export default defineConfig({
       url: 'http://127.0.0.1:5174',
       reuseExistingServer: !process.env.CI,
     },
+    {
+      command: 'npm run dev -- --port 5175 --strictPort --base=/app/',
+      env: { VITE_DATA_SOURCE: 'api' },
+      url: 'http://127.0.0.1:5175/app/',
+      reuseExistingServer: !process.env.CI,
+    },
   ],
 })

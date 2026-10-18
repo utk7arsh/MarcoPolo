@@ -2,6 +2,23 @@
 
 Last updated: 2026-10-18. Keep this file current: update it whenever a decision is made or a piece lands.
 
+## Saved dashboard items: startup fix (October 18, 2026)
+
+- User reported an empty Objects page, then confirmed the items became visible.
+  Actual Chrome checks now show **12 object rows** on both the private `/app/`
+  dashboard and local port 5176. No registered data was deleted or recreated.
+- Reproduced a startup bug in both real and stub modes: the registry restores
+  saved items, but the dashboard adapter starts empty until a world event arrives.
+  Initialize its item list from the restored core. New restart regressions cover
+  HTTP and WebSocket snapshots, photos, typed labels and deletion without a phone.
+- Also fixed the logo's absolute root URL, which returned 404 under `/app/`.
+  A browser regression checks subpath assets and a saved item with no position
+  while the phone is disconnected; Find remains disabled.
+- Local checks: **122 server tests passed**, one external dataset skip;
+  **53 frontend unit and 23 Chromium tests passed**, plus formatting, lint,
+  schema and build. User authorized pushing and deploying these follow-up fixes;
+  deployment and post-restart browser verification are pending.
+
 ## Pre-mobile live integration audit (October 18, 2026)
 
 - Rechecked GitHub, deployed source, service environments, private routes and
