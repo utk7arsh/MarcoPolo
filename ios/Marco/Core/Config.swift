@@ -17,6 +17,8 @@ enum Config {
     static let earAboveChestM: Float = 0.45
     static let relocalizeTimeoutS = 30.0
     static let mapSaveIntervalS = 30.0
+    /// The developer screen's "Camera at 30 fps" switch (default off: the camera runs at 60 fps unless the phone is hot).
+    static var lowFrameRate: Bool { UserDefaults.standard.bool(forKey: "lowFrameRate") }
     static let demoItems = ["keys", "wallet", "mug", "bottle"]
 
     /// CoreMotion's yaw grows turning left; our headings grow turning right, hence -1. Hour-one test: turn your

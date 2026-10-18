@@ -15,6 +15,11 @@ final class PhoneSocket: NSObject, URLSessionWebSocketDelegate {
     private var stopped = true
     private var backoff = 0.5
     private var held: [String] = []          // sendWhenOpen messages waiting for a connection
+    /// Stream messages handed to URLSession but not yet sent. On a stalled link (bad Wi-Fi, a Tailscale relay) they
+    /// would pile up in memory at ~100 KB/s with no limit; past this many, new ones are dropped (stale anyway).
+    private var inFlight = 0
+    static let maxInFlight = 32              // about 2 s of hands and poses
+    private(set) var droppedForBacklog = 0
     private let encoder = JSONEncoder()
 
     init(base: URL) {
@@ -66,8 +71,16 @@ final class PhoneSocket: NSObject, URLSessionWebSocketDelegate {
     private func send(text s: String) {
         queue.async {
             guard self.open, let task = self.task else { return }
+            guard self.inFlight < Self.maxInFlight else {
+                self.droppedForBacklog += 1
+                return
+            }
+            self.inFlight += 1
             task.send(.string(s)) { err in
-                if err != nil { self.queue.async { self.dropped(task) } }
+                self.queue.async {
+                    if task === self.task { self.inFlight -= 1 }
+                    if err != nil { self.dropped(task) }
+                }
             }
         }
     }
@@ -91,6 +104,7 @@ final class PhoneSocket: NSObject, URLSessionWebSocketDelegate {
         guard !stopped else { return }
         let t = session.webSocketTask(with: url)
         task = t
+        inFlight = 0                              // sends of the old socket no longer count
         t.resume()
         receive(t)
     }

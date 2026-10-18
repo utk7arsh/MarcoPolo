@@ -605,6 +605,16 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
   - Shaders are Swift source compiled on the phone at runtime: Xcode 26's Metal compiler is a separate download, and a `.metal` file would break the build without it.
   - Verified on this Mac: `check.sh` runs the point-cloud kernel and the heat-map shader on the Mac's GPU (3D points within 1 mm of `CameraMath`, the server's convention; colours match `DepthPalette`); `MarcoPolo.xcodeproj` builds for iOS.
   - Not verified: frame rate, heat and battery on the iPhone with capture running; how the overlay lines up on the real display transform.
+- **iPhone app made lighter (2026-10-18, Utkarsh; built and unit-tested, not yet measured on the phone)** after it overloaded and crashed now and then:
+  - **Camera stays at 60 fps** (the user's preference) and switches in place, with no tracking reset, to 1920x1440 at 30 fps only at serious heat or with Developer tools' "Camera at 30 fps" switch; back to 60 when it cools. If 30 fps ever gives no depth for 3 s it returns to 60 for the session. The log says which rate runs.
+  - **No plane detection:** nothing used plane anchors.
+  - **Hand detection** (Vision): one hand instead of two, the full 15/s only within 1.5 s of seeing a hand and 5/s otherwise, and the 9x9 patches read straight from the depth buffer instead of copying both whole maps per message (byte-identical, tested; the contract test still passes).
+  - **No idle re-rendering:** the ~10 values only Developer tools shows (and every partial transcript of nearby speech) are published only while that screen is open, and only on change. Before, the main panel re-rendered 10 times a second.
+  - **World-map saves off the ARKit queue:** archiving a large map no longer stalls frame delivery every 30 s; clearing goes through the same serial queue.
+  - **WebSocket backlog cap:** at most 32 stream messages waiting; on a stalled link URLSession used to buffer poses and hands without limit.
+  - **Heat policy** (`Core/ResourcePolicy.swift`): at serious heat the camera drops to 30 fps, hands to 10/2 per second and the LiDAR view to 30 fps; at critical, hands to 5/1 and the LiDAR view to 15 fps. Frames (1/s) and poses (10/s) never change.
+  - **Crash evidence:** MetricKit diagnostics (crashes, CPU limit hits, hangs, with call stacks) are saved to Documents/diagnostics, visible in Finder under Files.
+  - Next candidates, which need on-device profiling: the audio engine runs three HRTF players even when silent; speech recognition runs all the time.
 - **Phone to Vultr:** the iPhone is on the tailnet and reaches `marco-gpu` (`GET /v1/items` from Safari); the app's streaming to it is not yet run.
 - **AirPods mic (hour-one test 7):** does high-quality recording turn on with the AirPods Pro 3, does the output stay 2 channels, and how much input latency does it add from the vest?
 - **Relocalization** after an app relaunch: time and anchor error.

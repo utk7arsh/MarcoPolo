@@ -1,3 +1,4 @@
+import CoreVideo
 import Foundation
 
 /// Byte formats of docs/INTERFACES.md §2-3: float16 little-endian depth, DEFLATE compression, the hand patches,
@@ -44,6 +45,45 @@ enum Wire {
                     let k = j * size * size + (dy + r) * size + (dx + r)
                     dp[k] = depth[vv * w + uu]
                     cp[k] = conf[vv * w + uu]
+                }
+            }
+        }
+        return (dp, cp)
+    }
+
+    /// The same patches read straight from ARKit's buffers (Float32 depth, UInt8 confidence): only the 21 windows,
+    /// instead of copying both whole 256x192 maps for every hand message. Byte-identical to `patches(depth:conf:...)`.
+    static func patches(depth: CVPixelBuffer, conf: CVPixelBuffer, joints: [Joint],
+                        size: Int = HandJoints.patch) -> (depth: [Float], conf: [UInt8])? {
+        guard CVPixelBufferGetPixelFormatType(depth) == kCVPixelFormatType_DepthFloat32,
+              CVPixelBufferGetPixelFormatType(conf) == kCVPixelFormatType_OneComponent8 else { return nil }
+        let w = CVPixelBufferGetWidth(depth), h = CVPixelBufferGetHeight(depth)
+        guard CVPixelBufferGetWidth(conf) == w, CVPixelBufferGetHeight(conf) == h else { return nil }
+        CVPixelBufferLockBaseAddress(depth, .readOnly)
+        CVPixelBufferLockBaseAddress(conf, .readOnly)
+        defer {
+            CVPixelBufferUnlockBaseAddress(conf, .readOnly)
+            CVPixelBufferUnlockBaseAddress(depth, .readOnly)
+        }
+        guard let db = CVPixelBufferGetBaseAddress(depth), let cb = CVPixelBufferGetBaseAddress(conf) else { return nil }
+        let dRow = CVPixelBufferGetBytesPerRow(depth), cRow = CVPixelBufferGetBytesPerRow(conf)
+        let r = size / 2
+        var dp = [Float](repeating: .nan, count: joints.count * size * size)
+        var cp = [UInt8](repeating: 0, count: joints.count * size * size)
+        for (j, p) in joints.enumerated() where p.x.isFinite && p.y.isFinite {
+            let u = Int((p.x * Double(w)).rounded(.down))
+            let v = Int(((1 - p.y) * Double(h)).rounded(.down))
+            for dy in -r...r {
+                let vv = v + dy
+                guard vv >= 0, vv < h else { continue }
+                let drow = (db + vv * dRow).assumingMemoryBound(to: Float32.self)
+                let crow = (cb + vv * cRow).assumingMemoryBound(to: UInt8.self)
+                for dx in -r...r {
+                    let uu = u + dx
+                    guard uu >= 0, uu < w else { continue }
+                    let k = j * size * size + (dy + r) * size + (dx + r)
+                    dp[k] = drow[uu]
+                    cp[k] = crow[uu]
                 }
             }
         }

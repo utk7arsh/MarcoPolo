@@ -892,6 +892,57 @@ do {
     check(Tones.beep(fmt, freq: 880, harmonics: 6, ms: 70, noise: 0.1).frameLength == 3360, "70 ms beep")
 }
 
+// MARK: - Resource policy (Core/ResourcePolicy.swift) and the lighter hand path
+
+do {
+    // Frames and poses never change; hands run at full rate only near a hand, and slow down with heat.
+    let cool = ResourcePolicy(heat: .nominal), hot = ResourcePolicy(heat: .serious), burning = ResourcePolicy(heat: .critical)
+    check(cool.handHz(sinceLastHand: 0.5) == 15 && cool.handHz(sinceLastHand: 5) == 5, "nominal: 15/s near a hand, 5/s otherwise")
+    check(hot.handHz(sinceLastHand: 0) == 10 && hot.handHz(sinceLastHand: 9) == 2, "serious: 10/2")
+    check(burning.handHz(sinceLastHand: 0) == 5 && burning.handHz(sinceLastHand: 9) == 1, "critical: 5/1")
+    check(ResourcePolicy.Heat.allCases.map { ResourcePolicy(heat: $0).lidarViewFPS } == [60, 60, 30, 15], "LiDAR view fps by heat")
+    check(!cool.lowCameraRate && !ResourcePolicy(heat: .fair).lowCameraRate && hot.lowCameraRate && burning.lowCameraRate,
+          "camera stays at 60 fps until the phone is seriously hot")
+    check(ResourcePolicy.Heat(ProcessInfo.ThermalState.serious) == .serious && ResourcePolicy.Heat.fair < .critical, "heat mapping")
+    check(cool.summary == "heat nominal · camera 60 fps · hands 15/s near a hand, 5/s otherwise", cool.summary)
+    check(hot.summary == "heat serious · camera 30 fps · hands 10/s near a hand, 2/s otherwise", hot.summary)
+
+    // The gate: 5/s while no hand is around, 15/s for 1.5 s after one was seen (60 fps frames).
+    var gate = HandRateGate()
+    var fired = 0
+    for i in 0..<60 where gate.ready(Double(i) / 60, policy: cool) { fired += 1 }
+    check(fired == 5, "no hand: 5 detections in a second, got \(fired)")
+    gate.sawHand(at: 1.0)
+    fired = 0
+    for i in 60..<120 where gate.ready(Double(i) / 60, policy: cool) { fired += 1 }
+    check(fired == 15, "hand seen: 15 detections in the next second, got \(fired)")
+    fired = 0
+    for i in 180..<240 where gate.ready(Double(i) / 60, policy: cool) { fired += 1 }   // 2-3 s after: hand gone
+    check(fired == 5, "hand gone for 2 s: back to 5/s, got \(fired)")
+
+    // Hand patches read straight from padded buffers are byte-identical to the contract-tested array version.
+    let (d, c) = syntheticMaps()
+    let dpb = padded(d, 256, 192, format: kCVPixelFormatType_DepthFloat32)
+    let cpb = padded(c, 256, 192, format: kCVPixelFormatType_OneComponent8)
+    var js = HandJoints.names.enumerated().map { j, n in Joint(name: n, x: 0.2 + 0.03 * Double(j), y: 0.15 + 0.035 * Double(j), conf: 0.9) }
+    js[0] = Joint(name: "wrist", x: 0.001, y: 0.999, conf: 0.8)       // top-left corner: padded patch
+    js[3] = Joint(name: "thumbIP", x: 0, y: 0, conf: 0)               // missing joint, as the phone sends it
+    js[20] = Joint(name: "littleTip", x: 0.9999, y: 0.0001, conf: 0.7) // bottom-right corner
+    let ref = Wire.patches(depth: d, conf: c, width: 256, height: 192, joints: js)
+    if let fast = Wire.patches(depth: dpb, conf: cpb, joints: js) {
+        let same = fast.depth.count == ref.depth.count && zip(fast.depth, ref.depth).allSatisfy { $0.bitPattern == $1.bitPattern }
+        check(same && fast.conf == ref.conf, "buffer patches match the array patches byte for byte")
+        let a = HandMsg.make(sessionId: "s", mapId: "m", t: 1, transform: matrix_identity_float4x4, joints: js, chirality: "right",
+                             depth: d, conf: c, width: 256, height: 192)
+        let b = HandMsg.make(sessionId: "s", mapId: "m", t: 1, transform: matrix_identity_float4x4, joints: js, chirality: "right",
+                             patches: fast)
+        check(a == b, "the hand message is the same either way")
+    } else {
+        check(false, "buffer patches returned nil")
+    }
+    check(Wire.patches(depth: cpb, conf: cpb, joints: js) == nil, "wrong depth format: nil")
+}
+
 // MARK: - LiDAR view (Core/DepthVision.swift)
 
 do {

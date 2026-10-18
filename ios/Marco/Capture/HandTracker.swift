@@ -13,7 +13,7 @@ final class HandTracker {
 
     private let request: VNDetectHumanHandPoseRequest = {
         let r = VNDetectHumanHandPoseRequest()
-        r.maximumHandCount = 2
+        r.maximumHandCount = 1          // the app sends one hand; looking for two costs Vision twice the work
         return r
     }()
 
@@ -45,10 +45,16 @@ extension HandMsg {
     /// The hand message for one ARFrame: joints plus 9x9 depth and confidence patches around each of them.
     static func make(sessionId: String, mapId: String, t: Double, transform: simd_float4x4, joints: [Joint],
                      chirality: String, depth: [Float], conf: [UInt8], width: Int, height: Int) -> HandMsg {
-        let p = Wire.patches(depth: depth, conf: conf, width: width, height: height, joints: joints)
-        return HandMsg(session_id: sessionId, map_id: mapId, t_device: t, camera_transform: Geo.flat(transform),
-                       chirality: chirality, joints: joints,
-                       depth_patches_f16_b64: Wire.float16LE(p.depth).base64EncodedString(),
-                       conf_patches_u8_b64: Data(p.conf).base64EncodedString())
+        make(sessionId: sessionId, mapId: mapId, t: t, transform: transform, joints: joints, chirality: chirality,
+             patches: Wire.patches(depth: depth, conf: conf, width: width, height: height, joints: joints))
+    }
+
+    /// With the patches already cut (Wire.patches(depth:conf:joints:) reads them straight from ARKit's buffers).
+    static func make(sessionId: String, mapId: String, t: Double, transform: simd_float4x4, joints: [Joint],
+                     chirality: String, patches p: (depth: [Float], conf: [UInt8])) -> HandMsg {
+        HandMsg(session_id: sessionId, map_id: mapId, t_device: t, camera_transform: Geo.flat(transform),
+                chirality: chirality, joints: joints,
+                depth_patches_f16_b64: Wire.float16LE(p.depth).base64EncodedString(),
+                conf_patches_u8_b64: Data(p.conf).base64EncodedString())
     }
 }

@@ -76,7 +76,7 @@ final class LiDARRenderer: NSObject, MTKViewDelegate {
         view.device = device
         view.colorPixelFormat = .bgra8Unorm
         view.depthStencilPixelFormat = .depth32Float
-        view.preferredFramesPerSecond = 60
+        view.preferredFramesPerSecond = 60        // the camera's rate; AppModel.lidarFPS lowers it when the phone is hot
         view.framebufferOnly = true
         view.clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 1)
 

@@ -5,6 +5,8 @@ struct MarcoApp: App {
     @StateObject private var model = AppModel()
     @Environment(\.scenePhase) private var scenePhase
 
+    init() { CrashReports.shared.start() }
+
     var body: some Scene {
         WindowGroup {
             ContentView().environmentObject(model)

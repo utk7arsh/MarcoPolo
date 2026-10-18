@@ -79,7 +79,7 @@ final class AppModel: ObservableObject {
     private var fusion = HeadFusion()
     private var frameGate = Throttle(hz: Config.frameHz)
     private var poseGate = Throttle(hz: Config.poseHz)
-    private var handGate = Throttle(hz: Config.handHz)
+    private var handGate = HandRateGate()                              // 15/s near a hand, slower otherwise
     private var frameId = 0
     private var reportedFrameTicket: Int?
     private var handBusy = false
@@ -103,8 +103,22 @@ final class AppModel: ObservableObject {
 
     var arSession: ARSession { ar.session }
 
+    /// How hard to work, by heat (Core/ResourcePolicy.swift). Read on the ARKit queue, set on the main thread.
+    private let policy = Locked(ResourcePolicy())
+    private var thermalObserver: NSObjectProtocol?
+    /// The LiDAR view's redraw rate, lowered when the phone runs hot.
+    @Published private(set) var lidarFPS = ResourcePolicy().lidarViewFPS
+    /// True while Developer tools is on screen. The values only it shows are published only then: publishing them
+    /// at 10 Hz otherwise re-renders the main panel ten times a second for nothing. Main thread.
+    var diagnosticsVisible = false
+    private var acceptedCount = 0                                      // main thread
+    private var lastUploadText = ""                                    // main thread
+
     init() {
         if !ARSessionManager.supported { control.stop(reason: .unsupported) }
+        thermalObserver = NotificationCenter.default.addObserver(forName: ProcessInfo.thermalStateDidChangeNotification,
+                                                                 object: nil, queue: .main) { [weak self] _ in self?.thermalChanged() }
+        thermalChanged()
     }
 
     /// The clock of ARFrame.timestamp and CMDeviceMotion.timestamp.
@@ -199,8 +213,8 @@ final class AppModel: ObservableObject {
             self.act(intent, text)
         } }
         listener.onTranscript = { [weak self] text in DispatchQueue.main.async {
-            guard let self, self.running, self.control.generation == ticket else { return }
-            self.heard = text
+            guard let self, self.running, self.control.generation == ticket, self.diagnosticsVisible else { return }
+            self.update(\.heard, text)        // every partial transcript of nearby chatter: developer screen only
         } }
         listener.onWake = { [weak self] in DispatchQueue.main.async {
             guard let self, self.running, self.control.generation == ticket else { return }
@@ -256,11 +270,13 @@ final class AppModel: ObservableObject {
             guard let self, self.live.read({ $0.generation == ticket }) else { return }
             self.mapEvent(e, id, ticket: ticket)
         }
+        ar.onNote = { [weak self] line in DispatchQueue.main.async { self?.note(line) } }
         ar.onLost = { [weak self] in DispatchQueue.main.async {
             guard let self, self.running, self.control.generation == ticket else { return }
             self.speak(Lines.bearings)
         } }
         ar.queue.async { self.fusion = HeadFusion() }
+        updateCameraRate()                       // 60 fps unless hot or switched to 30
         ar.start()
 
         let t = Timer(timeInterval: 1.0 / 60, repeats: true) { [weak self] _ in self?.tick() }
@@ -387,11 +403,14 @@ final class AppModel: ObservableObject {
             poseRate.write { $0.tick(t) }
         }
         if frameGate.ready(t) { upload(frame, mapId: mapId, ticket: ticket) }
-        if handGate.ready(t) && !handBusy {
+        if !handBusy, handGate.ready(t, policy: policy.read { $0 }) {
             handBusy = true
             handQueue.async {
-                self.sendHand(frame, mapId: mapId, ticket: ticket)
-                self.ar.queue.async { self.handBusy = false }
+                let found = self.sendHand(frame, mapId: mapId, ticket: ticket)
+                self.ar.queue.async {
+                    self.handBusy = false
+                    if found { self.handGate.sawHand(at: t) }
+                }
             }
         }
     }
@@ -429,17 +448,18 @@ final class AppModel: ObservableObject {
     }
 
     /// Hand queue.
-    private func sendHand(_ frame: ARFrame, mapId: String, ticket: Int) {
+    /// Hand queue. True when Vision found a hand (the gate keeps the full rate while hands are around).
+    private func sendHand(_ frame: ARFrame, mapId: String, ticket: Int) -> Bool {
         guard live.read({ $0.generation == ticket }),
               let depth = frame.smoothedSceneDepth ?? frame.sceneDepth, let confMap = depth.confidenceMap,
-              let found = try? hands.detect(frame.capturedImage) else { return }      // nil: no hand in view
-        let d = FrameEncoder.plane(depth.depthMap, as: Float32.self)
-        let c = FrameEncoder.plane(confMap, as: UInt8.self)
-        guard live.read({ $0.generation == ticket }) else { return }
+              let found = try? hands.detect(frame.capturedImage) else { return false }  // nil: no hand in view
+        // Only the 21 9x9 windows are read from the depth buffers, not both whole maps.
+        guard let patches = Wire.patches(depth: depth.depthMap, conf: confMap, joints: found.joints),
+              live.read({ $0.generation == ticket }) else { return true }
         emit(HandMsg.make(sessionId: sessionId, mapId: mapId, t: frame.timestamp, transform: frame.camera.transform,
-                          joints: found.joints, chirality: found.chirality, depth: d.values, conf: c.values,
-                          width: d.width, height: d.height))
+                          joints: found.joints, chirality: found.chirality, patches: patches))
         handRate.write { $0.tick(frame.timestamp) }
+        return true
     }
 
     private func mapEvent(_ event: String, _ id: String, ticket: Int) {
@@ -495,14 +515,18 @@ final class AppModel: ObservableObject {
             if guidanceGate.ready(t) || !guidance.active { sendGuidance() }
         }
         if uiGate.ready(t) {
-            headYaw = l.headYaw
-            headSource = l.headSource
-            phase = guidance.phase
-            relAzimuth = guidance.relAzimuthDeg
-            distance = guidance.distanceM
             let target = guidance.active ? guidance.target?.itemId : nil
             if guidanceTargetId != target { guidanceTargetId = target }
-            refreshHealth(t, l)
+            if diagnosticsVisible {
+                update(\.headYaw, l.headYaw.rounded())
+                update(\.headSource, l.headSource)
+                update(\.phase, guidance.phase)
+                update(\.relAzimuth, guidance.relAzimuthDeg.rounded())
+                update(\.distance, (guidance.distanceM * 100).rounded() / 100)
+                update(\.framesAccepted, acceptedCount)
+                update(\.lastUpload, lastUploadText)
+                refreshHealth(t, l)
+            }
         }
     }
 
@@ -510,19 +534,20 @@ final class AppModel: ObservableObject {
     private func refreshHealth(_ t: Double, _ l: Live) {
         let poses = poseRate.read { m -> Double in var c = m; return c.rate(t) }
         let hands = handRate.read { m -> Double in var c = m; return c.rate(t) }
-        linkInfo = String(format: "frames %.1f/s · poses %.0f/s · hands %.0f/s", frameRate.rate(t), poses, hands)
+        update(\.linkInfo, String(format: "frames %.1f/s · poses %.0f/s · hands %.0f/s · ", frameRate.rate(t), poses, hands)
+                   + policy.read { $0 }.summary)
         let a = head.health
-        airpodsInfo = a.samples == 0 ? "no samples (AirPods in? motion allowed?)"
-            : String(format: "%.0f Hz · jitter %.0f ms · latency %.0f ms · raw yaw %.0f°", a.rateHz, a.jitterMs, a.latencyMs, a.yawDeg)
+        update(\.airpodsInfo, a.samples == 0 ? "no samples (AirPods in? motion allowed?)"
+            : String(format: "%.0f Hz · jitter %.0f ms · latency %.0f ms · raw yaw %.0f°", a.rateHz, a.jitterMs, a.latencyMs, a.yawDeg))
         if abs(l.signEvidence) < 50 {
-            signInfo = "turn your whole body a few times to check · realigned \(l.realignments)×"
+            update(\.signInfo, "turn your whole body a few times to check · realigned \(l.realignments)×")
         } else {
-            signInfo = (l.signEvidence > 0 ? "AirPods sign agrees with ARKit ✓" : "AirPods sign INVERTED: flip it")
-                + " · realigned \(l.realignments)×"
+            update(\.signInfo, (l.signEvidence > 0 ? "AirPods sign agrees with ARKit ✓" : "AirPods sign INVERTED: flip it")
+                + " · realigned \(l.realignments)×")
         }
         if recording {
             let p = recorder.progress
-            recordInfo = "● \(p.frames) frames · \(p.messages) messages · \(p.bytes / 1_000_000) MB"
+            update(\.recordInfo, "● \(p.frames) frames · \(p.messages) messages · \(p.bytes / 1_000_000) MB")
         }
     }
 
@@ -771,13 +796,33 @@ final class AppModel: ObservableObject {
 
     private func uploaded(_ code: Int, _ body: String, _ ms: Double) {
         if code == 202 {
-            framesAccepted += 1
+            acceptedCount += 1                  // published by the 10 Hz block while Developer tools is open
             frameRate.tick(now)
-            lastUpload = String(format: "202 · %.0f ms round trip", ms)
+            lastUploadText = String(format: "202 · %.0f ms round trip", ms)
         } else {
-            lastUpload = "\(code): \(body.prefix(160))"
+            lastUploadText = "\(code): \(body.prefix(160))"
             note("frame upload \(code): \(body.prefix(240))")
         }
+    }
+
+    /// Publishes only real changes: every @Published write re-renders the screens that observe the model.
+    private func update<T: Equatable>(_ key: ReferenceWritableKeyPath<AppModel, T>, _ value: T) {
+        if self[keyPath: key] != value { self[keyPath: key] = value }
+    }
+
+    /// The phone's heat changed: slow the optional work (Core/ResourcePolicy.swift). Main thread.
+    private func thermalChanged() {
+        let p = ResourcePolicy(heat: .init(ProcessInfo.processInfo.thermalState))
+        let before = policy.read { $0 }
+        policy.write { $0 = p }
+        update(\.lidarFPS, p.lidarViewFPS)
+        updateCameraRate()
+        if p.heat != before.heat, p.heat >= .serious || before.heat >= .serious { note(p.summary) }
+    }
+
+    /// 60 fps unless the phone is hot or the developer switch asks for 30. Switches a running camera in place.
+    func updateCameraRate() {
+        ar.setLowFrameRate(Config.lowFrameRate || policy.read { $0 }.lowCameraRate)
     }
 
     // MARK: - Recording (Core/Recorder.swift: the server's own layout, so server/tools read it as is)

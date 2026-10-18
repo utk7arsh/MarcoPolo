@@ -7,6 +7,7 @@ struct DiagnosticsView: View {
     @EnvironmentObject var model: AppModel
     @AppStorage("flipAirpodsYaw") private var flipYaw = false
     @AppStorage("useIPhoneMic") private var iPhoneMic = false
+    @AppStorage("lowFrameRate") private var lowFrameRate = false
     @State private var itemName = ""
     @State private var photo: PhotosPickerItem?
     @State private var talking = false
@@ -27,6 +28,8 @@ struct DiagnosticsView: View {
                     row("frames accepted", "\(model.framesAccepted)")
                     row("last upload", model.lastUpload)
                     row("rates", model.linkInfo)
+                    Toggle("Camera at 30 fps (saves power)", isOn: $lowFrameRate)
+                        .onChange(of: lowFrameRate) { _, _ in model.updateCameraRate() }
                 }
 
                 Section("Record on the phone (server layout)") {
@@ -91,6 +94,8 @@ struct DiagnosticsView: View {
             .navigationTitle("Marco")
         }
         .sheet(item: $model.shareFile) { file in ShareSheet(items: [file.url]) }
+        .onAppear { model.diagnosticsVisible = true }       // only then does the model publish these rows
+        .onDisappear { model.diagnosticsVisible = false }
         .onChange(of: photo) { _, item in
             guard let item else { return }
             let name = itemName.trimmingCharacters(in: .whitespaces)

@@ -12,7 +12,7 @@ struct LiDARScreen: View {
     var body: some View {
         ZStack(alignment: .topTrailing) {
             Color.black.ignoresSafeArea()
-            LiDARMetalView(session: model.arSession, error: $error)
+            LiDARMetalView(session: model.arSession, fps: model.lidarFPS, error: $error)
                 .ignoresSafeArea()
                 .accessibilityHidden(true)
             Button { dismiss() } label: {
@@ -39,6 +39,7 @@ struct LiDARScreen: View {
 /// The Metal view, sharing the app's ARSession (read-only: see LiDARRenderer).
 private struct LiDARMetalView: UIViewRepresentable {
     let session: ARSession
+    let fps: Int                                        // AppModel.lidarFPS: lower when the phone runs hot
     @Binding var error: String?
 
     /// Holds the renderer: MTKView keeps its delegate weakly.
@@ -64,5 +65,7 @@ private struct LiDARMetalView: UIViewRepresentable {
         return view
     }
 
-    func updateUIView(_ view: MTKView, context: Context) {}
+    func updateUIView(_ view: MTKView, context: Context) {
+        if view.preferredFramesPerSecond != fps { view.preferredFramesPerSecond = fps }
+    }
 }

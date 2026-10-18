@@ -78,6 +78,7 @@ A free Apple ID works. Apps signed with a free Personal Team expire after 7 days
 | `Net/Uploader.swift` | `POST /v1/frames` multipart, latest frame wins; `POST /v1/items`; legacy media fetch helper | yes, contract-tested |
 | `LiDAR/LiDARScreen.swift`, `LiDAR/LiDARRenderer.swift` | the LiDAR view: the live depth map, full screen, from the shared AR session (read-only). The renderer can also draw a room point cloud and item labels; the screen doesn't use them | no (ARKit, MetalKit) |
 | `Core/DepthVision.swift`, `Core/LiDARShaderSource.swift` | its maths (colour scale, depth probe, projection, item labels) and its shaders, compiled at runtime so the build needs no Metal Toolchain | yes, tested (shaders run on the Mac's GPU) |
+| `Core/ResourcePolicy.swift`, `App/CrashReports.swift` | how hard the phone works by heat and need (camera 60 fps, 30 when hot; hands 15/s only near a hand), and MetricKit crash and CPU reports saved to Documents/diagnostics | policy unit-tested |
 | `Net/ServerCheck.swift` | one `GET /v1/items` at Start, turned into a sentence that says what to fix | yes, unit-tested |
 | `Net/SpeechOutputClient.swift` | private exact-text TTS request, bounded reply cache, cancellation and Apple fallback selection; no API key | yes, unit-tested |
 | `Net/PhoneSocket.swift` | `/v1/phone` WebSocket: JSON both ways, reconnect with backoff, pings, holds map/query messages until connected | yes |
