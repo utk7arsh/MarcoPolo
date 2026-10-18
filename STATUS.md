@@ -361,9 +361,18 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
 
 ## Architecture progress map (October 17, 2026)
 
-- `docs/architecture.html` now colours every box, module, wire and demo step by progress: green **End to end** (integration-tested on loopback, replayed real data or from the Mac), teal **Live** (also verified with the real device or service), blue **Built** (code + unit tests only) and red **Not built**. Each element carries a hover note with its evidence from this file, and a summary bar and a "next to turn green" list sit at the top.
-- Snapshot (rechecked at `c6eca2f`, which adds the built-only LiDAR view): parts 15/26 end to end (6 live); wires 6/9 end to end (2 live; the dashboard wire is not built); demo steps 6/14 end to end (1 live). The phone app has not run on the iPhone, so the on-body boxes stay Built.
-- To update, change the element's `data-status` (`live`, `e2e`, `built`, `todo`) or the wire list in the page's script. Documentation only; no code or contract changed.
+- `docs/architecture.html` is now a **build map**: the target system, coloured by what actually works. Green **End to end** (integration-tested on loopback, replayed real data or from the Mac), teal **Live** (also verified with the real device or service), blue **Built** (code + unit tests only), red **Not built**. Hover any element for its evidence.
+- Sections:
+  - **Commands:** find, what is this, caretaker labels, touch to name, "this is the door" / left behind, and register (by a sighted helper or the caretaker). The wearer never names items themselves.
+  - **The 7-stage find experience:** "Polo! Behind you, two steps", the muffled beacon, the facing ding + buzz, faster beeps, the steady tone in the last 30 cm, "Got it" at touch. Each stage is mapped to its code (`Guidance.swift` phases, `Lines.swift`, server `touch.py`).
+  - **A left-to-right pipeline:** sources → pre-processing (phone capture, Photon intake) → **the brain on Vultr** (ingest, detect, box to 3D, world model, touch, answers, feeds) → post-processing (phone guidance, Photon outreach, dashboard) → destinations. 13 numbered wires.
+- Snapshot at `1a06d00`:
+  - commands 4/6 end to end;
+  - find stages 0/7 (all built, none heard on the vest);
+  - parts 16/33 (6 live);
+  - wires 8/13 (2 live).
+  - Not built: the dashboard feed and screen.
+- Documentation only; no code or contract changed.
 
 ## Find: keep looking when not found, and the hub fix (October 17, 2026, Utkarsh)
 
