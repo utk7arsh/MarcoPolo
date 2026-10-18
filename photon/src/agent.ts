@@ -170,14 +170,20 @@ export class MarcoAgent {
   /** Text only: Apple suppresses links and media in the first message of a conversation. */
   private async welcome(caretaker: Caretaker, messageId: string): Promise<Caretaker> {
     const user = this.deps.config.userName;
-    const hi = caretaker.name === "Family" ? "Hi!" : `Hi ${caretaker.name}!`;
-    await this.say(
-      caretaker,
-      `${hi} I'm Marco, ${user}'s home helper. When ${user} touches something I don't recognize, I'll text you a photo. ` +
-        `Reply with the object's name as text. You can also teach me anytime: send a photo with its name, like "${user}'s keys".`,
-      { key: `welcome:${messageId}` },
-    );
+    await this.say(caretaker, this.intro(caretaker), { key: `welcome:${messageId}` });
     return this.deps.store.upsertCaretaker({ ...caretaker, welcomedAt: now() });
+  }
+
+  /** The warm introduction: who Marco is, then what the caretaker can do, in a few lines. */
+  private intro(caretaker: Caretaker): string {
+    const user = this.deps.config.userName;
+    const hi = caretaker.name === "Family" ? "Hi!" : `Hi ${caretaker.name}!`;
+    return [
+      `${hi} I'm Marco, ${user}'s home helper 👋 I help ${user} find everyday things by sound and know what's in hand, and you can help me learn the house:`,
+      `• Teach me: send a photo of something with its name, like "${user}'s keys".`,
+      `• Answer me: when ${user} touches something I don't know, I'll text you a photo. Just reply with its name.`,
+      `• Start fresh: text /restart to clear what you've taught me.`,
+    ].join("\n");
   }
 
   /** Flow A: the caretaker sent one or more photos, maybe with a typed caption in the same message. */
@@ -399,6 +405,10 @@ export class MarcoAgent {
 
   /** Anything that is not a photo and not an answer. */
   private async chat(caretaker: Caretaker, { text, messageId }: Answer) {
+    if (/^(hi|hii+|hello|hey|hiya|start|help)\b[\s!.?]*$/i.test(text)) {
+      await this.say(caretaker, this.intro(caretaker), { key: `intro:${messageId}` });
+      return;
+    }
     const { store, config } = this.deps;
     const user = config.userName;
     if ((!/[\p{L}\p{N}]/u.test(text) || /^(thanks|thank you|ty|ok|okay|cool|great|perfect|nice|love you|got it)\b/i.test(text))) {

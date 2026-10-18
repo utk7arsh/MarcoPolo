@@ -430,3 +430,13 @@ test("a typed caption wins over an attached recording, whose bytes are never rea
   assert.equal(t.store.items()[0]?.label?.audio, null);
   assert.equal(t.store.items()[0]?.label?.transcript, null);
 });
+
+test("a greeting from a linked caretaker gets the warm introduction again", async () => {
+  const t = setup();
+  await t.say([{ text: "hi Marco" }]);
+  const welcome = t.lastText();
+  assert.match(welcome, /^Hi Mom! I'm Marco, Dad's home helper/);
+  assert.match(welcome, /Teach me: .*\n• Answer me: .*\n• Start fresh: text \/restart/);
+  await t.say([{ text: "Hi!" }]);
+  assert.equal(t.lastText(), welcome);
+});
