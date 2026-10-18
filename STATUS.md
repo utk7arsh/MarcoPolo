@@ -185,6 +185,19 @@ Last updated: 2026-10-18. Keep this file current: update it whenever a decision 
   bridge. Physical wearer → real caretaker photo → typed reply → spoken label
   remains unverified because the wearer phone is unavailable. No new keys needed.
 
+## Resource-light work merged onto the ElevenLabs commit (October 18, 2026, Utkarsh)
+
+- Local resource-light work (thermal `ResourcePolicy`, `HandRateGate`, depth patches only, Developer-tools-only
+  publishing) and the dashboard `sound`/`sound_field` reporting were reapplied on top of `a8261b4`. Conflicts were
+  only in `AppModel.swift` and `SpatialAudio.swift`.
+- Label voice memos stay removed, as `a8261b4` decided: no `playFile`, `playLabel` or label audio cache. Every label
+  is spoken through the one ElevenLabs/Apple voice, which also means no audio downloads or temp files per label.
+- Label lines are still reported to the dashboard as cue `label` (now without `audio_url`, which §3.2 already
+  allows), so its "Voice label" captions keep working. `say(_:from:cue:)` picks the cue.
+- Checks: `sh ios/check.sh` **417 passed**; every app source (App/ included) type-checks against the iOS 17
+  simulator SDK. Not run on a phone. Follow-up: INTERFACES.md §3.2 still says `duration_s` is exact "for a voice
+  memo" and describes `audio_url` as the memo; both are optional, so nothing breaks.
+
 ## Main push verification (October 18, 2026)
 
 - User authorized integrating and pushing the local changes. Preserved tracked
@@ -794,12 +807,12 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
   - **Commands:** find, what is this, caretaker labels, touch to name, "this is the door" / left behind, and register (by a sighted helper or the caretaker). The wearer never names items themselves.
   - **The 7-stage find experience:** "Polo! Behind you, two steps", the muffled beacon, the facing ding + buzz, faster beeps, the steady tone in the last 30 cm, "Got it" at touch. Each stage is mapped to its code (`Guidance.swift` phases, `Lines.swift`, server `touch.py`).
   - **A left-to-right pipeline:** sources → pre-processing (phone capture, Photon intake) → **the brain on Vultr** (ingest, detect, box to 3D, world model, touch, answers, feeds) → post-processing (phone guidance, Photon outreach, dashboard) → destinations. 13 numbered wires.
-- Snapshot at `de9aa08` (2026-10-18; adds the registry, hub fix, keep-looking, room-anchored audio, route watch, and the bridge running against marco-gpu):
-  - commands 4/6 end to end;
+- Snapshot at `cc38be3` (2026-10-18; adds Vedant's dashboard adapter and dashboard Find/Stop, built and tested but not yet in a browser or deployed):
+  - commands 4/7 end to end;
   - find stages 0/7 (all built, none heard on the vest);
-  - parts 18/36 (8 live);
+  - parts 18/38 (8 live);
   - wires 8/13 (3 live).
-  - Not built: the dashboard feed and screen.
+  - Nothing is red any more: the dashboard wire and screen are Built.
 - Documentation only; no code or contract changed.
 
 ## Find: keep looking when not found, and the hub fix (October 17, 2026, Utkarsh)

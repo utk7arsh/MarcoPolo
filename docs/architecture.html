@@ -130,8 +130,8 @@
 <div class="wrap">
   <header>
     <h1>Marco Polo: build map</h1>
-    <p>The target system and the demo it should deliver, coloured by what actually works today. Source of truth: <code>docs/HACKATHON-ROADMAP.md</code>, <code>docs/INTERFACES.md</code> v0.2, <code>STATUS.md</code> and the code at <code>de9aa08</code> (2026-10-18). Hover anything for the evidence.</p>
-    <div class="banner"><b>Where we really are:</b> the server on Vultr is live and now keeps registrations and labels across restarts, and the Photon bridge runs against it. The app installs and launches on the iPhone (348 Swift checks), but the full "where are my keys?" run, from the vest to the server and back into the AirPods, has not happened yet. Everything on the body is <b>Built</b>, not proven.</div>
+    <p>The target system and the demo it should deliver, coloured by what actually works today. Source of truth: <code>docs/HACKATHON-ROADMAP.md</code>, <code>docs/INTERFACES.md</code> v0.3, <code>STATUS.md</code> and the code at <code>cc38be3</code> (2026-10-18). Hover anything for the evidence.</p>
+    <div class="banner"><b>Where we really are:</b> the server on Vultr is live and keeps registrations and labels across restarts; the Photon bridge runs against it; the dashboard adapter now exists on the server (tested, not yet connected in a browser or deployed). The app installs and launches on the iPhone, but the full "where are my keys?" run, from the vest to the server and back into the AirPods, has not happened yet. Everything on the body is <b>Built</b>, not proven.</div>
     <p class="legend-title">Progress colours</p>
     <div class="legend">
       <span data-status="e2e"><i></i><b>End to end</b>&nbsp;works across its connections in software (loopback, replayed real recordings, or from the Mac)</span>
@@ -184,6 +184,12 @@
         <div class="say">"Marco, this is the door."</div>
         <p>Remembers the exit; walking out while your keys, wallet or phone stay in the room triggers a spoken warning and a buzz.</p>
         <div class="path"><code>set_place door</code> &#9315; &rarr; <code>event left_behind</code> &#9319;</div>
+      </div>
+      <div class="cmd" data-status="built" data-kind="cmd" title="3c82c6a: POST /dashboard/commands sends a command to the bound phone; command_ack drives lastCommand (pending, accepted, completed, rejected). Server 8 tests (idempotent retries, conflicts, timeout, session replacement); Swift CommandGate 9 tests. Not verified: the browser against these routes, AppModel in Xcode, a real Find from the dashboard.">
+        <div class="top"><span>Operator</span><span class="pill" data-status="built"></span></div>
+        <div class="say">Press Find / Stop on the dashboard</div>
+        <p>A teammate starts or stops guidance to a chosen item from the big screen; the phone runs exactly the same guidance as a voice Find.</p>
+        <div class="path"><code>POST /dashboard/commands</code> &#9321; &rarr; <code>command</code> &#9319; &rarr; <code>command_ack</code> &#9315;</div>
       </div>
       <div class="cmd" data-status="e2e" data-kind="cmd" title="POST /v1/items with the retake check works against the server and from Photon setup photos (end-to-end test). Done by a sighted helper: in the app only on the Debug diagnostics screen. Registrations now survive a server restart (registry.py, deployed and verified on marco-gpu). Open bug: registering the same name twice adds a second item, and find answers with the older one.">
         <div class="top"><span>Register</span><span class="pill" data-status="e2e"></span></div>
@@ -307,6 +313,7 @@
                   <div class="mod" data-status="e2e" title="find answered on live replay; what_is_this in the Photon end-to-end test."><b>6 &middot; Answers + events</b> find, what_is_this, set_place</div>
                   <div class="mod" data-status="e2e" title="Fixed (d6c2b26): every socket has its own bounded outbox, so a stalled dashboard can't block the phone. Live uvicorn test: 40/40 frames and the find answer get through (was 1/40). map_points still goes every frame."><b>7 &middot; Feeds</b> per-socket outboxes</div>
                   <div class="mod" data-status="live" title="registry.py saves every item and label (photo, crop, voice note) atomically and reloads them at start; deployed to marco-gpu (6f4c0ee) and verified live: GET 200, DELETE ?source=photon 200. Open: the same name registered twice adds a duplicate."><b>8 &middot; Registry</b> items + labels survive restarts</div>
+                  <div class="mod wide" data-status="built" title="3c82c6a (Vedant): GET /dashboard/snapshot, WS /events (on change, at least 1/s), GET /media/..., /app/..., POST /dashboard/commands; also under /api/...; all behind the gate. 8 tests with schema-valid snapshots. Not yet deployed to marco-gpu or opened in a browser."><b>9 &middot; Dashboard adapter</b> snapshot, events, media, Find/Stop</div>
                 </div>
                 <div class="hosts">
                   <div class="mod" data-status="live" title="0.18-0.40 s/frame measured on the box; no inbound ports."><b>Vultr A16</b> primary</div>
@@ -328,6 +335,7 @@
                 <div class="mod" data-status="built" title="Every line has a SoundAnchor: Marco's own lines ahead; labels and what-is-this from the touched jar; 'You left your keys' from the keys; label_ready from the item's last spot. Re-projected through the head yaw every tick."><b>Spoken lines</b> anchored in the room</div>
                 <div class="mod" data-status="built" title="Lookout: not seen / stale / picked up -> 'turn slowly', watch 60 s, start guidance on the next sighting. 20 checks."><b>Keep looking</b> 60 s watch for unseen items</div>
                 <div class="mod" data-status="built" title="RouteWatch: if output stops being 2-channel headphones, the beacon goes quiet and Marco says so; 'Headphones connected' when they return."><b>Route watch</b> AirPods drop-out</div>
+                <div class="mod" data-status="built" title="DashboardCommands.swift CommandGate (duplicates, other sessions, late commands; 9 tests) + AppModel.command(_:) sharing the voice Find's guidance start. Not run in Xcode or on the phone."><b>Dashboard commands</b> Find / Stop + ack</div>
                 <div class="mod" data-status="built" title="Label audio cached from /v1/audio; CAF/m4a playback on the phone unverified."><b>Label playback</b> cached, offline</div>
                 <div class="mod" data-status="built" title="Facing lock, touch and left-behind buzz."><b>Haptics</b> facing, touch, alerts</div>
               </div></div>
@@ -338,7 +346,7 @@
             </div>
             <div class="card ext" id="dashboard" data-status="built" title="52 unit + 22 browser tests; runs in Demo mode only: the server adapter is not built.">
               <div class="hd">Dashboard <small>frontend/ (React + Vite)</small></div>
-              <div class="bd"><ul><li>Chest view + boxes, map, sound radar, timeline</li><li><span class="pill" data-status="todo"></span> needs the server adapter</li></ul></div>
+              <div class="bd"><ul><li>Chest view + boxes, map, sound radar, timeline</li><li><span class="pill" data-status="built"></span> server adapter built; browser not yet connected (<code>VITE_DATA_SOURCE=api</code>)</li></ul></div>
             </div>
           </div>
         </div>
@@ -355,7 +363,7 @@
               <div class="hd">Caretaker <small>Messages app</small></div>
               <div class="bd"><ul><li>Gets the photo + question</li></ul></div>
             </div>
-            <div class="card ext" id="team" data-status="todo" title="Nothing live reaches the screen until the dashboard adapter exists.">
+            <div class="card ext" id="team" data-status="built" title="The adapter exists; nothing live has reached a browser yet (Sandeep runs the integration, then redeploy to marco-gpu).">
               <div class="hd">Team + judges <small>big screen</small></div>
             </div>
           </div>
@@ -381,14 +389,14 @@
       <ol>
         <li><b>First real run on the vest</b> against <code>marco-gpu</code>: capture + upload (&#9314;&#9315;&#9316;), then hear stages 1&ndash;5 of the find flow. This turns most blue boxes green.</li>
         <li><b>Touch with real hands</b>: refit <code>CONTACT_M</code> so stages 6&ndash;7, "touch to name" and "what is this" work on the vest.</li>
-        <li><b>Dashboard adapter</b> (&#9321;): the server still has no <code>/dashboard/snapshot</code>, <code>/events</code> or <code>/dashboard/commands</code>.</li>
+        <li><b>Connect the dashboard</b> (&#9321;): run it with <code>VITE_DATA_SOURCE=api</code> against the new routes, redeploy the server to <code>marco-gpu</code>, then a real Find from the dashboard.</li>
         <li><b>Fix duplicate registration</b>: the same name registered twice adds a second item and find answers with the older one; a retake should replace it.</li>
         <li><b>Tune detection on our props</b> (recall 4/9 on the first clips), fix AirPods front/back, set <code>ELEVENLABS_API_KEY</code>.</li>
       </ol>
     </div>
   </section>
 
-  <footer>Updated 2026-10-18 at commit <code>de9aa08</code>. To update progress, change a <code>data-status</code> attribute (<code>live</code> / <code>e2e</code> / <code>built</code> / <code>todo</code>) or an entry in the <code>EDGES</code> list in the script. Below 1180 px wide the wires hide; use the table.</footer>
+  <footer>Updated 2026-10-18 at commit <code>cc38be3</code>. To update progress, change a <code>data-status</code> attribute (<code>live</code> / <code>e2e</code> / <code>built</code> / <code>todo</code>) or an entry in the <code>EDGES</code> list in the script. Below 1180 px wide the wires hide; use the table.</footer>
 </div>
 
 <script>
@@ -412,10 +420,10 @@
     [7, 'bridgeIn', 'bottom', 0.5, 'eleven', 'top', 0.5, 'https', 'built', 'Photon bridge &rarr; ElevenLabs', 'HTTPS POST', '<code>/v1/speech-to-text</code> (Scribe)', 'per voice memo', 'Audio &rarr; transcript', 'Needs a key; not verified live.'],
     [8, 'server', 'right', 0.2, 'phoneOut', 'left', 0.3, 'ws', 'e2e', 'Server &rarr; iPhone', 'WSS (down) + HTTPS', '<code>/v1/phone</code>; <code>GET /v1/audio/{id}</code>', 'events; proximity 15/s', 'answer, touch, hand_proximity, event, label_ready; label audio', 'Answers on live replay and contract tests; not yet on the phone.'],
     [9, 'server', 'right', 0.5, 'bridgeOut', 'left', 0.5, 'ws', 'e2e', 'Server &rarr; Photon bridge', 'WSS', '<code>/v1/photon</code>', 'per unknown item', '<code>label_request {touch_id, crop_url}</code>', 'Connected to marco-gpu (reconnects after restarts); a request from Vultr needs a real touch.'],
-    [10, 'server', 'right', 0.82, 'dashboard', 'left', 0.5, 'ws', 'todo', 'Server &rarr; dashboard', 'WSS + HTTPS', '<code>/v1/dashboard</code> vs expected <code>/dashboard/snapshot</code>, <code>/events</code>', 'frame 1/s, world 2/s', 'Boxes, world, map, guidance, timeline', 'The frontend calls routes the server does not serve.'],
+    [10, 'server', 'right', 0.82, 'dashboard', 'left', 0.5, 'ws', 'built', 'Server &harr; dashboard', 'WSS + HTTPS', '<code>GET /dashboard/snapshot</code>, <code>WS /events</code>, <code>GET /media/&hellip;</code>, <code>POST /dashboard/commands</code>', 'on change, at least 1/s', 'Snapshot (schema.ts): frame + boxes, world, map, guidance, timeline, lastCommand; Find/Stop up', 'Adapter built and tested on the server (8 tests); browser integration and deploy pending.'],
     [11, 'phoneOut', 'right', 0.5, 'airpodsOut', 'left', 0.5, 'bt', 'built', 'iPhone &rarr; AirPods', 'Bluetooth', 'AVAudioEnvironmentNode HRTF', 'continuous', 'Stereo spatial audio (+ phone haptics)', '48 kHz stereo on a Mac; not on the vest.'],
     [12, 'bridgeOut', 'right', 0.5, 'caretakerOut', 'left', 0.5, 'imsg', 'live', 'Photon bridge &rarr; caretaker', 'Photon REST &rarr; iMessage', '<code>@photon-ai/api</code> sends', 'per request', 'Photo + "What is this?"', 'Photon 2.0 live and tested.'],
-    [13, 'dashboard', 'right', 0.5, 'team', 'left', 0.5, 'https', 'todo', 'Dashboard &rarr; screen', 'Browser', 'Vite proxy (<code>API_PROXY_TARGET</code>)', 'live', 'The observer view', 'Demo mode only until wire 10 exists.'],
+    [13, 'dashboard', 'right', 0.5, 'team', 'left', 0.5, 'https', 'built', 'Dashboard &rarr; screen', 'Browser', 'Vite proxy (<code>API_PROXY_TARGET</code>) or <code>/app/</code> from the server', 'live', 'The observer view + Find/Stop', 'Runs in Demo mode; live data waits on the browser integration.'],
   ];
 
   for (const el of document.querySelectorAll('[data-status]')) {
