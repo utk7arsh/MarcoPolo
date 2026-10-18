@@ -8,7 +8,7 @@ import simd
 /// itself never turns and there is no AVAudio yaw-sign convention to get wrong.
 ///
 /// Two places: the guided item (`place`, every tick: the beacon, the tone, and the voice when `atItem`), and the
-/// voice's own point (`say(_:at:)`, `playFile(_:at:)`, then `moveVoice` every tick), for a line from somewhere else
+/// voice's own point (`say(_:at:)`, then `moveVoice` every tick), for a line from somewhere else
 /// in the room, such as a touched jar.
 final class SpatialAudio {
     enum PlaybackError: Error { case unreadableAudio }
@@ -23,6 +23,8 @@ final class SpatialAudio {
     private lazy var ding = Tones.ding(format)
     private lazy var steady = Tones.loop(format, freq: 660)
     private let synth = AVSpeechSynthesizer()
+    private let speechOutput = SpeechOutputClient()
+    private var speechGeneration = 0
     private var speechConverter: AVAudioConverter?
     private lazy var blip = Tones.blip(format)
     private enum VoiceSpot { case ahead, item, point }
@@ -120,6 +122,7 @@ final class SpatialAudio {
 
     /// "Marco" alone was heard: a soft blip ahead, then say the rest.
     func listening() {
+        cancelVoice()
         aim(.ahead)
         voice.scheduleBuffer(blip, at: nil, options: [], completionHandler: nil)
     }
@@ -143,7 +146,7 @@ final class SpatialAudio {
     #endif
 
     func stop() {
-        synth.stopSpeaking(at: .immediate)
+        cancelVoice()
         for node in [beacon, tone, voice] { node.stop() }
         engine.stop()
         #if os(iOS)
@@ -160,7 +163,7 @@ final class SpatialAudio {
         if voiceSpot == .item { voice.position = pt }
     }
 
-    /// Where the voice's own point is now, listener-relative. Call every tick after `say(_:at:)` or `playFile(_:at:)`.
+    /// Where the voice's own point is now, listener-relative. Call every tick after `say(_:at:)`.
     func moveVoice(_ p: SIMD3<Float>) {
         guard voiceSpot == .point else { return }
         voice.position = AVAudio3DPoint(x: p.x, y: p.y, z: p.z)
@@ -175,7 +178,7 @@ final class SpatialAudio {
         }
     }
 
-    /// Sound cues. .say, .playLabel and .haptic are routed by the app (speech needs a place, labels the cache).
+    /// Sound cues. .say, .playLabel and .haptic are routed by the app (speech needs a place).
     func play(_ cue: Cue) {
         switch cue {
         case .beep(let muffled):
@@ -190,7 +193,7 @@ final class SpatialAudio {
                 tone.play()
             }
         case .silence:
-            synth.stopSpeaking(at: .immediate)
+            cancelVoice()
             for n in [beacon, tone, voice] {
                 n.stop()
                 n.play()
@@ -213,30 +216,50 @@ final class SpatialAudio {
     }
 
     private func speak(_ text: String) {
-        let u = AVSpeechUtterance(string: text)
-        u.voice = AVSpeechSynthesisVoice(language: "en-US")
-        synth.write(u) { [weak self] buffer in
-            guard let self, let pcm = buffer as? AVAudioPCMBuffer, pcm.frameLength > 0 else { return }
-            if self.speechConverter?.inputFormat != pcm.format {
-                self.speechConverter = AVAudioConverter(from: pcm.format, to: self.format)
+        cancelVoice()
+        let ticket = speechGeneration
+        speechOutput.audio(for: text) { [weak self] data in
+            guard let self, self.speechGeneration == ticket, self.engine.isRunning else { return }
+            if let data, let mono = try? self.speechBuffer(data) {
+                self.voice.scheduleBuffer(mono, at: nil, options: [.interrupts], completionHandler: nil)
+            } else {
+                self.appleSpeech(text, ticket: ticket)
             }
-            guard let conv = self.speechConverter, let mono = Self.convert(pcm, with: conv, to: self.format, endOfStream: false) else { return }
-            self.voice.scheduleBuffer(mono, completionHandler: nil)
         }
     }
 
-    /// A label voice memo (any format AVAudioFile reads, such as the server's m4a), at the item or ahead.
-    func playFile(_ url: URL, atItem: Bool) throws {
-        let mono = try monoBuffer(url)
-        aim(atItem ? .item : .ahead)
-        voice.scheduleBuffer(mono, at: nil, options: [.interrupts], completionHandler: nil)
+    func configureSpeech(base: URL?) { speechOutput.configure(base: base) }
+
+    /// Invalidate network replies and Apple callbacks as well as the sound already playing.
+    private func cancelVoice() {
+        speechGeneration += 1
+        speechOutput.cancel()
+        synth.stopSpeaking(at: .immediate)
+        voice.stop()
+        if engine.isRunning { voice.play() }
     }
 
-    /// A label voice memo from a point in the room: the jar the hand is on.
-    func playFile(_ url: URL, at p: SIMD3<Float>) throws {
-        let mono = try monoBuffer(url)
-        aim(.point, p)
-        voice.scheduleBuffer(mono, at: nil, options: [.interrupts], completionHandler: nil)
+    private func speechBuffer(_ data: Data) throws -> AVAudioPCMBuffer {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("speech-\(UUID().uuidString).wav")
+        defer { try? FileManager.default.removeItem(at: url) }
+        try data.write(to: url, options: .atomic)
+        return try monoBuffer(url)
+    }
+
+    private func appleSpeech(_ text: String, ticket: Int) {
+        let u = AVSpeechUtterance(string: text)
+        u.voice = AVSpeechSynthesisVoice(language: "en-US")
+        synth.write(u) { [weak self] buffer in
+            guard let pcm = buffer as? AVAudioPCMBuffer, pcm.frameLength > 0 else { return }
+            DispatchQueue.main.async {
+                guard let self, self.speechGeneration == ticket, self.engine.isRunning else { return }
+                if self.speechConverter?.inputFormat != pcm.format {
+                    self.speechConverter = AVAudioConverter(from: pcm.format, to: self.format)
+                }
+                guard let conv = self.speechConverter, let mono = Self.convert(pcm, with: conv, to: self.format, endOfStream: false) else { return }
+                self.voice.scheduleBuffer(mono, completionHandler: nil)
+            }
+        }
     }
 
     private func monoBuffer(_ url: URL) throws -> AVAudioPCMBuffer {

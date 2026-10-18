@@ -75,12 +75,13 @@ A free Apple ID works. Apps signed with a free Personal Team expire after 7 days
 | `Capture/ARSessionManager.swift` | ARKit + LiDAR (`smoothedSceneDepth`), ARWorldMap save every 30 s, relocalize on launch, fresh map after 30 s | no (ARKit) |
 | `Capture/FrameEncoder.swift` | sensor JPEG 960x720 (no rotation, no EXIF tag), depth/confidence maps as arrays (handles padded rows) | yes, tested |
 | `Capture/HandTracker.swift` | Vision hand pose (orientation `.up`), 21 joints in the server's order, the 9x9 depth patches | yes, contract-tested |
-| `Net/Uploader.swift` | `POST /v1/frames` multipart, latest frame wins; `POST /v1/items`; label audio fetch | yes, contract-tested |
+| `Net/Uploader.swift` | `POST /v1/frames` multipart, latest frame wins; `POST /v1/items`; legacy media fetch helper | yes, contract-tested |
 | `LiDAR/LiDARScreen.swift`, `LiDAR/LiDARRenderer.swift` | the LiDAR view: the live depth map, full screen, from the shared AR session (read-only). The renderer can also draw a room point cloud and item labels; the screen doesn't use them | no (ARKit, MetalKit) |
 | `Core/DepthVision.swift`, `Core/LiDARShaderSource.swift` | its maths (colour scale, depth probe, projection, item labels) and its shaders, compiled at runtime so the build needs no Metal Toolchain | yes, tested (shaders run on the Mac's GPU) |
 | `Net/ServerCheck.swift` | one `GET /v1/items` at Start, turned into a sentence that says what to fix | yes, unit-tested |
+| `Net/SpeechOutputClient.swift` | private exact-text TTS request, bounded reply cache, cancellation and Apple fallback selection; no API key | yes, unit-tested |
 | `Net/PhoneSocket.swift` | `/v1/phone` WebSocket: JSON both ways, reconnect with backoff, pings, holds map/query messages until connected | yes |
-| `Audio/SpatialAudio.swift` | `AVAudioEnvironmentNode` HRTF: beeps, ding, steady tone, spatial speech, label playback. The audio route: stereo out to the AirPods, speech in from the AirPods' mic (iOS 26 Bluetooth high-quality recording) or the iPhone's | yes |
+| `Audio/SpatialAudio.swift` | `AVAudioEnvironmentNode` HRTF: beeps, ding, steady tone, spatial speech from ElevenLabs WAV, with Apple fallback. The audio route: stereo out to the AirPods, speech in from the AirPods' mic (iOS 26 Bluetooth high-quality recording) or the iPhone's | yes |
 | `Audio/HeadTracker.swift` | `CMHeadphoneMotionManager` (AirPods yaw), plus its rate, jitter and latency for the debug screen | yes |
 | `Voice/Listener.swift` | on-device speech: always listening for "Marco ..." (or "Marco", a blip, then the request), plus hold-to-talk; registered item names as recognizer hints; restarts on route changes | yes |
 | `Core/Vocabulary.swift` | what was said to a registered item: "car keys" to keys, "specs" to glasses case, "walet" to wallet; ambiguous ("jar") goes to the server as said | yes, unit-tested |
@@ -103,6 +104,14 @@ Threads:
 ARFrames are only held while their data is copied out; ARKit stalls if they pile up.
 
 ## How the server's messages reach the AirPods
+Spoken replies now prefer ElevenLabs through the private server's `/v1/speech`.
+`Lines` chooses the words; the provider only supplies the voice. The key stays
+server-side. Cached lines play locally; a failed/unconfigured/old server selects
+Apple synthesis, through the same spatial node. The request deadline is 3 s,
+with a 15 s cooldown after network/provider failure. Stop, a new line or the wake
+cue cancels obsolete speech. Beeps and head tracking never wait for TTS.
+See [speech setup and remaining checks](../docs/SPEECH-OUTPUT-PLAN.md).
+
 The AirPods take no commands; they don't talk to the server either. The server sends meaning to the phone (items, positions, touches; `docs/INTERFACES.md` §4). The phone renders every sound binaurally (`SpatialAudio`, Apple's HRTF) and sends finished stereo to the AirPods over Bluetooth. The AirPods send back head motion, which places those sounds.
 
 Each line Marco says has a `SoundAnchor`. A point in the room is re-projected through the fused head yaw every tick, guiding or not, so the sound stays put while the head turns.
@@ -113,7 +122,7 @@ Each line Marco says has a `SoundAnchor`. A point in the room is re-projected th
 | `answer find`, not found yet; later a `seen` / `moved` / `put_down` event for it | why, and "turn slowly"; then "Polo! I see your keys..." | ahead; then the item |
 | `hand_proximity` (15/s while guiding) | the steady tone in the last 30 cm | the item |
 | `touch` on the guided item | silence, then its label or "Got it." | the item |
-| `touch` on another known item | its label (the caretaker's voice memo, or text) | the touched point (`touch.position`): the jar under your hand |
+| `touch` on another known item | its typed label, spoken through the same TTS path | the touched point (`touch.position`): the jar under your hand |
 | `answer what_is_this` | the label, or "I don't know this one yet..." | that touch's point, else where the item was last seen |
 | `event left_behind` | "You left your keys on the table." | where the keys are |
 | `label_ready` | "Your helper says that's the cumin." | where the item was last seen, else ahead |

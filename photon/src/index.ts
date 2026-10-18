@@ -7,7 +7,6 @@ import { Media } from "./media.js";
 import { PhotonChannel, startEvents, type EventStream } from "./photon.js";
 import { SimChannel } from "./sim.js";
 import { Store } from "./store.js";
-import { elevenLabsTranscriber, noTranscriber } from "./transcribe.js";
 
 try {
   process.loadEnvFile();
@@ -27,7 +26,6 @@ const agent = new MarcoAgent({
   store,
   media,
   channel: photon ?? sim!,
-  transcribe: config.elevenLabsKey ? elevenLabsTranscriber(config.elevenLabsKey, config.sttModel) : noTranscriber,
   server,
 });
 
@@ -66,7 +64,6 @@ log.info(
   `Marco x Photon 2.0 up: mode=${config.mode} server=${config.marcoServerUrl} status=http://127.0.0.1:${config.port}/health ` +
     `caretakers=${store.caretakers().length}`,
 );
-if (!config.elevenLabsKey) log.warn("ELEVENLABS_API_KEY not set: voice memos are kept and sent, but not transcribed into names");
 if (config.mode === "sim") log.info("sim mode: POST /dev/inbound to play the caretaker");
 
 let stopping = false;

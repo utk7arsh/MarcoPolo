@@ -4,11 +4,11 @@ import { join } from "node:path";
 import type { Conversation } from "./channel.js";
 
 export interface Label {
-  /** Short searchable name ("cumin"), or null when only an untranscribed voice note exists. */
+  /** Short searchable name ("cumin"); nullable for saved records from older versions. */
   name: string | null;
   /** What the caretaker typed, if anything. */
   text: string | null;
-  /** Speech-to-text of the voice note, if any. */
+  /** Legacy stored transcript, retained for reading old data only. */
   transcript: string | null;
   /** Media filename of the caretaker's voice note (m4a when conversion worked). */
   audio: string | null;
@@ -232,27 +232,4 @@ export class Store {
     );
   }
 
-  /** The most recent named answer without a voice note, so a voice memo sent right after it is added to it (§5). */
-  recentWithoutVoice(caretaker: string, withinMs: number): Question | undefined {
-    const cutoff = Date.now() - withinMs;
-    return Object.values(this.data.questions)
-      .filter((q) => q.caretaker === caretaker && q.status === "answered" && q.answeredAt && Date.parse(q.answeredAt) > cutoff)
-      .filter((q) => {
-        const label = this.data.items[q.itemId]?.label;
-        return label?.name && !label.audio;
-      })
-      .sort((a, b) => (b.answeredAt ?? "").localeCompare(a.answeredAt ?? ""))[0];
-  }
-
-  /** The most recent question answered with a voice note but no name, so a follow-up text can name it. */
-  recentUnnamed(caretaker: string, withinMs: number): Question | undefined {
-    const cutoff = Date.now() - withinMs;
-    return Object.values(this.data.questions)
-      .filter((q) => q.caretaker === caretaker && q.status === "answered" && q.answeredAt && Date.parse(q.answeredAt) > cutoff)
-      .filter((q) => {
-        const label = this.data.items[q.itemId]?.label;
-        return label?.audio && !label.name;
-      })
-      .sort((a, b) => (b.answeredAt ?? "").localeCompare(a.answeredAt ?? ""))[0];
-  }
 }

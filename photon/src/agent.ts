@@ -5,12 +5,8 @@ import { MarcoServerError, PHOTON_SOURCE, type LabelRequest, type MarcoServerApi
 import type { Media } from "./media.js";
 import { extractName, isDontKnow } from "./names.js";
 import { now, stableId, type Caretaker, type Item, type Label, type LastAnswer, type Question, type Store } from "./store.js";
-import type { Transcriber } from "./transcribe.js";
 
 const HELP_COOLDOWN_MS = 10 * 60_000;
-const NAME_FOLLOWUP_MS = 10 * 60_000;
-/** A voice memo this soon after a typed name is added to that item (docs/INTERFACES.md §5 "a voice note after the name"). */
-const VOICE_FOLLOWUP_MS = 2 * 60_000;
 const LOVE = "❤️";
 const LIKE = "👍";
 /** Texted by a caretaker: remove every label Photon gave the Marco server, to test again from scratch. */
@@ -21,7 +17,6 @@ export interface AgentDeps {
   store: Store;
   media: Media;
   channel: Channel;
-  transcribe: Transcriber;
   /** The Marco server (docs/INTERFACES.md §5): where labels and registrations go, and what tells the phone. */
   server: MarcoServerApi;
 }
@@ -32,7 +27,7 @@ export type LabelRequestResult =
   | { status: "no_caretaker"; touch_id: string };
 
 type MediaPart = Extract<Part, { type: "media" }>;
-type Answer = { text: string; audio: MediaPart | null; messageId: string };
+type Answer = { text: string; messageId: string };
 type Outcome = NonNullable<LastAnswer["outcome"]>;
 
 const isImage = (p: Part): p is MediaPart => p.type === "media" && /^image\//i.test(p.mimeType);
@@ -43,10 +38,9 @@ const sameConversation = (a: Conversation, b: Conversation) => a.spaceId === b.s
  * Marco's side of the family conversation in iMessage, feeding the Marco server (docs/INTERFACES.md §5).
  *
  * Ask (Flow B): the server sends label_request on /v1/photon when the user asks "what is this?" about something
- * unknown. Marco texts the caretaker the crop; the reply (text and/or voice memo) goes to POST /v1/labels, and the
+ * unknown. Marco texts the caretaker the crop; the typed reply goes to POST /v1/labels, and the
  * server tells the phone (label_ready).
- * Teach (Flow A): the caretaker texts a photo plus a name or voice memo; it goes to POST /v1/items (and the voice
- * memo to POST /v1/labels on that item).
+ * Teach (Flow A): the caretaker texts a photo plus a typed name; it goes to POST /v1/items (corrections go to POST /v1/labels on that item).
  */
 export class MarcoAgent {
   private readonly pending = new Set<Promise<void>>();
@@ -72,8 +66,12 @@ export class MarcoAgent {
   }
 
   private async process(message: Inbound): Promise<void> {
-    const { store } = this.deps;
+    const { store, config } = this.deps;
     const handle = normalizeHandle(message.from);
+    if (!config.caretakerNames.has(handle)) {
+      log.warn("ignoring message from an unconfigured caretaker");
+      return;
+    }
     if (message.kind === "read") {
       if (message.parentId) this.onRead(handle, message.parentId);
       return;
@@ -94,12 +92,16 @@ export class MarcoAgent {
       .flatMap((p) => (p.type === "text" ? [p.text.trim()] : []))
       .filter(Boolean)
       .join(" ");
-    const answer: Answer = { text, audio, messageId: message.id };
+    const answer: Answer = { text, messageId: message.id };
+    if (audio && !text && !images.length) {
+      await this.say(caretaker, "Please type the object's name. Voice labels are no longer supported.", { key: `typed-name:${message.id}` });
+      return;
+    }
 
     // Commands come first, so "/restart" is never taken as the answer to an open question.
     if (!images.length && !audio && RESTART.test(text)) return this.restart(caretaker, message.id);
     if (images.length) return this.onPhotos(caretaker, images, answer);
-    if (!text && !audio) return;
+    if (!text) return;
     const question = this.pickQuestion(caretaker, message.parentId, answer);
     if (question) return this.answer(caretaker, question, answer);
     if (!isNew) await this.chat(caretaker, answer);
@@ -132,7 +134,7 @@ export class MarcoAgent {
     const photoId = await channel.send(conv, { type: "image", path: media.path(item.photo!), mimeType: "image/jpeg" }, { key: `ask:${question.id}:photo` });
     const askId = await channel.send(
       conv,
-      { type: "text", text: `${config.userName} just touched this and asked what it is. Reply with a voice memo and your voice becomes its label.` },
+      { type: "text", text: `${config.userName} just touched this and asked what it is. Reply with the object's name as text.` },
       { key: `ask:${question.id}:text` },
     );
     store.updateQuestion(question.id, { status: "open", messageIds: [photoId, askId] });
@@ -142,7 +144,8 @@ export class MarcoAgent {
 
   primaryCaretaker(): Caretaker | undefined {
     const { store, config } = this.deps;
-    return (config.primaryCaretaker && store.caretaker(config.primaryCaretaker)) || store.caretakers()[0];
+    const allowed = store.caretakers().filter((caretaker) => config.caretakerNames.has(normalizeHandle(caretaker.handle)));
+    return (config.primaryCaretaker && allowed.find((caretaker) => caretaker.handle === config.primaryCaretaker)) || allowed[0];
   }
 
   private link(handle: string, conversation: Conversation): Caretaker {
@@ -165,13 +168,13 @@ export class MarcoAgent {
     await this.say(
       caretaker,
       `${hi} I'm Marco, ${user}'s home helper. When ${user} touches something I don't recognize, I'll text you a photo. ` +
-        `Reply with a voice memo and your voice becomes its label. You can also teach me anytime: send a photo with its name, like "${user}'s keys".`,
+        `Reply with the object's name as text. You can also teach me anytime: send a photo with its name, like "${user}'s keys".`,
       { key: `welcome:${messageId}` },
     );
     return this.deps.store.upsertCaretaker({ ...caretaker, welcomedAt: now() });
   }
 
-  /** Flow A: the caretaker sent one or more photos, maybe with a caption or voice memo in the same message. */
+  /** Flow A: the caretaker sent one or more photos, maybe with a typed caption in the same message. */
   private async onPhotos(caretaker: Caretaker, images: MediaPart[], answer: Answer) {
     const { store, media } = this.deps;
     const questions: Question[] = [];
@@ -194,7 +197,7 @@ export class MarcoAgent {
       );
     }
     const [only] = questions;
-    if (only && questions.length === 1 && (answer.text || answer.audio)) return this.answer(caretaker, only, answer);
+    if (only && questions.length === 1 && answer.text) return this.answer(caretaker, only, answer);
 
     // iMessage often delivers a photo and its caption as two messages. Wait briefly so the caption answers first.
     this.later(async () => {
@@ -202,8 +205,8 @@ export class MarcoAgent {
       if (!open.length) return;
       const ask =
         open.length === 1
-          ? "Got it. What is this? Reply with its name or a voice memo."
-          : `Got ${open.length} photos. Swipe to reply on each one with its name or a voice memo.`;
+          ? "Got it. What is this? Reply with its name as text."
+          : `Got ${open.length} photos. Swipe to reply on each one with its name as text.`;
       const sentId = await this.say(caretaker, ask, { parentId: answer.messageId, key: `prompt:${answer.messageId}` });
       for (const q of open) store.updateQuestion(q.id, { messageIds: [...q.messageIds, sentId] });
     });
@@ -220,21 +223,17 @@ export class MarcoAgent {
     }
     const open = store.openQuestions(caretaker.handle)[0];
     if (open) return open;
-    if (answer.audio && !answer.text) {
-      const named = store.recentWithoutVoice(caretaker.handle, VOICE_FOLLOWUP_MS);
-      if (named) return named;
-    }
-    return store.recentUnnamed(caretaker.handle, NAME_FOLLOWUP_MS);
+    return undefined;
   }
 
-  private async answer(caretaker: Caretaker, question: Question, { text, audio, messageId }: Answer) {
-    const { store, media, transcribe, config } = this.deps;
+  private async answer(caretaker: Caretaker, question: Question, { text, messageId }: Answer) {
+    const { store, config } = this.deps;
     const item = store.item(question.itemId);
     if (!item) return;
     const user = config.userName;
     const retry = question.lastAnswer?.messageId === messageId;
 
-    if (!audio && isDontKnow(text)) {
+    if (isDontKnow(text)) {
       store.updateQuestion(question.id, {
         status: "answered",
         answeredAt: question.answeredAt ?? now(),
@@ -253,36 +252,14 @@ export class MarcoAgent {
       label = item.label;
       kind = question.lastAnswer!.kind;
     } else {
-      let audioFile: string | null = null;
-      let transcript: string | null = null;
-      if (audio) {
-        audioFile = await media.saveAudio(await audio.read(), audio.mimeType);
-        transcript = await transcribe(media.path(audioFile));
-      }
-      const previous = item.label;
-      const spoken = extractName(transcript);
-      // A text right after an unnamed voice note names it and keeps the voice.
-      const naming = !audio && !!previous?.audio && !previous.name;
-      // A voice memo (with no new name in it) for an item that already has a name: add the voice to it.
-      const voice = !!audio && !text && !!previous?.name && (!spoken || spoken.toLowerCase() === previous.name.toLowerCase());
-      kind = naming ? "naming" : voice ? "voice" : question.status === "answered" ? "correction" : "answer";
-      label =
-        naming && previous
-          ? { ...previous, text, name: extractName(text), createdAt: now() }
-          : voice && previous
-            ? { ...previous, audio: audioFile, transcript, createdAt: now() }
-            : {
-                name: extractName(text) ?? spoken,
-                text: text || null,
-                transcript,
-                audio: audioFile,
-                author: caretaker.name,
-                authorHandle: caretaker.handle,
-                createdAt: now(),
-              };
+      kind = question.status === "answered" ? "correction" : "answer";
+      label = {
+        name: extractName(text), text, transcript: null, audio: null,
+        author: caretaker.name, authorHandle: caretaker.handle, createdAt: now(),
+      };
       store.updateItem(item.id, { label, name: label.name ?? item.name });
       store.updateQuestion(question.id, { status: "answered", answeredAt: question.answeredAt ?? now(), lastAnswer: { messageId, kind, outcome: null } });
-      log.info(`label for ${item.id}: ${label.name ?? "(voice only)"}${label.audio ? " + voice" : ""} (${kind})`);
+      log.info(`label for ${item.id}: ${label.name ?? "(unnamed)"} (${kind})`);
     }
 
     // Reach the Marco server first: that is what tells the phone. A network error throws, so the event is replayed.
@@ -308,9 +285,9 @@ export class MarcoAgent {
   private async deliver(question: Question, item: Item, label: Label, kind: LastAnswer["kind"]): Promise<Outcome> {
     const { server, store, media } = this.deps;
     const name = label.name;
-    if (!name) return "held"; // the server needs a name; the voice note waits for one
-    const text = label.text ?? label.transcript ?? name;
-    const audioPath = label.audio ? media.path(label.audio) : null;
+    if (!name) return "held"; // A searchable typed name is required.
+    const text = label.text ?? name;
+    const audioPath = null; // New labels are typed; never upload legacy caretaker recordings.
     const photoPath = item.photo ? media.path(item.photo) : null;
     const remember = (serverItemId: string | null | undefined) => {
       if (serverItemId) store.updateItem(item.id, { serverItemId });
@@ -337,7 +314,7 @@ export class MarcoAgent {
         }
       }
 
-      // Flow A: register the photo once; later answers (a voice memo, a correction) go to POST /v1/labels.
+      // Flow A: register the photo once; later corrections go to POST /v1/labels.
       let serverItemId = item.serverItemId ?? null;
       const registeredNow = !serverItemId;
       if (!serverItemId) {
@@ -368,19 +345,10 @@ export class MarcoAgent {
     const name = label.name;
     if (outcome === "unreachable") return `Thanks! I couldn't get that to ${user}'s phone just now, but I saved it here.`;
     if (outcome === "retake") return `I can't see the ${name} clearly in that photo. Could you send another, a bit closer and on a plain surface?`;
-    if (outcome === "held" || !name) {
-      return question.kind === "identify"
-        ? `Got your voice note. What's it called? Text me a word or two and ${user} will hear it.`
-        : `Saved your voice note. Text me its name too, so ${user} can ask for it.`;
-    }
-    if (kind === "voice") return `Added your voice to the ${name}. ${user} will hear it next time.`;
+    if (outcome === "held" || !name) return "Please type the object's name.";
     if (kind === "correction") return `Updated: "${name}".`;
-    if (question.kind === "identify") {
-      return label.audio ? `Got it: ${name}. ${user} will hear your voice next time.` : `Got it: ${name}. I'll tell ${user}.`;
-    }
-    return label.audio
-      ? `Saved "${name}" with your voice. ${user} can ask me for it by name now.`
-      : `Saved "${name}". ${user} can ask me for it by name now.`;
+    if (question.kind === "identify") return `Got it: ${name}. I'll tell ${user}.`;
+    return `Saved "${name}". ${user} can ask me for it by name now.`;
   }
 
   /**
@@ -424,14 +392,14 @@ export class MarcoAgent {
   }
 
   /** Anything that is not a photo and not an answer. */
-  private async chat(caretaker: Caretaker, { text, audio, messageId }: Answer) {
+  private async chat(caretaker: Caretaker, { text, messageId }: Answer) {
     const { store, config } = this.deps;
     const user = config.userName;
-    if (!audio && (!/[\p{L}\p{N}]/u.test(text) || /^(thanks|thank you|ty|ok|okay|cool|great|perfect|nice|love you|got it)\b/i.test(text))) {
+    if ((!/[\p{L}\p{N}]/u.test(text) || /^(thanks|thank you|ty|ok|okay|cool|great|perfect|nice|love you|got it)\b/i.test(text))) {
       await this.react(caretaker, messageId, LOVE);
       return;
     }
-    if (!audio && /^(list|items|what do you know)\b/i.test(text)) {
+    if (/^(list|items|what do you know)\b/i.test(text)) {
       const names = store.items().flatMap((i) => (i.name ? [i.name] : []));
       await this.say(caretaker, names.length ? `I know ${names.length}: ${names.join(", ")}.` : "Nothing yet. Send me a photo with its name to start.", {
         key: `list:${messageId}`,
@@ -441,9 +409,7 @@ export class MarcoAgent {
     if (caretaker.lastHelpAt && Date.now() - Date.parse(caretaker.lastHelpAt) < HELP_COOLDOWN_MS) return;
     await this.say(
       caretaker,
-      audio
-        ? "I got a voice note but I'm not sure which item it's for. Send a photo first, then your voice memo."
-        : `To teach me something, send a photo of it with its name. When ${user} finds something I don't know, I'll text you a photo to label.`,
+      `To teach me something, send a photo of it with its name. When ${user} finds something I don't know, I'll text you a photo to label.`,
       { key: `help:${messageId}` },
     );
     store.upsertCaretaker({ ...caretaker, lastHelpAt: now() });

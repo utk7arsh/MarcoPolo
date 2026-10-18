@@ -721,6 +721,111 @@ do {
           "command_ack wire keys")
 }
 
+// MARK: - Speech output: private requests, caching, fallback and late-reply cancellation
+
+do {
+    let base = URL(string: "https://marco.test")!
+    let request = SpeechOutputClient.request(base: base, text: "Polo! On your left.")
+    check(request.url?.absoluteString == "https://marco.test/v1/speech" && request.httpMethod == "POST", "speech uses the private server route")
+    check(request.value(forHTTPHeaderField: "xi-api-key") == nil, "no provider key leaves the phone")
+    let body = try! JSONSerialization.jsonObject(with: request.httpBody!) as! [String: String]
+    check(body == ["text": "Polo! On your left."], "speech request sends only the already-decided line")
+    let response = HTTPURLResponse(url: base, statusCode: 200, httpVersion: nil, headerFields: ["Content-Type": "audio/wav"])!
+    // An actual PCM WAV: one signed 16-bit mono sample at 24 kHz.
+    let wav = Data([
+        0x52, 0x49, 0x46, 0x46, 38, 0, 0, 0, 0x57, 0x41, 0x56, 0x45,
+        0x66, 0x6d, 0x74, 0x20, 16, 0, 0, 0, 1, 0, 1, 0,
+        0xc0, 0x5d, 0, 0, 0x80, 0xbb, 0, 0, 2, 0, 16, 0,
+        0x64, 0x61, 0x74, 0x61, 2, 0, 0, 0, 1, 0,
+    ])
+    check(SpeechOutputClient.validAudio(wav, response: response), "WAV response accepted")
+    check(!SpeechOutputClient.validAudio(Data("not audio".utf8), response: response), "invalid audio refused")
+    check(!SpeechOutputClient.validAudio(Data(repeating: 0, count: 1_000_001), response: response), "oversized audio refused")
+    var signatureOnly = Data(repeating: 0, count: 46)
+    signatureOnly.replaceSubrange(0..<4, with: Data("RIFF".utf8))
+    signatureOnly.replaceSubrange(8..<12, with: Data("WAVE".utf8))
+    check(!SpeechOutputClient.validAudio(signatureOnly, response: response), "RIFF signature alone cannot poison the speech cache")
+    for (offset, byte, name) in [(4, 0xff, "RIFF length"), (22, 2, "stereo"), (24, 0, "sample rate"),
+                                 (28, 0, "byte rate"), (32, 1, "block alignment"), (34, 8, "sample width"),
+                                 (36, 0, "data chunk"), (40, 4, "truncated sample data")] {
+        var invalid = wav
+        invalid[offset] = UInt8(byte)
+        check(!SpeechOutputClient.validAudio(invalid, response: response), "invalid speech WAV rejected: \(name)")
+    }
+    do {
+        var requests = 0
+        var time = 0.0
+        var finish: ((Data?, URLResponse?, Error?) -> Void)?
+        let recovering = SpeechOutputClient(clock: { time }, load: { _, done in
+            requests += 1; finish = done; return {}
+        })
+        recovering.configure(base: base)
+        var result: Data?
+        recovering.audio(for: "same phrase") { result = $0 }
+        finish?(signatureOnly, response, nil)
+        RunLoop.current.run(until: Date().addingTimeInterval(0.025))
+        check(result == nil, "malformed WAV selects fallback before being cached")
+        time = 16
+        recovering.audio(for: "same phrase") { result = $0 }
+        check(requests == 2, "malformed audio does not prevent a later provider retry")
+        finish?(wav, response, nil)
+        RunLoop.current.run(until: Date().addingTimeInterval(0.025))
+        check(result == wav, "same phrase recovers with valid provider audio")
+    }
+    var loads = 0, cancels = 0
+    var completions: [(Data?, URLResponse?, Error?) -> Void] = []
+    var time = 100.0
+    let client = SpeechOutputClient(maxEntries: 1, clock: { time }, load: { _, done in
+        loads += 1
+        completions.append(done)
+        return { cancels += 1 }
+    })
+    func drainSpeechCallbacks() { RunLoop.current.run(until: Date().addingTimeInterval(0.025)) }
+    var results: [Data?] = []
+    client.audio(for: "No server") { results.append($0) }
+    check(results.count == 1 && results[0] == nil && loads == 0, "unconfigured speech falls back without a request")
+    results.removeAll()
+    client.configure(base: base)
+    client.audio(for: "old") { results.append($0) }
+    client.audio(for: "new") { results.append($0) }
+    completions[0](wav, response, nil)
+    drainSpeechCallbacks()
+    check(results.isEmpty && cancels == 1, "new speech cancels and ignores the older response")
+    completions[1](wav, response, nil)
+    drainSpeechCallbacks()
+    check(results.count == 1 && results[0] == wav, "current response completes")
+    client.audio(for: "new") { results.append($0) }
+    check(loads == 2 && results.count == 2, "a repeated phrase uses cached audio")
+    client.audio(for: "stopped") { results.append($0) }
+    client.cancel()
+    completions[2](wav, response, nil)
+    drainSpeechCallbacks()
+    check(results.count == 2, "Stop suppresses late audio and fallback callbacks")
+    client.audio(for: "failure") { results.append($0) }
+    completions[3](nil, nil, URLError(.timedOut))
+    drainSpeechCallbacks()
+    check(results.count == 3 && results.last! == nil, "network failure chooses Apple speech")
+    client.audio(for: "another line") { results.append($0) }
+    check(loads == 4 && results.last! == nil, "provider cooldown avoids repeated timeout waits")
+    client.audio(for: "new") { results.append($0) }
+    check(results.last! == wav, "cached speech is available during an outage")
+    time += 16
+    client.audio(for: "recovered") { results.append($0) }
+    completions[4](wav, response, nil)
+    drainSpeechCallbacks()
+    check(results.last! == wav && loads == 5, "speech retries after the short cooldown")
+    client.audio(for: "new") { results.append($0) }
+    check(loads == 6, "bounded phrase cache evicts the oldest entry")
+    client.configure(base: URL(string: "https://other.test"))
+    completions[5](wav, response, nil)
+    let before = results.count
+    drainSpeechCallbacks()
+    check(results.count == before, "changing servers invalidates the previous response")
+    client.audio(for: "recovered") { results.append($0) }
+    check(loads == 7, "a new server does not reuse the old server's voice cache")
+    client.cancel()
+}
+
 // MARK: - Frame encoding (CoreImage, CoreVideo)
 
 func ycbcr(_ w: Int, _ h: Int) -> CVPixelBuffer {

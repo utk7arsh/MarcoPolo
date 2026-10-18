@@ -1,10 +1,184 @@
 # Marco: project status (read this first)
 
-Last updated: 2026-10-17. Keep this file current: update it whenever a decision is made or a piece lands.
+Last updated: 2026-10-18. Keep this file current: update it whenever a decision is made or a piece lands.
+
+## Main push verification (October 18, 2026)
+
+- User authorized integrating and pushing the local changes. Preserved tracked
+  edits and untracked source under `/private/tmp/marco-before-push-20261018T082732Z/`.
+  Fetched and pulled `origin/main` with fast-forward only: already current at
+  `cc38be3`, no conflicts or teammate commits to reconcile.
+- Re-ran all checks: **110 server tests passed, one external dataset skipped**;
+  **387 Swift checks**, **47 Photon tests**, **8 reference contract tests**,
+  **53 frontend unit and 22 Chromium browser tests** passed. Formatting, lint,
+  exported schema, production dashboard build and unsigned iOS Release build pass.
+  Initial sandbox attempts blocked loopback sockets/compiler caches; the full
+  checks passed with the required local system access, without disabling tests.
+- Real local ElevenLabs → HTTP → production Swift/spatial renderer check passed
+  all **14 assertions** plus HTTP 403/503/422 boundaries; fresh generation took
+  **0.810 s**. Stop, late replies, cache/offline use and Apple fallback passed.
+  No audible playback or physical iPhone/AirPods verification is claimed.
+- Read-only live private `/dashboard/snapshot` returned 200 and passed the actual
+  frontend schema. Three `/events` WebSocket snapshots also passed that schema
+  with increasing sequences. `/v1/items` returned 200. `GET /v1/speech` returned 404;
+  the deployed server still needs the new endpoint and private environment before
+  the app can use ElevenLabs there. No shared deployment or command was sent.
+- All 66 installed Python dependencies are compatible. No configured API key,
+  conflict marker, tracked spatial experiment or unignored file over 10 MB was
+  found. Env files stay ignored with 0600 permissions. The existing nested
+  frontend workflow remains inactive on GitHub; local checks were run explicitly.
+- ElevenLabs receives only exact selected text: `Lines.swift`, guidance rules
+  and server item state determine the words. No conversational agent, project
+  prompt, Scribe or dialogue memory is configured; caretaker text can be spoken
+  verbatim. Beacons, anchors and head tracking remain local to the phone.
+
+## Deeper pre-merge review (October 18, 2026)
+
+- Found and fixed malformed WAV caching: validate the endpoint's PCM header,
+  lengths and format before caching. Twelve new assertions reproduced rejection
+  and recovery failures before the fix; all **387 Swift checks** now pass.
+- Fixed a flaky Chromium reconnect test that confused StrictMode's canceled
+  startup fetch with watchdog recovery. It now waits for an additional fetch and
+  actual visible recovery; added an HTTP-refetch recovery unit test. Production
+  transport behavior and timeouts remain unchanged.
+- Final full frontend check passes: formatting, lint, schema, build, **53 unit
+  tests and 22 Chromium browser tests**. The first browser attempt lacked the
+  test binary; installed it outside the repository before investigating the
+  actual failing test. No tests were skipped to obtain a pass.
+- Rechecked **110 server tests** (one external dataset skip), **47 Photon tests**,
+  **8 scaffold tests**, dependency consistency, shell syntax and secret exclusion.
+  The complete app builds in **Release** for a generic iOS device without signing.
+- The corrected client passed the actual loopback HTTP/spatial renderer checks
+  again: 14 assertions plus 403/503/422 boundaries; real TTS **0.826 s**. Stop,
+  delayed replies, Apple fallback and cache use after server shutdown passed.
+- Fresh `git fetch origin`: HEAD and origin/main both `cc38be3`, zero committed
+  divergence. All edits remain local; no commit, push or deployment.
+- Existing integration limitation: the GitHub workflow is nested inside
+  `frontend/.github/workflows/`, so GitHub will not discover it automatically
+  without a repository-root workflow entry. Its placement was preserved from the
+  earlier layout request. Physical iPhone/AirPods checks also remain outstanding.
+  See [the pre-merge report](docs/PRE-MERGE-REVIEW.md) for evidence and limits.
+
+## Local speech end-to-end verification (October 18, 2026)
+
+- Started three temporary loopback-only servers with isolated data: real TTS,
+  missing provider key, and closed authentication. Verified actual HTTP 403,
+  503 and 422 boundaries. No deployed server or shared data was changed.
+- Ran the production `SpeechOutputClient` over real URLSession HTTP against the
+  local endpoint with the provided key: **1.071 s** for a fresh 2.09 s mono WAV.
+  The identical line returned synchronously from the phone's cache (~0.009 ms).
+- Rendered through the production `SpatialAudio` graph in AVAudioEngine offline
+  mode: non-silent stereo with expected left/right energy differences. Stop
+  silenced playback, and Stop before a delayed HTTP reply prevented late speech.
+- Verified real HTTP 503 selects Apple fallback/cooldown, and Apple synthesis
+  itself produces speech through the same spatial graph. After shutting down
+  the isolated live server, cached ElevenLabs speech still worked; an uncached
+  request selected fallback. **14 Swift integration assertions** passed, plus
+  the three HTTP boundary checks above.
+- Re-ran regressions: **110 server tests passed, 1 external-dataset skip**;
+  **375 Swift checks passed**; **47 Photon tests and typecheck passed**.
+- Evidence and generated audio: `/private/tmp/marco-local-speech-evidence-20261018/`
+  (`report.json`, `reply.wav`, left/right renders, Apple fallback and run log).
+  All temporary test servers were stopped. The Mac reported built-in speakers;
+  no audible playback, physical iPhone, AirPods/head-motion, walking, front/back
+  perception or device-latency check is claimed. No deployment, commit or push.
+
+## ElevenLabs output-only migration (October 18, 2026)
+
+- Implemented authenticated `POST /v1/speech`: exact short text to ElevenLabs
+  Flash v2.5 / George, 24 kHz mono PCM wrapped in WAV. No answer generation or
+  speech recognition. The key is in ignored `server/.env` (0600), removed from
+  Photon configuration; `.env*` is excluded from server deployment sync.
+- iOS prefers this endpoint and converts its WAV through the existing spatial
+  voice node. Item anchors, head fusion, beacons and the 60 Hz guidance loop stay
+  local. Bounded memory caches and 2.5 s server / 3 s phone deadlines limit cost
+  and delays. Missing key, failure or decode error uses Apple synthesis. Network
+  failures trigger a 15 s cooldown; cached lines remain available offline.
+- New speech, wake cues, Stop and session stop invalidate pending requests and
+  late callbacks. Removed caregiver recording playback/downloads from the active
+  app. Apple recognition still handles wearer commands; VoiceOver handles UI.
+- Deleted Photon's Scribe client, ElevenLabs config and voice-label conversion.
+  Welcome/help/questions request typed names. Recordings are refused without
+  downloading/transcribing/uploading them; captioned photos and typed answers,
+  corrections, allow-list checks, persistence and retries remain. Existing saved
+  media and optional wire fields are preserved for compatibility.
+- Restarted only this repo's verified local bridge (old PID 92292 → **6703**),
+  preserving state/cursor. `/health` reports live Photon mode and the private
+  server connected; five local saved items and zero open questions. No deliberate
+  iMessage send, shared-item reset or remote deployment occurred in this task.
+- **Verification:** **110 server tests pass**, one external ARKitScenes dataset
+  check skipped; **375 Swift checks pass**; **47 Photon tests pass**, zero skips,
+  including the actual isolated server's typed-label/persistence/reset flow.
+  iOS generic-device Debug build succeeds with signing disabled.
+- **Real provided-key TTS:** endpoint HTTP 200, 1.95 s WAV, 24 kHz mono / 16-bit.
+  First response **1.005 s**, cached repeat **0.001 s**. Production Swift decode
+  and conversion to 48 kHz mono succeeds with non-silent samples, without playing
+  sound. These are local endpoint/decoder checks, not measured iPhone latency.
+- Updated canonical contract to v0.4 and generated Word copy; component setup and
+  [speech implementation notes](docs/SPEECH-OUTPUT-PLAN.md) describe activation.
+- **Still needed:** deploy code and configure `/etc/marco/local.env` on Vultr,
+  install the updated iOS app, then check voice/beacon playback, world anchoring,
+  Stop and offline fallback on the actual iPhone/AirPods. Old deployed code keeps
+  its existing speech behavior. No commit or push was made.
+
+## Latest main synchronization and dependency verification (October 17, 2026)
+
+- Fetched GitHub and fast-forwarded local `main` from `bfe19e9` to **`cc38be3`**
+  (13 commits). A second fetch after validation still reported `cc38be3`. No merge
+  conflicts. The remote version is the working baseline; no local commit or push.
+- Preserved every prior tracked/untracked edit in Git stash
+  `Preserve local dashboard Photon and speech plan before latest main sync 2026-10-17`
+  and a separate patch/archive at `/private/tmp/marco-before-main-sync-20261018T064652Z/`.
+  Ignored credentials and data stayed in place. The old frontend raw-v1 adapter
+  and Scribe additions were not reapplied over the new server adapter.
+- Reconciled only still-needed fixes: pinned bundled `ffmpeg-static@5.3.0`,
+  explicit npm install-script approvals, converter regression tests, caregiver
+  allow-list checks (including previously saved caretakers), and `.env.*` ignores.
+  Preserved upstream persistence, source attribution and `/restart` behavior.
+  The newly added reset flow was exercised only against an isolated local stub,
+  never against the shared server.
+- Installed frontend/Photon from lockfiles and all `server/requirements.txt`
+  dependencies into ignored `server/.venv`. `uv pip check` passed; PyTorch,
+  Transformers OWLv2/AutoModel/processors, SciPy and OpenCV import successfully.
+  Model weights/inference on physical demo footage were not rebenchmarked.
+- Changed ignored `frontend/.env.local` from `VITE_DATA_SOURCE=v1` to `api`, keeping
+  the existing private proxy target. Made Playwright's demo server explicitly
+  select demo mode so a developer's API configuration cannot change those tests.
+  Restarted this repo's verified local Vite process on **http://127.0.0.1:5176/**.
+- **Validation:** frontend lint, format, exported-schema checks and production
+  build pass; **52 frontend unit tests**, **22 Chrome browser tests**, **49 Photon
+  tests** (zero skips, including actual local-server persistence/reset integration),
+  **8 Photon scaffold tests**, **98 server tests** (one external ARKitScenes sample
+  test skipped), and **357 Swift checks** pass. The complete iOS app builds in
+  Xcode Debug for a generic iOS device with signing disabled. Initial sandbox
+  socket/CoreVideo restrictions were resolved by running the relevant local
+  checks with normal system-framework access, without changing app logic.
+- **Live private dashboard, read-only:** `/dashboard/snapshot` and its `/api`
+  alias returned 200. Real Chrome validated the snapshot against the frontend
+  Zod schema, received 11 event snapshots, displayed four registered items and
+  loaded a 960×720 chest-camera frame. The phone reported connected. No page
+  errors, failed API responses, browser writes or commands occurred. Two Diet
+  Coke registrations already exist and were left untouched. Evidence:
+  `/private/tmp/marco-latest-main-live-browser.json`,
+  `/private/tmp/marco-latest-main-objects.png`,
+  `/private/tmp/marco-latest-main-camera.png`.
+- No shared-server deployment, real iMessage send, physical iPhone install,
+  Find/Stop command or AirPods test was performed in this synchronization.
+  The existing live Photon process was not restarted; runtime adoption of the
+  updated bridge and the planned ElevenLabs TTS migration remain separate work.
 
 **Primary roadmap:** the user's approved whole-system diagram is recorded in
 [`docs/HACKATHON-ROADMAP.md`](docs/HACKATHON-ROADMAP.md). Read it and `AGENTS.md`
 before future edits; this status file records implementation evidence and remaining gaps.
+
+**Current working baseline:** latest fetched `origin/main`, **`cc38be3`**, checked
+again after local validation on October 17, 2026. Use this version and the small
+local integration fixes below; do not restore the old raw-v1 frontend over it.
+**Latest speech decision:** caretaker labels are photos plus typed names;
+ElevenLabs is used only for Marco's spoken responses (TTS) in the local code.
+Scribe/voice-label handling is removed; private TTS and iOS playback are implemented
+and tested. Shared deployment and physical playback remain pending.
+See [`docs/SPEECH-OUTPUT-PLAN.md`](docs/SPEECH-OUTPUT-PLAN.md).
 
 **Hardware (final):** iPhone 16 Pro (LiDAR) in a chest vest, and AirPods Pro 3. Until the phone recordings exist, iPad LiDAR data (ARKitScenes) is used for checking.
 

@@ -14,6 +14,7 @@ from pathlib import Path
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
+from pydantic import BaseModel, Field
 
 from . import codec, geometry as G
 from .auth import require_caller, ws_caller
@@ -22,6 +23,7 @@ from .dashboard_commands import CommandError
 from .hub import Hub
 from .recorder import Recorder
 from .stub import StubBrain
+from .speech import SpeechOutput, SpeechSettings, SpeechUnavailable
 
 DATA = Path(os.environ.get("MARCO_DATA", Path(__file__).resolve().parents[1] / "data"))
 REQUIRED_META = ("session_id", "map_id", "frame_id", "t_device", "camera_transform", "intrinsics", "image_resolution")
@@ -52,6 +54,26 @@ dash = Dashboard(brain)                 # the browser's API (frontend/), built f
 DASHBOARD_ONLY = {"command_ack"}        # phone messages for the dashboard adapter only, not the brain
 latest_frame: dict[str, int] = {}
 work_lock = asyncio.Lock()
+speech = SpeechOutput(SpeechSettings.from_env())
+
+
+class SpeechRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=360)
+
+
+@app.post("/v1/speech")
+async def spoken_reply(body: SpeechRequest, caller=Depends(require_caller)):
+    """A short, already-decided Marco line; never a prompt or speech-recognition request."""
+    try:
+        audio, cached = await speech.render(body.text)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="speech text must contain 1 to 360 characters") from None
+    except SpeechUnavailable:
+        raise HTTPException(status_code=503, detail="speech output unavailable; use on-device speech") from None
+    return Response(audio, media_type="audio/wav", headers={
+        "Cache-Control": "private, no-store", "X-Marco-Speech-Provider": "elevenlabs",
+        "X-Marco-Speech-Cache": "hit" if cached else "miss",
+    })
 
 
 async def dispatch(out):

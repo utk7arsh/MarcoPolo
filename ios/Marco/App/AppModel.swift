@@ -97,7 +97,6 @@ final class AppModel: ObservableObject {
     private var guidanceScope: NavigationScope?
     private var commandGate = CommandGate()               // dashboard Find/Stop (docs/INTERFACES.md §4)
     private var labels: [String: (text: String?, url: String?)] = [:]  // item_id -> its label
-    private var audioCache: [String: URL] = [:]                        // label_audio_url -> local file
     private var listenerStarted = false
     private var vocabulary = ItemVocabulary()                          // registered item names, for the listener
     private var frameRate = RateMeter()
@@ -173,7 +172,8 @@ final class AppModel: ObservableObject {
             self.uploaded(code, body, ms)
         } }
         uploader = up
-        refreshItems(ticket: ticket)                         // labels made before this launch, audio cached now
+        audio.configureSpeech(base: url)
+        refreshItems(ticket: ticket)                         // typed labels and names made before this launch
 
         let sock = PhoneSocket(base: url)
         sock.onMessage = { [weak self] m in DispatchQueue.main.async {
@@ -314,7 +314,7 @@ final class AppModel: ObservableObject {
         micInfo = SpatialAudio.routeDescription()
     }
 
-    /// The registered items: their labels (audio cached now) and their names, which the listener matches speech to.
+    /// Typed labels and item names. Marco speaks every response through the same output voice.
     private func refreshItems(ticket: Int) {
         uploader?.items { [weak self] items in
             DispatchQueue.main.async {
@@ -323,8 +323,7 @@ final class AppModel: ObservableObject {
                     Geo.vec(it.position).map { ItemMark(id: it.item_id, name: it.name, position: $0, surface: it.surface, state: it.state) }
                 }
                 for it in items where it.label_text != nil || it.label_audio_url != nil {
-                    self.labels[it.item_id] = (Lines.spokenLabel(name: it.name, labelText: it.label_text), it.label_audio_url)
-                    self.cache(it.label_audio_url)
+                    self.labels[it.item_id] = (Lines.spokenLabel(name: it.name, labelText: it.label_text), nil)
                 }
                 self.learn(items.map(\.name))
             }
@@ -552,9 +551,8 @@ final class AppModel: ObservableObject {
         case .event(let e): worldEvent(e)
         case .labelReady(let l):
             let text = Lines.spokenLabel(name: l.name, labelText: l.label_text)
-            labels[l.item_id] = (text, l.label_audio_url)
-            guidance.updateLabel(itemId: l.item_id, name: l.name, text: text, audioURL: l.label_audio_url)
-            cache(l.label_audio_url)
+            labels[l.item_id] = (text, nil)
+            guidance.updateLabel(itemId: l.item_id, name: l.name, text: text, audioURL: nil)
             say(Lines.labelReady(l), from: anchor(item: l.item_id, touch: nil))
         case .error(let e): note("server: \(e.detail)")
         case .command(let c): command(c)
@@ -634,10 +632,6 @@ final class AppModel: ObservableObject {
 
     private func whatIsThis(_ a: WhatAnswer) {
         let from = anchor(item: a.item_id, touch: a.touch_id)          // the jar under the hand answers
-        if a.status == "known", let url = a.label_audio_url {
-            if let file = audioCache[url], playLabel(file, from: from) { return }
-            cache(url)
-        }
         if let line = Lines.whatIsThis(a) { say(line, from: from) }
     }
 
@@ -654,7 +648,6 @@ final class AppModel: ObservableObject {
         guard let id = tm.item_id else { return }
         let label = labels[id]
         let from = SoundAnchor.at(tm.position)                         // the label comes from the jar itself
-        if let url = label?.url, let file = audioCache[url], playLabel(file, from: from) { return }
         if let line = Lines.touchedKnown(name: tm.name, labelText: label?.text) { say(line, from: from) }
     }
 
@@ -694,8 +687,7 @@ final class AppModel: ObservableObject {
             switch c {
             case .haptic: haptic.impactOccurred()
             case .say(let s): say(s, from: guided)
-            case .playLabel(let url, let fallback):
-                if let f = audioCache[url], playLabel(f, from: guided) { continue }
+            case .playLabel(_, let fallback):
                 say(fallback, from: guided)
             default: audio.play(c)
             }
@@ -777,18 +769,6 @@ final class AppModel: ObservableObject {
         }
     }
 
-    /// The phone caches label audio, so touch playback never waits for the network (§4).
-    private func cache(_ url: String?) {
-        guard let url, audioCache[url] == nil, let up = uploader else { return }
-        up.fetch(path: url) { [weak self] data, mime in
-            guard let data else { return }
-            let ext = ["audio/x-caf": "caf", "audio/mpeg": "mp3", "audio/wav": "wav"][mime ?? ""] ?? "m4a"
-            let file = FileManager.default.temporaryDirectory.appendingPathComponent("label-\(UUID().uuidString).\(ext)")
-            guard (try? data.write(to: file)) != nil else { return }
-            DispatchQueue.main.async { self?.audioCache[url] = file }
-        }
-    }
-
     private func uploaded(_ code: Int, _ body: String, _ ms: Double) {
         if code == 202 {
             framesAccepted += 1
@@ -845,13 +825,6 @@ final class AppModel: ObservableObject {
         voiceAnchor = anchor
         if let p = voicePoint() { audio.say(line, at: p) } else { audio.say(line, atItem: false) }
         note("says: \(line)")
-    }
-
-    /// A label voice memo, from where it belongs. False if the file can't be played.
-    private func playLabel(_ file: URL, from anchor: SoundAnchor) -> Bool {
-        voiceAnchor = anchor
-        if let p = voicePoint() { return (try? audio.playFile(file, at: p)) != nil }
-        return (try? audio.playFile(file, atItem: false)) != nil
     }
 
     private func voicePoint() -> SIMD3<Float>? {

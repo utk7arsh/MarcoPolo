@@ -156,6 +156,25 @@ describe('FastAPI transport', () => {
     expect(receive).toHaveBeenCalledTimes(1)
     stop()
   })
+  it('restores live state from the watchdog HTTP refetch before a new socket sends data', async () => {
+    const initial = demoSnapshot()
+    const recovered = structuredClone(initial)
+    recovered.sequence++
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(new Response(JSON.stringify(initial)))
+      .mockResolvedValueOnce(new Response(JSON.stringify(recovered)))
+    const receive = vi.fn(),
+      connection = vi.fn()
+    const stop = createApiTransport('/api').start(receive, connection)
+    await vi.advanceTimersByTimeAsync(3500)
+    expect(connection).toHaveBeenLastCalledWith('stale')
+    await vi.advanceTimersByTimeAsync(7500)
+    expect(fetch).toHaveBeenCalledTimes(2)
+    expect(receive).toHaveBeenLastCalledWith(recovered)
+    expect(connection).toHaveBeenLastCalledWith('live')
+    expect(Socket.instances).toHaveLength(2)
+    stop()
+  })
   it('schedules only one reconnect when error, close and heartbeat coincide', async () => {
     const stop = createApiTransport('/api').start(vi.fn(), vi.fn())
     await vi.advanceTimersByTimeAsync(0)

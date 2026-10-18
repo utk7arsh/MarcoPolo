@@ -111,7 +111,7 @@ cmd_up() {
 cmd_deploy() {
   need TAILSCALE_ALLOWED_LOGINS
   "${SSH[@]}" "mkdir -p /opt/marco/server /opt/marco/deploy" || die "can't reach root@$NAME over Tailscale. Is this Mac on the tailnet, and did 'up' finish?"
-  rsync -az --delete --exclude .venv --exclude data --exclude __pycache__ --exclude .pytest_cache \
+  rsync -az --delete --exclude '.env*' --exclude .venv --exclude data --exclude __pycache__ --exclude .pytest_cache \
     -e "ssh -o StrictHostKeyChecking=accept-new" "$REPO/server/" "root@$NAME:/opt/marco/server/"
   rsync -az -e "ssh -o StrictHostKeyChecking=accept-new" "$HERE/remote-setup.sh" "$HERE/marco.service" "root@$NAME:/opt/marco/deploy/"
   "${SSH[@]}" "ALLOWED='$TAILSCALE_ALLOWED_LOGINS' MODE='${MARCO_MODE:-real}' bash /opt/marco/deploy/remote-setup.sh"

@@ -247,12 +247,17 @@ test('a silent socket automatically refetches current state and resumes without 
   })
   await page.goto('/#live')
   await expect(page.getByLabel('2.1 meters')).toBeVisible()
+  // StrictMode may send and cancel an extra startup request. Recovery must
+  // fetch again after startup, regardless of how many requests startup made.
+  const startupLoads = loads
   await expect(
     page.getByText('Connection lost. Showing last-seen memory.', {
       exact: true,
     }),
   ).toBeVisible({ timeout: 6000 })
-  await expect.poll(() => loads, { timeout: 10000 }).toBe(2)
+  await expect
+    .poll(() => loads, { timeout: 10000 })
+    .toBeGreaterThan(startupLoads)
   await expect(page.getByLabel('2.1 meters')).toBeVisible()
   await expect(page.locator('.position-status')).toHaveText('Live position')
 })

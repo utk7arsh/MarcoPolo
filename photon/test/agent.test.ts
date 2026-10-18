@@ -68,7 +68,7 @@ class FakeServer implements MarcoServerApi {
   }
 }
 
-function setup(transcripts: Array<string | null> = []) {
+function setup() {
   const dir = mkdtempSync(join(tmpdir(), "marco-photon-"));
   const config: Config = {
     mode: "sim",
@@ -78,21 +78,17 @@ function setup(transcripts: Array<string | null> = []) {
     userName: "Dad",
     caretakerNames: new Map([[MOM, "Mom"]]),
     primaryCaretaker: null,
-    elevenLabsKey: null,
-    sttModel: "scribe_v2",
     marcoServerUrl: "http://marco.test",
     promptDelayMs: 30,
   };
   const store = new Store(dir);
   const sim = new SimChannel();
   const server = new FakeServer();
-  let transcriptions = 0;
   const agent = new MarcoAgent({
     config,
     store,
     media: new Media(dir),
     channel: sim,
-    transcribe: async () => (transcriptions++, transcripts.shift() ?? null),
     server,
   });
 
@@ -104,7 +100,7 @@ function setup(transcripts: Array<string | null> = []) {
   };
   const texts = () => sim.outbox.filter((o) => o.type === "text").map((o) => o.text ?? "");
   const lastText = () => texts().at(-1) ?? "";
-  return { store, sim, server, agent, say, texts, lastText, transcriptions: () => transcriptions };
+  return { config, store, sim, server, agent, say, texts, lastText };
 }
 
 /** Links Mom, delivers one label_request, and returns the id of the photo she received. */
@@ -130,50 +126,6 @@ test("ask: a label_request fetches the crop and texts it to the caretaker", asyn
   const sent = t.sim.outbox.slice(-2);
   assert.deepEqual(sent.map((o) => [o.type, o.mime_type ?? null]), [["attachment", "image/jpeg"], ["text", null]]);
   assert.match(sent[1]?.text ?? "", /^Dad just touched this and asked what it is\./);
-});
-
-test("ask: a swipe-reply voice memo is posted to /v1/labels with the touch_id before Mom is thanked", async () => {
-  const t = setup(["That's the cumin, love."]);
-  const { photoId } = await askMom(t, "t1");
-  await t.say([{ voice: VOICE }], photoId);
-  assert.equal(t.server.labels.length, 1);
-  const [label] = t.server.labels;
-  assert.deepEqual({ touchId: label?.touchId, itemId: label?.itemId, name: label?.name, text: label?.text }, {
-    touchId: "t1",
-    itemId: undefined,
-    name: "cumin",
-    text: "That's the cumin, love.",
-  });
-  assert.ok(label?.audioExt, "the voice memo is attached");
-  const confirmation = t.sim.outbox.at(-1)!;
-  assert.equal(confirmation.text, "Got it: cumin. Dad will hear your voice next time.");
-  assert.equal(confirmation.reply_to, photoId);
-  assert.ok(t.sim.outbox.some((o) => o.type === "reaction" && o.emoji === "❤️"));
-});
-
-test("ask: a typed name, then a voice memo, becomes §5's 'voice note after the name' on the same item_id", async () => {
-  const t = setup([null]);
-  const { photoId } = await askMom(t, "t1");
-  await t.say([{ text: "That's the cumin, love" }], photoId);
-  await t.say([{ voice: VOICE }]);
-  assert.equal(t.server.labels.length, 2);
-  const [first, second] = t.server.labels;
-  assert.deepEqual([first?.touchId, first?.name, first?.text, first?.audioExt], ["t1", "cumin", "That's the cumin, love", null]);
-  assert.deepEqual([second?.itemId, second?.touchId, second?.name, second?.text], ["srv_t1", undefined, "cumin", "That's the cumin, love"]);
-  assert.ok(second?.audioExt);
-  assert.equal(t.lastText(), "Added your voice to the cumin. Dad will hear it next time.");
-});
-
-test("ask: an untranscribed voice memo waits for a name, then goes with it", async () => {
-  const t = setup([null]);
-  const { photoId } = await askMom(t, "t1");
-  await t.say([{ voice: VOICE }], photoId);
-  assert.equal(t.server.labels.length, 0, "the server needs a name");
-  assert.match(t.lastText(), /^Got your voice note\. What's it called\?/);
-  await t.say([{ text: "paprika" }]);
-  assert.equal(t.server.labels.length, 1);
-  assert.deepEqual([t.server.labels[0]?.touchId, t.server.labels[0]?.name], ["t1", "paprika"]);
-  assert.ok(t.server.labels[0]?.audioExt, "the earlier voice memo goes with the name");
 });
 
 test("ask: unthreaded answers go to the oldest request; a swipe-reply picks one", async () => {
@@ -238,17 +190,14 @@ test("teach: a photo with a caption is registered with POST /v1/items as JPEG", 
   assert.equal(t.lastText(), 'Saved "keys". Dad can ask me for it by name now.');
 });
 
-test("teach: a bare photo gets a threaded prompt; a voice memo names it and is added as its label", async () => {
-  const t = setup(["these are Dad's reading glasses"]);
+test("teach: a bare photo prompts for a typed name", async () => {
+  const t = setup();
   await t.say([{ text: "hi" }]);
-  const photoMsg = await t.say([photo()]);
-  const prompt = t.sim.outbox.at(-1)!;
-  assert.deepEqual([prompt.text, prompt.reply_to], ["Got it. What is this? Reply with its name or a voice memo.", photoMsg.id]);
-  await t.say([{ voice: VOICE }]);
-  assert.deepEqual(t.server.items.map((i) => i.name), ["reading glasses"]);
-  assert.equal(t.server.labels.length, 1);
-  assert.deepEqual([t.server.labels[0]?.itemId, t.server.labels[0]?.name, t.server.labels[0]?.text], ["srv_item_1", "reading glasses", "these are Dad's reading glasses"]);
-  assert.match(t.lastText(), /^Saved "reading glasses" with your voice/);
+  const image = await t.say([photo()]);
+  assert.equal(t.lastText(), "Got it. What is this? Reply with its name as text.");
+  await t.say([{ text: "reading glasses" }], image.id);
+  assert.deepEqual(t.server.items.map(i => i.name), ["reading glasses"]);
+  assert.equal(t.server.labels.length, 0);
 });
 
 test("teach: a caption arriving as its own message beats the prompt", async () => {
@@ -291,23 +240,22 @@ test("retry: a failed welcome is sent on redelivery, once", async () => {
 });
 
 test("retry: the server being down fails the event; the replay posts once and thanks Mom once", async () => {
-  const t = setup(["That's the cumin, love."]);
+  const t = setup();
   const { photoId } = await askMom(t, "t1");
-  const memo = t.sim.inbound(MOM, [{ voice: VOICE }], { replyTo: photoId });
+  const memo = t.sim.inbound(MOM, [{ text: "That's the cumin, love." }], { replyTo: photoId });
   t.server.failLabels = 1;
   await assert.rejects(t.agent.handle(memo));
   assert.equal(t.server.labels.length, 0);
   assert.ok(!t.texts().some((s) => s.startsWith("Got it")), "Mom isn't thanked for something that didn't arrive");
   await t.agent.handle(memo);
   assert.equal(t.server.labels.length, 1);
-  assert.equal(t.transcriptions(), 1, "not transcribed twice");
   assert.equal(t.texts().filter((s) => s.startsWith("Got it: cumin")).length, 1);
 });
 
 test("retry: a failed confirmation is re-sent without posting the label again", async () => {
-  const t = setup(["That's the cumin, love."]);
+  const t = setup();
   const { photoId } = await askMom(t, "t1");
-  const memo = t.sim.inbound(MOM, [{ voice: VOICE }], { replyTo: photoId });
+  const memo = t.sim.inbound(MOM, [{ text: "That's the cumin, love." }], { replyTo: photoId });
   t.sim.failSends = 2; // the threaded confirmation and its plain-send fallback
   await assert.rejects(t.agent.handle(memo));
   assert.equal(t.server.labels.length, 1, "the phone already has the label");
@@ -375,4 +323,62 @@ test("retry: a replayed /restart re-sends the reply without removing again", asy
   assert.deepEqual(t.server.removals, ["photon"], "the server is asked once");
   assert.equal(t.texts().filter((s) => s.startsWith("Fresh start")).length, 1);
   assert.match(t.lastText(), /removed 1 label from Marco \(keys\)/);
+});
+
+test("caretaker allow-list ignores unknown senders without reading media or replying", async () => {
+  const t = setup();
+  const message = t.sim.inbound("+13105550999", [photo(), { voice: VOICE }, { text: "keys" }]);
+  for (const part of message.parts) {
+    if (part.type === "media") part.read = async () => { throw new Error("unapproved media must not be read"); };
+  }
+  await t.agent.handle(message);
+  await t.agent.handle(message);
+  assert.equal(t.store.caretakers().length, 0);
+  assert.equal(t.store.items().length, 0);
+  assert.equal(t.sim.outbox.length, 0);
+  assert.equal(t.server.items.length, 0);
+  assert.equal(t.server.labels.length, 0);
+});
+
+test("caretaker allow-list accepts a normalized handle", async () => {
+  const t = setup();
+  await t.agent.handle(t.sim.inbound("(310) 555-0101", [{ text: "hi" }]));
+  assert.equal(t.store.caretaker(MOM)?.name, "Mom");
+  assert.equal(t.texts().length, 1);
+});
+
+test("a removed caretaker cannot receive new crops or label an old question", async () => {
+  const t = setup();
+  const { photoId } = await askMom(t, "before-removal");
+  const sent = t.sim.outbox.length;
+  t.config.caretakerNames.clear();
+  assert.equal(t.agent.primaryCaretaker(), undefined);
+  assert.equal((await t.agent.onLabelRequest(request("after-removal"))).status, "no_caretaker");
+  await t.say([{ text: "cumin" }], photoId);
+  assert.equal(t.sim.outbox.length, sent);
+  assert.equal(t.server.labels.length, 0);
+});
+
+test("voice-only replies are rejected without reading media or changing the open question", async () => {
+  const t = setup();
+  const { photoId } = await askMom(t, "typed-only");
+  const audio = t.sim.inbound(MOM, [{ voice: VOICE }], { replyTo: photoId });
+  for (const part of audio.parts) if (part.type === "media") part.read = async () => { throw new Error("must not read recordings"); };
+  await t.agent.handle(audio);
+  await t.agent.handle(audio);
+  assert.equal(t.server.labels.length, 0);
+  assert.equal(t.store.openQuestions(MOM).length, 1);
+  assert.match(t.lastText(), /Please type the object's name/);
+  await t.say([{ text: "cumin" }], photoId);
+  assert.deepEqual([t.server.labels[0]?.name, t.server.labels[0]?.audioPath], ["cumin", null]);
+});
+
+test("a typed caption wins over an attached recording, whose bytes are never read", async () => {
+  const t = setup();
+  const m = t.sim.inbound(MOM, [photo(), { text: "house keys" }, { voice: VOICE }]);
+  for (const part of m.parts) if (part.type === "media" && part.mimeType.startsWith("audio/")) part.read = async () => { throw new Error("must not read recordings"); };
+  await t.agent.handle(m);
+  assert.equal(t.server.items[0]?.name, "house keys");
+  assert.equal(t.store.items()[0]?.label?.audio, null);
+  assert.equal(t.store.items()[0]?.label?.transcript, null);
 });

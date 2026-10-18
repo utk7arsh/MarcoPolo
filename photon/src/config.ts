@@ -13,8 +13,6 @@ export interface Config {
   caretakerNames: Map<string, string>;
   /** Handle that receives "what is this?" photos. Defaults to the first caretaker who texted Marco. */
   primaryCaretaker: string | null;
-  elevenLabsKey: string | null;
-  sttModel: string;
   /** The Marco server's `tailscale serve` URL (docs/INTERFACES.md §5): label_request in, labels and registrations out. */
   marcoServerUrl: string;
   /** Wait this long after a bare photo before asking "what is this?", so a caption sent right after it wins. */
@@ -80,8 +78,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     userName: env.MARCO_USER_NAME ?? "Dad",
     caretakerNames: parseCaretakers(env.CARETAKERS),
     primaryCaretaker: env.PRIMARY_CARETAKER ? normalizeHandle(env.PRIMARY_CARETAKER) : null,
-    elevenLabsKey: env.ELEVENLABS_API_KEY || null,
-    sttModel: env.ELEVENLABS_STT_MODEL ?? "scribe_v2",
     marcoServerUrl,
     promptDelayMs: Number(env.PROMPT_DELAY_MS ?? 2500),
   };

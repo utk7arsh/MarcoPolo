@@ -13,6 +13,13 @@ Read `STATUS.md`, `docs/HACKATHON-ROADMAP.md`, `docs/INTERFACES.md`, and
   or adding substantial scope; routine fixes within it should proceed.
 - Keep the native iOS app a small accessible control/start panel. Keep the web
   dashboard the observer/setup surface. Preserve their approved shared design.
+- Use the latest fetched `origin/main` as the working baseline. Preserve local
+  edits before updating; reconcile necessary fixes individually rather than
+  restoring obsolete integrations over newer teammates' work.
+- The user dropped caretaker voice labelling: use photos and typed names through
+  Photon. ElevenLabs is intended for Marco's spoken responses (TTS) only. See
+  `docs/SPEECH-OUTPUT-PLAN.md` for the implemented output path, configuration,
+  fallback and remaining deployment/device checks. Do not reintroduce Scribe.
 - Keep perception on the private server, raw sensor geometry consistent, frame
   upload at 1 fps with latest-frame-wins, and guidance on the phone at 60 Hz.
 - Use existing Apple frameworks for motion and HRTF. An OS spatial-audio flag

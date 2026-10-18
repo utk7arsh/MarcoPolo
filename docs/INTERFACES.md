@@ -1,6 +1,6 @@
-# Marco: who builds what, and the interfaces between us (v0.3, 2026-10-17)
+# Marco: who builds what, and the interfaces between us (v0.4, 2026-10-18)
 
-Three owners, one contract. Change a message format only by updating this file, the code and tests on both sides, and telling the others. What changed since v0.1 is listed in §11, and since v0.2 in §12.
+Three owners, one contract. Change a message format only by updating this file, the code and tests on both sides, and telling the others. Changes are listed in §11–13.
 
 ## 1. Owners
 
@@ -23,7 +23,7 @@ Three owners, one contract. Change a message format only by updating this file, 
   - the guidance sequence (§7);
   - label playback.
 - **Voice:** "Marco" plus speech recognition, turned into queries; Marco's spoken lines.
-- **Photon:** sends the caretaker the photo of an unknown item, receives the label (text or voice memo), and posts it to the server.
+- **Photon:** sends the caretaker the photo of an unknown item, receives its typed name, and posts it to the server. Voice recordings are not labels.
 
 **Dashboard (web, `frontend/`).** Reads the server's feeds only (§6):
 - the live chest view with boxes;
@@ -158,6 +158,38 @@ Three owners, one contract. Change a message format only by updating this file, 
 
    The server keeps the items but marks their positions stale until they're seen again.
 
+### 3.5 Spoken replies: `POST /v1/speech` (JSON)
+
+The phone's existing `Lines` and guidance logic decide what to say. This route
+converts that exact text to speech; it does not generate an answer or recognize
+speech. It uses the same fail-closed Tailscale authentication as every other route.
+
+```json
+{"text": "Polo! On your left, two steps, on the table."}
+```
+
+- `text`: 1–360 characters; whitespace is trimmed. Blank text and NUL are rejected (422).
+- **200:** `Content-Type: audio/wav`, mono 24 kHz signed 16-bit PCM in a WAV
+  container, at most 20 seconds. The server uses the standard 44-byte PCM RIFF
+  header followed by sample data; the phone validates format and lengths before
+  caching. `Cache-Control: private, no-store` prevents HTTP
+  caching; `X-Marco-Speech-Provider: elevenlabs` identifies the provider and
+  `X-Marco-Speech-Cache: hit|miss` identifies reuse of a cached/pending request.
+- **503:** unconfigured key, provider failure, invalid audio, saturation or
+  timeout. The phone falls back to Apple's `AVSpeechSynthesizer`. The server's
+  deadline is 2.5 s and the phone's is 3 s; after failure the phone uses Apple for
+  uncached lines for 15 s before trying again. **403:** caller not authorized.
+- Server cache: at most 128 entries / 8 MiB, keyed by voice, model and text;
+  duplicate pending lines share generation. Phone cache: 64 entries / 8 MiB,
+  cleared when the configured server changes. Caches are memory-only.
+- A newer line, wake blip, Stop or stopped session cancels pending playback.
+  Late replies cannot speak an old instruction. The phone converts the WAV to
+  its existing mono spatial voice node; world anchors, beeps, head fusion and
+  the 60 Hz guidance loop remain on the phone. No TTS request per sensor tick.
+- Key and stock voice/model configuration stay on the server. Defaults:
+  `ELEVENLABS_VOICE_ID=JBFqnCBsd6RMkjVDRZzb`,
+  `ELEVENLABS_TTS_MODEL=eleven_flash_v2_5`. See `server/.env.example`.
+
 ## 4. Server to phone (Vedant sends over `/v1/phone`)
 
 ```json
@@ -180,8 +212,8 @@ Three owners, one contract. Change a message format only by updating this file, 
 - `seen_ago_s` may be `null`.
 - `touch.item_id` is `null` for an unknown thing being touched.
 - `hand_proximity` is sent 15 times a second while guiding: the fingertip's distance to the target, which drives the steady tone in §7.
-- **Touching a known item** while not being guided to it names it: the phone plays its label audio, or says its label text, or "That's the {name}."
-- The phone caches label audio, so touch playback never waits for the network. `GET /v1/audio/{id}` returns the original format (an iMessage voice note is `.caf`).
+- **Touching a known item** while not being guided to it names it: the phone says its label text, or "That's the {name}," through §3.5 with Apple fallback.
+- `label_audio_url` and `GET /v1/audio/{id}` remain for stored-data and older-client compatibility. The current iOS app does not download or prefer caretaker recordings; it caches synthesized replies instead.
 
 **Dashboard command** (Find or Stop pressed on the dashboard, §6), sent only to the socket bound to the current session:
 ```json
@@ -202,14 +234,14 @@ Three owners, one contract. Change a message format only by updating this file, 
 - **Asking:** send the crop (the touched item boxed) to the caretaker over iMessage.
 - **Replying:** post the answer to `POST /v1/labels` as multipart:
   - `touch_id`, `name` (short, e.g. "cumin"), and `text` (the caretaker's words, which the phone speaks);
-  - optionally `audio` (the voice memo, any format).
+  - no `audio` is sent by the current bridge. The optional legacy upload field remains compatible with older clients and saved data.
 
   The server:
   - registers the item from the crop;
   - anchors it where it was touched;
   - sends `label_ready` to the phone;
   - replies `{"status": "ok", "item_id": "…"}`.
-- **A voice note after the name:** post again with that `item_id` (instead of `touch_id`), the same `name` and `text`, and the `audio`.
+- **Corrections:** post again with that `item_id` (instead of `touch_id`), the corrected `name` and typed `text`. A standalone recording gets a request to type the name; it is not downloaded, transcribed or uploaded as a label.
 - **Caretaker-initiated setup:** the caretaker sends a photo with a caption. Post it to `POST /v1/items` with `name` = the caption.
 - **`source=photon`** goes on every Photon `POST /v1/items` and `POST /v1/labels` (an item a label creates gets this source).
 - **Starting over (testing):** when a caretaker texts `/restart`, the bridge calls `DELETE /v1/items?source=photon`.
@@ -276,7 +308,7 @@ The phone runs this loop at 60 Hz for low latency (`ios/Marco/Core/Guidance.swif
 4. **Facing** (|relative azimuth| 12° or less): a double ding plus a haptic, once per lock. The lock releases past 20°.
 5. **Walking:** the gap between beeps = clamp(0.15 + 0.35 × distance, 0.15, 1.0) s. *"Within reach, on the {surface}"* is said once at 0.6 m (POC 5).
 6. **Steady tone** once `hand_proximity.distance_m` is 0.30 or less. It releases above 0.40, or when proximity is older than 0.5 s.
-7. **On `touch` for that item:** silence, then the item's label (audio, or its text) or *"Got it."*
+7. **On `touch` for that item:** silence, then the item's typed label or *"Got it."* through §3.5. The phone's guidance sequence does not wait for cloud speech.
 
 If an `event moved` (or `put_down`) arrives for the target, retarget to its new `position`.
 
@@ -293,7 +325,7 @@ If an `event moved` (or `put_down`) arrives for the target, retarget to its new 
 **Utkarsh needs from Vedant:**
 1. A stub server that accepts everything above and returns fake `answer` / `touch` / `event` messages (`MARCO_MODE=stub`, the default).
 2. Then the real ones (`MARCO_MODE=real`).
-3. Label audio URLs.
+3. Typed labels and the speech route (§3.5). Legacy label audio URLs remain optional compatibility fields.
 4. `label_request` events for Photon.
 
 **The dashboard needs from Vedant:**
@@ -343,3 +375,7 @@ If an `event moved` (or `put_down`) arrives for the target, retarget to its new 
 - **New route** `DELETE /v1/items?source=…`, which forgets one source's items. Photon's `/restart` command uses it (§5).
 - **Dashboard API** (§6): `GET /dashboard/snapshot`, `WS /events`, `POST /dashboard/commands`, `GET /media/…` and `/app/…`, each also under `/api/…`, all behind the auth gate.
 - **New phone messages for dashboard Find and Stop:** `command` (server to phone, §4) and `command_ack` (phone to server, §3.2).
+
+## 13. Changes since v0.3
+- **Output-only ElevenLabs:** authenticated `POST /v1/speech` (§3.5), short exact text to mono WAV, bounded caching/timeouts and Apple fallback. iOS plays it through the existing spatial voice node.
+- **Typed Photon labels:** no Scribe, transcription or new caregiver audio labels. Photos and typed names, retries, corrections and source attribution stay. Stored legacy media and optional wire fields remain compatible.

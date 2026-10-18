@@ -1,9 +1,9 @@
 // End to end against the real Marco server (server/, MARCO_MODE=stub, loopback, AUTH_TEST_BYPASS=1), with this
 // service running as its own process in sim mode (the caretaker is played over /dev/inbound):
 //   phone asks "what is this?" -> server label_request on /v1/photon -> Photon texts the crop to Mom ->
-//   Mom replies by text, then by voice memo -> POST /v1/labels -> the phone gets label_ready with playable audio;
+//   Mom replies by text -> POST /v1/labels -> the phone gets label_ready with typed text;
 //   Mom sends a setup photo -> POST /v1/items -> GET /v1/items has it;
-//   the server restarts -> the labels, voice memo and registration are still there (marco/registry.py);
+//   the server restarts -> the labels and registration are still there (marco/registry.py);
 //   Mom texts /restart -> DELETE /v1/items?source=photon -> none of Photon's items remain, even after another restart.
 // Skips unless a Python with the server's stub dependencies is available (MARCO_SERVER_PYTHON, server/.venv or poc/.venv).
 import assert from "node:assert/strict";
@@ -15,6 +15,7 @@ import { dirname, join, resolve } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { deflateRawSync } from "node:zlib";
+import { ffmpegExecutable } from "../src/media.js";
 
 const PHOTON_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const SERVER_DIR = resolve(PHOTON_DIR, "..", "server");
@@ -31,7 +32,7 @@ function serverPython(): string | null {
 }
 const has = (bin: string) => spawnSync("which", [bin], { stdio: "ignore" }).status === 0;
 const PYTHON = serverPython();
-const SKIP = !PYTHON ? "no Python with the server's stub dependencies (set MARCO_SERVER_PYTHON)" : !has("ffmpeg") ? "needs ffmpeg for fixtures" : false;
+const SKIP = !PYTHON ? "no Python with the server's stub dependencies (set MARCO_SERVER_PYTHON)" : !has(ffmpegExecutable) ? "needs ffmpeg for fixtures" : false;
 
 const freePort = () =>
   new Promise<number>((done) => {
@@ -92,9 +93,7 @@ function frameForm(jpeg: Buffer): FormData {
 test("end to end with the real Marco server: label_request -> iMessage -> /v1/labels -> label_ready; setup photo -> /v1/items; persistence; /restart", { skip: SKIP, timeout: 180_000 }, async () => {
   const dir = mkdtempSync(join(tmpdir(), "marco-e2e-"));
   const jpegPath = join(dir, "frame.jpg");
-  execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc=size=960x720", "-frames:v", "1", jpegPath]);
-  const memoPath = join(dir, "memo.caf");
-  execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "sine=frequency=440:duration=1", "-c:a", "libopus", "-ar", "48000", memoPath]);
+  execFileSync(ffmpegExecutable, ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc=size=960x720", "-frames:v", "1", jpegPath]);
   let setupPhoto = readFileSync(jpegPath);
   let setupMime = "image/jpeg";
   if (has("sips")) {
@@ -141,7 +140,6 @@ test("end to end with the real Marco server: label_request -> iMessage -> /v1/la
           CARETAKERS: `${MOM}=Mom`,
           PRIMARY_CARETAKER: "",
           MARCO_USER_NAME: "Grandpa",
-          ELEVENLABS_API_KEY: "",
           PROMPT_DELAY_MS: "100",
         },
         logs,
@@ -171,24 +169,18 @@ test("end to end with the real Marco server: label_request -> iMessage -> /v1/la
     const cropMsg = await waitFor("the crop on Mom's iMessage", async () => (await outbox()).find((m) => m.type === "attachment"));
     assert.equal(cropMsg.mime_type, "image/jpeg");
 
-    // Mom answers by text (swipe-reply), then adds a voice memo.
+    // Mom answers by text (swipe-reply).
     const thanks = await mom({ text: "That's the cumin, love", reply_to: cropMsg.id });
     assert.equal(thanks.find((m) => m.type === "text")?.text, "Got it: cumin. I'll tell Grandpa.");
     const first = await waitFor("label_ready (text)", () => fromServer.find((m) => m.type === "label_ready"));
     assert.deepEqual([first.name, first.label_text, first.label_audio_url], ["cumin", "That's the cumin, love", null]);
 
-    const added = await mom({ voice_base64: readFileSync(memoPath).toString("base64"), voice_mime: "audio/x-caf" });
-    assert.equal(added.find((m) => m.type === "text")?.text, "Added your voice to the cumin. Grandpa will hear it next time.");
-    const second = await waitFor("label_ready (voice)", () => fromServer.filter((m) => m.type === "label_ready")[1]);
-    assert.equal(second.item_id, first.item_id, "the voice note lands on the same item");
-    const audio = await fetch(`${base}${second.label_audio_url}`);
-    assert.equal(audio.headers.get("content-type"), "audio/mp4", "sent as m4a, which the phone and the dashboard can both play");
-    assert.equal(Buffer.from(await audio.arrayBuffer()).toString("latin1", 4, 8), "ftyp");
-
-    // The phone asks again: now the server knows it, in Mom's voice.
+    // A recording is refused; it cannot replace the typed label.
+    const refused = await mom({ voice_base64: Buffer.from("unused").toString("base64"), voice_mime: "audio/mp4" });
+    assert.match(refused.find((m) => m.type === "text")?.text ?? "", /Please type/);
     phone.send(JSON.stringify({ type: "query", session_id: "photon-e2e", query_id: "q2", kind: "what_is_this" }));
     const known = await waitFor("the second what_is_this answer", () => fromServer.find((m) => m.query_id === "q2"));
-    assert.deepEqual([known.status, known.name, known.label_audio_url], ["known", "cumin", second.label_audio_url]);
+    assert.deepEqual([known.status, known.name, known.label_audio_url], ["known", "cumin", null]);
 
     // Teach: a setup photo with a caption is registered on the server.
     const saved = await mom({ image_base64: setupPhoto.toString("base64"), image_mime: setupMime, text: "These are Grandpa's keys" });
@@ -205,9 +197,7 @@ test("end to end with the real Marco server: label_request -> iMessage -> /v1/la
     const cumin = kept.find((i) => i.name === "cumin")!;
     assert.equal(cumin.item_id, first.item_id);
     assert.equal(cumin.label_text, "That's the cumin, love");
-    const keptAudio = await fetch(`${base}${cumin.label_audio_url}`);
-    assert.equal(keptAudio.headers.get("content-type"), "audio/mp4");
-    assert.equal(Buffer.from(await keptAudio.arrayBuffer()).toString("latin1", 4, 8), "ftyp");
+    assert.equal(cumin.label_audio_url, null);
     await waitFor("Photon reconnected to /v1/photon", async () => (await (await fetch(`${bridge}/health`)).json()).marco_server.connected);
 
     // /restart from the caretaker's chat removes exactly what Photon added, for good.

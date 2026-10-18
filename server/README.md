@@ -104,6 +104,35 @@ Check a phone recording against the contract (run it on the first recording from
 python tools/check_recording.py data/sessions/<session_id>
 ```
 
+## Spoken replies (ElevenLabs output only)
+
+`POST /v1/speech` accepts `{"text":"Polo! Your keys are on your left."}` and
+returns mono WAV for the phone's existing spatial player. Marco's rules choose
+the words; ElevenLabs only supplies the voice. There is no transcription or LLM.
+See [the contract, §3.5](../docs/INTERFACES.md).
+
+Copy `.env.example` to the ignored `.env` and set `ELEVENLABS_API_KEY` privately.
+The default stock voice is George (`JBFqnCBsd6RMkjVDRZzb`), model
+`eleven_flash_v2_5`. Override with `ELEVENLABS_VOICE_ID` / `ELEVENLABS_TTS_MODEL`.
+The app reads process environment, **not `.env` automatically**. For an isolated
+local development server, load it explicitly with uv:
+
+```bash
+cd server
+AUTH_TEST_BYPASS=1 uv run --no-project --env-file .env --python .venv/bin/python python -m marco.app
+```
+
+Do not use the test bypass on a Tailscale-served port. For the existing systemd
+deployment, put these three variables in `/etc/marco/local.env`, preserve its
+other values and permissions, deploy the updated code and restart `marco.service`.
+The deploy sync excludes `.env*`; local credentials are never copied with code.
+No key belongs in Photon, the browser or the iOS bundle.
+
+Requests have a 2.5 s deadline, bounded memory caching, duplicate coalescing and
+two concurrent provider calls. The phone has its own cache, cancels obsolete
+lines and falls back to Apple speech on failure. Its beeps and tracking stay local.
+Existing saved audio remains readable for older clients; new labels are typed.
+
 ## The dashboard's API
 `marco/dashboard.py` serves the dashboard in `frontend/` from what the core already publishes (`docs/INTERFACES.md` §6):
 - `GET /dashboard/snapshot`, `WS /events`, `POST /dashboard/commands` (Find and Stop, confirmed by the phone) and `GET /media/...`;
@@ -131,6 +160,7 @@ During development, `npm run dev` proxies `/api` to this server instead (`API_PR
 | Module | What |
 |---|---|
 | `marco/app.py` | FastAPI routes and WebSockets, validation (422 with a reason), latest-frame-wins, recording |
+| `marco/speech.py` | output-only ElevenLabs TTS, bounded WAV conversion/cache and safe failures |
 | `marco/auth.py` | the fail-closed gate |
 | `marco/geometry.py` | column-major matrices, upright rotation from gravity, box to 3D, headings, clock positions, surfaces |
 | `marco/codec.py` | depth/confidence (zlib or raw DEFLATE), hand patches |
