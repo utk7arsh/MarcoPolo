@@ -98,3 +98,36 @@ def _jpeg():
     buf = io.BytesIO()
     Image.new("RGB", (128, 128)).save(buf, "JPEG")
     return buf.getvalue()
+
+
+def test_live_check_against_a_running_loopback_server(fake, tmp_path, monkeypatch):
+    """tools/live_check.py end to end: register, stream, ask, against a real (stub) server on 127.0.0.1."""
+    import uvicorn
+    monkeypatch.setenv("MARCO_DATA", str(tmp_path / "server-data"))
+    monkeypatch.setenv("MARCO_MODE", "stub")
+    monkeypatch.setenv("AUTH_TEST_BYPASS", "1")
+    import marco.app
+    import marco.stub
+    importlib.reload(marco.stub)
+    app_mod = importlib.reload(marco.app)
+    photo = tmp_path / "remote.jpg"
+    photo.write_bytes(_jpeg())
+    port = free_port()
+    server = uvicorn.Server(uvicorn.Config(app_mod.app, host="127.0.0.1", port=port, log_level="warning"))
+    th = threading.Thread(target=server.run, daemon=True)
+    th.start()
+    for _ in range(100):
+        if server.started:
+            break
+        time.sleep(0.05)
+    try:
+        lc = load("live_check")
+        rep = lc.check(f"http://127.0.0.1:{port}", str(fake), {"remote": str(photo)}, speed=200, extra=["keys"])
+    finally:
+        server.should_exit = True
+        th.join(timeout=10)
+    assert rep["registrations"]["remote"]["status"] == 200 and rep["registrations"]["remote"]["quality"] == "ok"
+    assert rep["stream"]["frames"] == len((fake / "frames.jsonl").read_text().splitlines())
+    assert rep["answers"]["keys"]["found"] is True                      # the stub's own keys
+    assert rep["answers"]["remote"]["found"] is False                   # the stub never "sees" registered items
+    assert rep["errors"] == [] and "where is my keys? found" in lc.summary(rep)
