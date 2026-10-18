@@ -6,7 +6,7 @@ import simd
 enum Phase: String {
     case behind      // |azimuth| > 110 (back in front under 100): low, muffled beeps
     case turning     // in front, off to one side: plain beeps at a steady searching pace
-    case facing      // just locked onto the beam: double ding + haptic, once per lock
+    case facing      // steadily facing the beam: double ding + haptic, once until a sustained turn away
     case approach    // on the beam: bright pulses, faster as the distance shrinks; the stop notes at the item
     case reach       // fingertip within 45 cm (hand_proximity): rising pings, a held tone on contact
     case touched     // touch on the target: silence, then "Got it" or the label
@@ -25,7 +25,7 @@ enum Beacon: Equatable {
 
 enum Cue: Equatable {
     case beacon(Beacon)
-    case ding                        // locked on: two rising notes
+    case ding                        // steady alignment confirmed: two rising notes
     case arrive                      // stop walking: three rising notes
     case handPing(Int)               // reach: pitch step 0 (45 cm away) ... handSteps - 1 (almost touching)
     case haptic
@@ -62,10 +62,15 @@ struct GuidanceTarget: Equatable {
 struct Guidance {
     static let facingDeg = 12.0          // the beam's half-angle far away ...
     static let beamHalfWidthM = 0.3      // ... and its half-width at the item up close
-    static let lockHysteresisDeg = 8.0   // unlock this far outside the lock angle: one lock, one ding
+    static let lockHysteresisDeg = 8.0   // the ordinary beacon changes back outside this buffer
+    static let facingDwellS = 0.35       // a passing sweep across the beam does not confirm alignment
+    static let facingRearmExtraDeg = 15.0 // turn clearly away: 27° far away, wider up close
+    static let facingRearmS = 0.7        // remain outside that boundary before another confirmation is possible
+    static let facingCooldownS = 3.0     // minimum gap between confirmation dings, including after retargeting
+    static let facingMaxGapS = 0.2       // an unsampled pause is not evidence of holding a direction
     static let behindDeg = 110.0         // POC 5
     static let behindExitDeg = 100.0     // hysteresis, so the timbre doesn't flicker at the side
-    static let facingHoldS = 0.8         // "facing" right after the lock, then "approach"
+    static let facingHoldS = 0.8         // "facing" right after the confirmation, then "approach"
     static let searchIntervalS = 0.4     // the beat while turning (POC 5)
     static let behindIntervalS = 0.55
     static let hereIntervalS = 1.1
@@ -111,7 +116,11 @@ struct Guidance {
     private(set) var relAzimuthDeg = 0.0
     private(set) var distanceM = 0.0
     private var locked = false
-    private var lockedAt = -Double.infinity
+    private var confirmedAt = -Double.infinity
+    private var facingArmed = true
+    private var facingSince: Double?
+    private var awaySince: Double?
+    private var lastFacingSample: Double?
     private var behind = false
     private var arrived = false
     private var holding = false          // the steady tone is on
@@ -146,8 +155,8 @@ struct Guidance {
         guard moved else { return }
         arrived = false
         proximity = nil
-        locked = false
-        lockedAt = -Double.infinity
+        // Keep the facing confirmation latched for the same item. The next tick evaluates its new angle;
+        // coordinate corrections alone must not produce another ding or bypass its cooldown.
         lastDistance = nil
         closingMS = 0
     }
@@ -168,6 +177,43 @@ struct Guidance {
     mutating func handProximity(itemId: String, distanceM d: Double, t: Double) {
         guard itemId == target?.itemId else { return }
         proximity = (d, t)
+    }
+
+    /// Only the special confirmation is debounced. The ordinary beacon and spatial placement still follow
+    /// the current angle on every tick. Missing samples cannot complete either dwell timer.
+    private mutating func confirmFacing(now: Double, azimuth: Double, beam: Double) -> Bool {
+        if let last = lastFacingSample, now < last || now - last > Self.facingMaxGapS {
+            interruptFacingDwell()
+        }
+        lastFacingSample = now
+        if !facingArmed {
+            facingSince = nil
+            if azimuth > beam + Self.facingRearmExtraDeg {
+                let since = awaySince ?? now
+                awaySince = since
+                if now - since >= Self.facingRearmS {
+                    facingArmed = true
+                    awaySince = nil
+                }
+            } else {
+                awaySince = nil
+            }
+            return false
+        }
+        guard azimuth <= beam else { facingSince = nil; return false }
+        let since = facingSince ?? now
+        facingSince = since
+        guard now - since >= Self.facingDwellS, now - confirmedAt >= Self.facingCooldownS else { return false }
+        facingArmed = false
+        facingSince = nil
+        confirmedAt = now
+        return true
+    }
+
+    private mutating func interruptFacingDwell() {
+        facingSince = nil
+        awaySince = nil
+        lastFacingSample = nil
     }
 
     /// A touch from the server. On the target: silence, then its label or "Got it."
@@ -207,6 +253,7 @@ struct Guidance {
         // The hand: from 45 cm the fingertip's distance is all that plays.
         let handLimit = phase == .reach ? Self.handReleaseM : Self.handStartM
         if let p = proximity, now - p.t <= Self.proximityFreshS, p.d <= handLimit {
+            interruptFacingDwell()
             if phase != .reach {
                 phase = .reach
                 lastBeep = -.infinity
@@ -230,19 +277,11 @@ struct Guidance {
         let lock = Self.lockDeg(distanceM)
         if !locked && az <= lock {
             locked = true
-            lockedAt = now
-            lastBeep = now
-            cues += [.ding, .haptic]
         } else if locked && az > lock + Self.lockHysteresisDeg {
             locked = false
             lastBeep = -.infinity                    // the plain beep at once: you've drifted off the beam
         }
         behind = az > (behind ? Self.behindExitDeg : Self.behindDeg)
-        if locked {
-            phase = now - lockedAt < Self.facingHoldS ? .facing : .approach
-        } else {
-            phase = behind ? .behind : .turning
-        }
 
         if arrived && distanceM > Self.rearmM { arrived = false }
         if !arrived && distanceM <= stopAtM {
@@ -250,6 +289,18 @@ struct Guidance {
             quietUntil = now + Self.arriveS
             lastBeep = now
             cues += [.arrive, .haptic]
+        }
+
+        if arrived || now < quietUntil {
+            interruptFacingDwell()           // arrival/reach and the opening speech have their own cues
+        } else if confirmFacing(now: now, azimuth: az, beam: lock) {
+            lastBeep = now
+            cues += [.ding, .haptic]
+        }
+        if locked {
+            phase = now - confirmedAt < Self.facingHoldS ? .facing : .approach
+        } else {
+            phase = behind ? .behind : .turning
         }
 
         if now >= quietUntil {

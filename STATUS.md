@@ -2,6 +2,30 @@
 
 Last updated: 2026-10-18. Keep this file current: update it whenever a decision is made or a piece lands.
 
+## Stable direction confirmation (October 18, 2026)
+
+- Implemented the user's approved fix on freshly fetched main `37b2e72`.
+  The double ding and haptic require 350 ms continuously inside the beam. After
+  confirming, rearm only after 700 ms beyond the beam angle plus 15 degrees
+  (27 degrees far away, wider nearby), then another alignment dwell. Confirmations
+  are at least three seconds apart; staying aligned never repeats one by itself.
+- Ordinary beacon angle/timbre handling keeps its existing 8-degree hysteresis
+  and distance cadence, separately from the confirmation latch. Target position
+  updates still apply immediately and preserve the same item's latch/cooldown.
+  A new Find resets confirmation. Capture, geometry and wire formats are unchanged.
+- Speech, arrival and hand guidance take priority. Interruptions and sampling
+  gaps over 200 ms clear pending dwell timers without rearming a used confirmation.
+  Updated `ios/README.md` and INTERFACES.md section 7; regenerated its DOCX.
+- **495 Swift checks pass**, including 34 additional checks for jitter, passing
+  sweeps, sustained-away rearm, cooldown, position updates, interruptions, nearby
+  angles and cue priority. The full unsigned iOS Release build succeeds; its only
+  warning is skipped AppIntents metadata extraction (no AppIntents dependency).
+  **11 iOS/server contract and touch-guidance integration tests pass**. Timings
+  still need a physical walking/listening check. The user authorized pushing this
+  iOS fix; no backend redeployment is required. Rebuild/install the phone app to
+  use it. No device installation was performed. Evidence logs:
+  `/private/tmp/marco-facing-confirmation-{swift,contract,xcode}.log`.
+
 ## Release validation (October 18, 2026)
 
 - Fresh fetch confirms baseline `651edc7` is latest main; no merge was needed.

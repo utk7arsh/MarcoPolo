@@ -384,7 +384,7 @@ do {
     run(1.2, chest: .zero, yaw: 110)                                   // turned partway: in front, 70° off
     check(g.phase == .turning && (2...3).contains(beacons().count) && beacons().allSatisfy { $0 == .offBeam }, "turning: plain beeps 0.4 s apart: \(beacons())")
     cues = []
-    run(0.3, chest: .zero, yaw: 179)                                   // faces it
+    run(0.5, chest: .zero, yaw: 179)                                   // holds alignment long enough to confirm
     check(cues.filter { $0 == .ding }.count == 1 && cues.contains(.haptic) && g.phase == .facing, "facing: one ding + haptic")
     cues = []
     run(2.0, chest: .zero, yaw: 175)
@@ -393,8 +393,12 @@ do {
     run(0.1, chest: .zero, yaw: 150)                                   // veers 30° off at 2 m
     check(g.phase == .turning && beacons().first == .offBeam, "drifting off the beam is heard at once: \(cues)")
     cues = []
-    run(0.2, chest: .zero, yaw: 180)
-    check(cues.filter { $0 == .ding }.count == 1, "a new lock dings again")
+    run(0.5, chest: .zero, yaw: 180)
+    check(!cues.contains(.ding), "a brief drift off and back does not repeat confirmation")
+    cues = []
+    run(0.8, chest: .zero, yaw: 150)                                   // deliberately turns away, then returns
+    run(0.5, chest: .zero, yaw: 180)
+    check(cues.filter { $0 == .ding }.count == 1, "a sustained turn away rearms one confirmation")
     cues = []
     run(3, chest: SIMD3(0, 0, -1), yaw: 180)                           // 3 m away
     let far = beacons().count
@@ -450,10 +454,14 @@ do {
 
     // The corridor: 18° off is on the beam at 0.7 m (a 22 cm miss) but not at 3 m (93 cm).
     var c = Guidance()
-    c.start(GuidanceTarget(itemId: "cup", name: "cup", position: SIMD3(0, 1, -0.7), surface: nil, labelText: nil, labelAudioURL: nil), now: 0)
-    check(c.tick(now: 0, chest: .zero, ear: SIMD3(0, 0.45, 0), headYawDeg: -18).contains(.ding), "18° off at 0.7 m is on the beam")
-    c.start(GuidanceTarget(itemId: "cup", name: "cup", position: SIMD3(0, 1, -3), surface: nil, labelText: nil, labelAudioURL: nil), now: 1)
-    check(!c.tick(now: 1, chest: .zero, ear: SIMD3(0, 0.45, 0), headYawDeg: -18).contains(.ding), "18° off at 3 m is not")
+    c.start(GuidanceTarget(itemId: "cup", name: "cup", position: SIMD3(0, 1, -0.7), surface: nil, labelText: nil, labelAudioURL: nil), now: 0, speechS: 0)
+    var corridorCues: [Cue] = []
+    for i in 0..<30 { corridorCues += c.tick(now: Double(i) / 60, chest: .zero, ear: SIMD3(0, 0.45, 0), headYawDeg: -18) }
+    check(corridorCues.filter { $0 == .ding }.count == 1, "18° off at 0.7 m confirms after dwelling on the beam")
+    c.start(GuidanceTarget(itemId: "cup", name: "cup", position: SIMD3(0, 1, -3), surface: nil, labelText: nil, labelAudioURL: nil), now: 1, speechS: 0)
+    corridorCues = []
+    for i in 0..<30 { corridorCues += c.tick(now: 1 + Double(i) / 60, chest: .zero, ear: SIMD3(0, 0.45, 0), headYawDeg: -18) }
+    check(!corridorCues.contains(.ding), "18° off at 3 m never confirms")
 
     // A walk in at a steady speed: no words on the way, and the stop notes earlier for a faster walker.
     func walk(speed: Double) -> (words: [String], stopAt: Double) {
@@ -519,6 +527,124 @@ do {
     check(near(Geo.wrap180(out - Geo.wrap180(200)), 25, 0.01), "the lead is capped at 25°: \(out)")
     out = yp.predict(t: 2, yawDeg: 0, aheadS: 0.15)
     check(out == 0 && yp.rateDegS == 0, "a pause starts the slope over")
+}
+
+// MARK: - Facing confirmation: dwell, sustained-away rearm and independent continuous guidance
+
+do {
+    let target = GuidanceTarget(itemId: "keys", name: "keys", position: SIMD3(0, 1, -3), surface: "table", labelText: nil, labelAudioURL: nil)
+    var g = Guidance()
+    var t = 0.0
+    func restart(_ item: GuidanceTarget = target, speechS: Double = 0) {
+        g.start(item, now: t, speechS: speechS)
+    }
+    func run(_ seconds: Double, yaw: Double = 0) -> [Cue] {
+        var cues: [Cue] = []
+        for _ in 0..<Int((seconds * 60).rounded(.up)) {
+            cues += g.tick(now: t, chest: .zero, ear: SIMD3(0, 0.45, 0), headYawDeg: yaw)
+            t += 1.0 / 60
+        }
+        return cues
+    }
+    func dings(_ cues: [Cue]) -> Int { cues.filter { $0 == .ding }.count }
+
+    restart()
+    let starting = run(0.3)
+    check(dings(starting) == 0 && starting.contains(.beacon(.onBeam)), "ordinary on-beam pulses work immediately, before confirmation")
+    let confirmed = run(0.1)
+    check(dings(confirmed) == 1 && confirmed.contains(.haptic) && g.phase == .facing, "holding alignment for 350 ms confirms once with a buzz")
+    check(dings(run(4)) == 0 && g.phase == .approach, "holding the direction does not repeat a ding after the cooldown")
+
+    var jitter: [Cue] = []
+    for yaw in [21.0, 0, -22, 0, 26, 0, -25, 0] { jitter += run(0.9, yaw: yaw) }
+    check(dings(jitter) == 0 && !jitter.contains(.haptic), "crossing the old lock boundary repeatedly cannot repeat the confirmation or buzz")
+    check(jitter.contains(.beacon(.offBeam)) && jitter.contains(.beacon(.onBeam)), "ordinary beeps still change promptly while confirmation stays latched")
+    let offBeam = run(1.0 / 60, yaw: 22)
+    check(g.phase == .turning && offBeam.contains(.beacon(.offBeam)), "leaving the ordinary beam is heard on the next tick without waiting for rearm")
+    _ = run(1.0 / 60)
+    check(g.phase == .approach, "returning to the ordinary beam updates immediately without another confirmation")
+
+    var briefTurns: [Cue] = []
+    for _ in 0..<4 {
+        briefTurns += run(0.6, yaw: 40)
+        briefTurns += run(0.4)
+    }
+    check(dings(briefTurns) == 0, "separate short turns away do not accumulate into a rearm")
+    _ = run(0.8, yaw: 40)
+    check(dings(run(0.3)) == 0, "a deliberate return still needs its own alignment dwell")
+    check(dings(run(0.1)) == 1, "a sustained turn away and steady return confirm once")
+
+    _ = run(0.8, yaw: -40)
+    check(dings(run(0.4)) == 0 && dings(run(1.4)) == 0, "a fast second turn cannot bypass the three-second cooldown")
+    check(dings(run(0.6)) == 1 && dings(run(1)) == 0, "rearmed steady alignment confirms once when cooldown expires")
+
+    restart()
+    var sweeps = run(0.2)
+    sweeps += run(0.05, yaw: 18)            // inside the beacon's 8° buffer but outside the actual beam
+    sweeps += run(0.2)
+    check(dings(sweeps) == 0, "a passing sweep or excursion outside the beam resets entry dwell")
+    check(dings(run(0.2)) == 1, "steady alignment following a sweep can confirm normally")
+
+    // Position estimates can change without a turn. Keep the latch and cooldown, and use the new geometry.
+    var corrections: [Cue] = []
+    for i in 0..<40 {
+        g.retarget(itemId: "keys", position: SIMD3(i % 2 == 0 ? 0.02 : -0.02, 1, -3), surface: "shelf")
+        corrections += run(0.1)
+    }
+    check(dings(corrections) == 0 && !corrections.contains(.haptic), "repeated small position corrections do not reset the confirmation latch")
+    check(g.target?.position == SIMD3(-0.02, 1, -3) && g.target?.surface == "shelf", "preserving confirmation still applies the latest target geometry and surface")
+    g.retarget(itemId: "keys", position: SIMD3(3, 1, 0), surface: "counter")
+    let moved = run(0.8)
+    check(dings(moved) == 0 && g.phase == .turning && near(g.relAzimuthDeg, 90), "a large move changes guidance immediately and rearms through the new angle")
+    check(dings(run(0.4, yaw: 90)) == 1, "turning toward the moved item confirms after a fresh dwell")
+    g.retarget(itemId: "keys", position: SIMD3(3.01, 1, 0), surface: nil)
+    check(dings(run(0.5, yaw: 90)) == 0, "a correction immediately after confirmation cannot bypass cooldown")
+
+    restart()
+    _ = run(0.3)
+    g.retarget(itemId: "keys", position: SIMD3(0.01, 1, -3), surface: nil)
+    check(dings(run(0.1)) == 1, "small position corrections do not starve the first alignment dwell")
+    let other = GuidanceTarget(itemId: "mug", name: "mug", position: target.position, surface: nil, labelText: nil, labelAudioURL: nil)
+    restart(other)
+    check(dings(run(0.4)) == 1, "a new Find gets its own confirmation without the previous target's cooldown")
+    _ = g.stop()
+    check(run(1).isEmpty, "stopped guidance cannot emit a delayed confirmation")
+    restart()
+    check(dings(run(0.4)) == 1, "Stop followed by Find starts a fresh confirmation")
+
+    // Dwell must be observed continuously, rather than inferred from two samples around a long pause.
+    restart()
+    _ = run(0.2)
+    t += 1
+    check(dings(run(0.1)) == 0 && dings(run(0.3)) == 1, "a missing-sample gap restarts entry dwell")
+    _ = run(0.4, yaw: 40)
+    t += 2
+    _ = run(0.4, yaw: 40)
+    check(dings(run(0.5)) == 0, "a missing-sample gap cannot complete the sustained-away rearm")
+
+    restart(speechS: 1)
+    check(run(1).isEmpty, "confirmation and beacons stay quiet over the opening speech")
+    check(dings(run(0.2)) == 0 && dings(run(0.3)) == 1, "alignment is checked again after speech before confirming")
+    restart()
+    _ = run(0.2)
+    g.handProximity(itemId: "keys", distanceM: 0.3, t: t)
+    let reaching = run(0.3)
+    check(dings(reaching) == 0 && g.phase == .reach && reaching.contains(.handPing(Guidance.handStep(0.3))), "hand guidance takes priority and cancels a pending facing confirmation")
+    t += 0.6
+    check(dings(run(0.1)) == 0 && dings(run(0.3)) == 1, "returning from reach requires a fresh alignment dwell")
+
+    var nearby = target
+    nearby.position = SIMD3(0, 1, -0.5)
+    restart(nearby)
+    let arrival = run(2)
+    check(arrival.filter { $0 == .arrive }.count == 1 && dings(arrival) == 0, "arrival notes are not followed or interrupted by a facing ding")
+    nearby.position = SIMD3(0, 1, -1)
+    restart(nearby)
+    check(dings(run(0.4)) == 1, "the wider nearby beam still supports confirmation")
+    _ = run(3.2, yaw: 28)                 // outside the ordinary lock, inside the distance-adjusted rearm boundary
+    check(dings(run(0.5)) == 0, "the rearm angle widens with the beam up close")
+    _ = run(0.8, yaw: 40)
+    check(dings(run(0.4)) == 1, "turning beyond the nearby rearm boundary allows another confirmation")
 }
 
 // MARK: - Audit regressions: request cancellation, pose validity, map-save lifetime, live target metadata

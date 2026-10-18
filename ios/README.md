@@ -113,6 +113,15 @@ with a 15 s cooldown after network/provider failure. Stop, a new line or the wak
 cue cancels obsolete speech. Beeps and head tracking never wait for TTS.
 See [speech setup and remaining checks](../docs/SPEECH-OUTPUT-PLAN.md).
 
+The "correct direction" double ding requires 350 ms of steady alignment. Small
+movements across the ordinary beacon boundary do not repeat it: a new
+confirmation requires 700 ms clearly turned away (27° far away, wider up close),
+another alignment dwell, and at least three seconds since the last confirmation.
+Position updates for the same item preserve this latch. Ordinary directional
+beeps and spatial placement remain responsive. Speech, arrival and hand cues
+take priority; missing samples cannot complete a dwell. These starting timings
+are software-tested and still need a physical walking/listening check.
+
 The AirPods take no commands; they don't talk to the server either. The server sends meaning to the phone (items, positions, touches; `docs/INTERFACES.md` §4). The phone renders every sound binaurally (`SpatialAudio`, Apple's HRTF) and sends finished stereo to the AirPods over Bluetooth. The AirPods send back head motion, which places those sounds.
 
 Each line Marco says has a `SoundAnchor`. A point in the room is re-projected through the fused head yaw every tick, guiding or not, so the sound stays put while the head turns.
@@ -144,7 +153,7 @@ The server only relays them. Recordings keep them, so a replayed walk drives the
 
 ## Test
 ```
-sh ios/check.sh                                     # type-checks the macOS-buildable files, runs 286 checks
+sh ios/check.sh                                     # type-checks the macOS-buildable files and runs core checks
 cd server && ../poc/.venv/bin/python -m pytest -q tests/test_ios_contract.py
 ```
 The second command builds the Swift core and feeds the exact bytes it produces to the real server:
@@ -166,7 +175,7 @@ Add tests in `Tests/main.swift` for any logic you add to `Core/`.
 1. **Start.** Expect socket connected, tracking normal, and "frames accepted" going up once a second. A 422 in the log says exactly what the server didn't like.
 2. **"Where are my keys?" against the stub.** You should hear "Polo! Behind you, two steps..." coming from 2 m behind where you first stood. Then:
    - muffled beeps;
-   - a ding when you face it;
+   - one ding after facing it steadily for 350 ms; small sideways movements should not repeat it;
    - the stub's fake hand counts down and "touches" after about 8 s.
 3. **AirPods.** Put them in and watch the `airpods` row: expect about 25 Hz; note the jitter, the latency, and how far the raw yaw drifts in 10 minutes with your head still.
    - **Yaw sign:** turn your head right: "head yaw" must go up. Or turn your whole body a few times and read `sign check`. If it's inverted, flip the toggle.

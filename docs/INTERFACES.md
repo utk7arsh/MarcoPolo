@@ -367,7 +367,12 @@ The phone runs this loop at 60 Hz for low latency (`ios/Marco/Core/Guidance.swif
    - **on the beam** (step 4): a bright pulse whose pace is the distance (step 5).
 
    The beacon is never played behind the head (`BeaconWarp`): errors up to 30° are doubled, 30-90° are squeezed into 60-90°, and anything further round is pinned at 90° on the shorter turning side. Once within reach, the direction is true.
-4. **On the beam** (|relative azimuth| within max(12°, atan(0.3 m / distance)), a corridor 30 cm either side of the item): a double ding plus a haptic, once per lock. The lock releases 8° outside that, and drifting off swaps to the plain beep at once.
+4. **On the beam** (|relative azimuth| within max(12°, atan(0.3 m / distance)), a corridor 30 cm either side of the item): the ordinary beacon switches to bright pulses without a confirmation dwell; the beacon lock releases 8° outside that, and drifting off swaps to the plain beep at once. The special **alignment confirmation** is separate:
+   - hold inside the beam for 0.35 s to get one double ding and haptic;
+   - rearm only after remaining more than 15° outside the beam boundary for 0.7 s (27° from the target far away, wider up close), then returning for another 0.35 s dwell;
+   - leave at least 3 s between confirmation dings; holding alignment after cooldown alone does not repeat one;
+   - coordinate updates for the same target preserve the latch and cooldown; a new Find resets them;
+   - gaps longer than 0.2 s restart pending dwell timers. Confirmation pauses during the opening speech, arrival and hand guidance; these stages do not count toward dwell. Arrival and reach keep their own cues. Spatial placement and ordinary beeps still use the current angle every tick.
 5. **Walking:** the gap between bright pulses = clamp(0.3 × distance^0.8, 0.2, 0.95) s. **Stop** at 0.6 m, called earlier by 0.5 s of walking speed (at most 0.3 m): three rising notes and a haptic, then a soft ping from the item every 1.1 s. Walking back beyond 1.1 m re-arms it. Nothing is spoken between the opening line and the touch: the beeps do the guiding.
 6. **Reach** once `hand_proximity.distance_m` is 0.45 or less (it releases above 0.55, or when proximity is older than 0.5 s): pings from the item that rise in pitch (six steps, D5 to D6) and speed up (0.3 s apart at 45 cm, 0.13 s at 10 cm). The **steady tone**, the top pitch, plays at 5 cm or less and releases above 9 cm.
 7. **On `touch` for that item:** silence, then the item's typed label or *"Got it."* through §3.5. The phone's guidance sequence does not wait for cloud speech.
@@ -441,6 +446,7 @@ If an `event moved` (or `put_down`) arrives for the target, retarget to its new 
 ## 13. Changes since v0.3
 - **Output-only ElevenLabs:** authenticated `POST /v1/speech` (§3.5), short exact text to mono WAV, bounded caching/timeouts and Apple fallback. iOS plays it through the existing spatial voice node.
 - **§7 guidance sounds** (phone only; no message format changed): a beam that widens to 30 cm either side up close, three beacon sounds, a beacon never played behind, distance pace across the whole room, a speed-compensated stop (notes and a haptic, no words), graded reach pings with the steady tone at contact (5 cm), and head yaw advanced by the audio latency. The only words during a find are the opening line and the touch.
+- **Stable facing confirmation** (§7 step 4; phone only): 0.35 s entry dwell, a wider sustained-away rearm and a 3 s repeat limit prevent repeated dings from small movements. Ordinary beacon direction/cadence remain responsive, and same-item position updates preserve the confirmation latch.
 - **Typed Photon labels:** no Scribe, transcription or new caregiver audio labels. Photos and typed names, retries, corrections and source attribution stay. Stored legacy media and optional wire fields remain compatible.
 - **A hand over the guided item no longer makes it `missing`** (§7 step 7). Close up, the detector usually can't see the item under the hand. That used to mark the item `missing` after 3 frames, which took it out of touch matching, so the touch, and with it the end of the search, never came.
   - Frames where a hand is within 35 cm of an item don't count as misses.
