@@ -37,6 +37,32 @@ export function locationIsValid(data: DashboardData, item?: Item) {
   )
 }
 
+export function currentMapWearer(data: DashboardData) {
+  const mapId = data.session.worldMapId
+  return mapId &&
+    data.map?.worldMapId === mapId &&
+    data.wearer?.worldMapId === mapId
+    ? data.wearer
+    : null
+}
+
+export function mapPositionIsLive(
+  data: DashboardData,
+  online: boolean,
+  now = Date.now(),
+) {
+  const wearer = currentMapWearer(data)
+  return !!(
+    online &&
+    wearer &&
+    data.devices.phone.state === 'connected' &&
+    data.devices.phone.tracking === 'normal' &&
+    data.devices.phone.lastMessageAt &&
+    now - Date.parse(data.devices.phone.lastMessageAt) < 5000 &&
+    now - Date.parse(wearer.at) < 5000
+  )
+}
+
 export function guidanceIssue(
   data: DashboardData,
   online: boolean,

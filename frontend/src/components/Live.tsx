@@ -1,6 +1,12 @@
 import { useState } from 'react'
 import type { DashboardData } from '../lib/schema'
-import { ago, direction, guidanceIssue, location } from '../lib/format'
+import {
+  ago,
+  direction,
+  guidanceIssue,
+  location,
+  mapPositionIsLive,
+} from '../lib/format'
 import { Icon } from './Icon'
 import { EmptyState, ItemImage } from './Shared'
 import { MapView } from './MapView'
@@ -62,14 +68,7 @@ export function Live({
             : nav.state === 'paused'
               ? 'Guidance paused'
               : 'Ready'
-  const mapLive =
-    online &&
-    data.devices.phone.state === 'connected' &&
-    data.devices.phone.tracking === 'normal' &&
-    !!data.devices.phone.lastMessageAt &&
-    now - Date.parse(data.devices.phone.lastMessageAt) < 5000 &&
-    !!data.wearer &&
-    now - Date.parse(data.wearer.at) < 5000
+  const mapLive = mapPositionIsLive(data, online, now)
   const audioActive =
     active &&
     data.devices.airpods.state === 'connected' &&
@@ -94,7 +93,7 @@ export function Live({
       <div className="live-layout">
         <section className="panel live-viewport" aria-label="Live view">
           <div className="viewport-toolbar">
-            <div className="segmented small" aria-label="Live view mode">
+            <div className="view-switch" aria-label="Live view mode">
               <button
                 aria-pressed={view === 'map'}
                 onClick={() => setView('map')}
@@ -125,10 +124,7 @@ export function Live({
             />
           )}
         </section>
-        <aside
-          className="panel guidance-panel"
-          aria-label="Navigation guidance"
-        >
+        <aside className="guidance-panel" aria-label="Navigation guidance">
           {item ? (
             <>
               <div className="guidance-item">
@@ -146,7 +142,9 @@ export function Live({
                   </p>
                 </div>
               </div>
-              <div className={`direction-display ${found ? 'found' : ''}`}>
+              <div
+                className={`direction-display ${found ? 'found' : active ? 'guiding' : ''}`}
+              >
                 {found ? (
                   <>
                     <span className="direction-circle">
@@ -182,7 +180,7 @@ export function Live({
                       {nav.state === 'within_reach'
                         ? 'Within reach'
                         : nav.bearingDeg !== null
-                          ? direction(nav.bearingDeg)
+                          ? direction(nav.bearingDeg).replace(', ', ',\n')
                           : 'Direction unavailable'}
                     </p>
                   </>
@@ -232,6 +230,7 @@ export function Live({
                     }
                     onClick={onStop}
                   >
+                    <Icon name="stop" size={16} />
                     {pending ? 'Requesting…' : 'Stop finding'}
                   </button>
                 )}

@@ -51,7 +51,6 @@ server/data/
 ios/build/
 ios/xcode/
 ios/Marco.xcodeproj/
-ios/Marco/Info.plist
 xcuserdata/
 *.xcuserstate
 DerivedData/

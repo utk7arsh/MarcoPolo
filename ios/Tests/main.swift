@@ -30,6 +30,119 @@ func pose(yawLeftDeg: Float, pitchDeg: Float = 0, at p: SIMD3<Float> = .zero) ->
     return T
 }
 
+// Control panel: permission cancellation, first-frame identity, interruption and server input.
+var capture = CaptureControl()
+check(capture.phase == .ready && capture.action == "Start camera", "initial camera action")
+let firstStart = capture.begin(supported: true)!
+check(capture.begin(supported: true) == nil, "duplicate start is ignored")
+capture.stop()
+check(!capture.permission(granted: true, ticket: firstStart), "stop invalidates pending permission")
+capture.firstFrame(ticket: firstStart)
+check(capture.phase == .ready, "old frame cannot revive stopped capture")
+let deniedStart = capture.begin(supported: true)!
+check(!capture.permission(granted: false, ticket: deniedStart), "permission denial never starts capture")
+check(capture.phase == .denied && capture.action == "Open Settings", "permission recovery action")
+let retry = capture.begin(supported: true)!
+check(capture.permission(granted: true, ticket: retry), "retry after permission grant")
+check(capture.phase == .starting && capture.action == "Cancel", "wait for actual first frame")
+capture.firstFrame(ticket: firstStart)
+check(capture.phase == .starting, "old session frame cannot finish new start")
+capture.firstFrame(ticket: retry)
+check(capture.phase == .running && capture.action == "Stop camera", "first current frame starts UI")
+capture.stop(reason: .interrupted)
+check(capture.phase == .interrupted && capture.needsAttention, "interruption exposes recovery")
+capture.stop()
+check(capture.begin(supported: false) == nil && capture.phase == .unsupported, "report unsupported depth")
+for bad in ["", "localhost:8000", "ftp://server", "https://", "https://user:pass@server", "https://server?q=1", "https://server#part"] {
+    check(ControlServerAddress.parse(bad) == nil, "reject invalid server: \(bad)")
+}
+check(ControlServerAddress.parse("  https://demo.example.ts.net/api\n")?.absoluteString == "https://demo.example.ts.net/api", "trim and retain base path")
+check(ControlServerAddress.parse("http://127.0.0.1:8000") != nil, "accept local development server")
+check(AudioRouteState(spatial: nil).spatialLabel == "Spatial audio unknown", "unknown spatial route")
+check(AudioRouteState(spatial: false).spatialLabel == "Spatial audio off", "disabled spatial flag")
+check(AudioRouteState(spatial: true).spatialLabel == "Spatial audio available", "enabled spatial flag")
+
+// Spoken control-panel status: useful recovery instructions, meaningful changes only.
+var statusReady = AccessibleControlStatus(serverConfigured: true,
+    audio: AudioRouteState(name: "AirPods", external: true, spatial: true))
+check(statusReady.summary.contains("Camera is off"), "spoken summary includes camera state")
+check(statusReady.summary.contains("LiDAR available"), "spoken summary includes LiDAR")
+check(statusReady.summary.contains("AirPods") && statusReady.summary.contains("Spatial audio available"), "spoken summary includes actual audio route")
+check(statusReady.summary.contains("Start the camera to connect"), "idle connection is not reported as a failure")
+check(statusReady.summary.contains("Voice commands: off"), "spoken summary includes voice status")
+check(statusReady.announcement(since: statusReady) == nil, "identical status is silent")
+var missingServer = statusReady
+missingServer.serverConfigured = false
+check(missingServer.summary.contains("Connection settings"), "missing server has recovery instructions")
+var statusRunning = statusReady
+statusRunning.phase = .running
+statusRunning.tracking = "normal"
+statusRunning.voice = .listening
+check(statusRunning.waitingForServer, "running disconnected state enables connection reminder")
+check(statusRunning.announcement(since: statusReady)?.contains("Camera running") == true, "announce successful first frame")
+check(statusRunning.announcement(since: statusReady)?.contains("Server connecting") == true, "camera running does not imply server connected")
+var connected = statusRunning
+connected.serverConnected = true
+check(!connected.waitingForServer, "connected state cancels connection reminder")
+check(connected.announcement(since: statusRunning) == "Server connected.", "announce server recovery")
+check(statusRunning.announcement(since: connected)?.contains("Server disconnected. Check Wi-Fi and Tailscale") == true, "announce lost server with action")
+check(statusReady.announcement(since: connected) == "Camera stopped.", "intentional stop does not also announce server failure")
+var denied = statusReady
+denied.phase = .denied
+check(denied.announcement(since: statusReady)?.contains("Open iPhone Settings") == true, "camera denial explains recovery")
+check(denied.cameraActionHint.contains("Settings"), "denied primary action hint describes Settings")
+denied.message = "Allow camera access in Settings."
+check(denied.cameraDescription == "Camera access is off. Allow camera access in Settings.", "camera permission instructions are not duplicated")
+var interrupted = connected
+interrupted.phase = .interrupted
+interrupted.message = "Camera interrupted. Start again when ready."
+check(interrupted.cameraDescription == interrupted.message, "specific interruption reason is not duplicated")
+check(statusReady.cameraActionHint.contains("Two-finger double-tap"), "start hint makes Magic Tap discoverable")
+check(connected.cameraActionHint.contains("Stops capture"), "stop hint describes resource cleanup")
+var failedCamera = connected
+failedCamera.phase = .failed
+failedCamera.message = "Camera is being used by another app."
+check(failedCamera.announcement(since: connected)?.contains("another app") == true, "camera failure includes specific reason")
+var unsupported = statusReady
+unsupported.phase = .unsupported
+unsupported.lidarAvailable = false
+check(unsupported.summary.contains("LiDAR-capable iPhone is required"), "unsupported hardware has explanation")
+var permission = statusReady
+permission.phase = .permission
+check(permission.announcement(since: statusReady) == nil, "system permission prompt owns speech")
+var noHeadphones = connected
+noHeadphones.audio = AudioRouteState(name: "iPhone", external: false, spatial: false)
+check(noHeadphones.announcement(since: connected)?.contains("Headphones disconnected") == true, "announce unplugged headphones")
+check(noHeadphones.summary.contains("Connect headphones for directional audio"), "speaker fallback is explicit")
+var spatialOff = connected
+spatialOff.audio.spatial = false
+check(spatialOff.announcement(since: connected) == nil, "OS spatial flag is informational, not an HRTF failure")
+var voiceDenied = connected
+voiceDenied.voice = .permissionDenied
+check(voiceDenied.announcement(since: connected)?.contains("microphone and speech recognition") == true, "voice permission failure is discoverable")
+check(voiceDenied.summary.contains("restart the camera"), "voice recovery explains restart")
+check(connected.announcement(since: voiceDenied) == "Voice commands are listening again.", "announce voice recovery")
+var voiceUnavailable = connected
+voiceUnavailable.voice = .unavailable
+check(voiceUnavailable.announcement(since: connected)?.contains("unavailable") == true, "voice startup error has speech")
+var audioFailed = connected
+audioFailed.audioProblem = "Navigation audio could not start. Stop and restart the camera to try again."
+check(audioFailed.announcement(since: connected) == audioFailed.audioProblem, "navigation audio startup error has speech")
+var limited = connected
+limited.tracking = "limited: moving too fast"
+check(limited.announcement(since: connected)?.contains("more slowly") == true, "tracking loss has actionable instructions")
+var stillLimited = limited
+stillLimited.tracking = "limited: too few features"
+check(stillLimited.announcement(since: limited) == nil, "changing limited reasons does not chatter")
+check(connected.announcement(since: limited) == "Position tracking restored.", "announce restored positioning")
+check(stillLimited.summary.contains("better light"), "read status includes latest tracking reason")
+var initializing = connected
+initializing.tracking = "limited: initializing"
+check(connected.announcement(since: initializing) == nil, "normal startup tracking does not generate recovery chatter")
+for state in [statusReady, statusRunning, connected, denied, failedCamera, unsupported, voiceDenied, noHeadphones] {
+    check(!state.summary.contains("\n"), "spoken status has no visual line breaks")
+}
+
 struct SplitMix: RandomNumberGenerator {
     var state: UInt64
     mutating func next() -> UInt64 {
@@ -275,13 +388,99 @@ do {
 
     var h = Guidance()
     h.start(GuidanceTarget(itemId: "mug", name: "mug", position: SIMD3(0, 1, -3), surface: nil, labelText: nil, labelAudioURL: "/v1/audio/a"), now: 0)
-    h.retarget(itemId: "mug", position: SIMD3(3, 1, 0))
+    h.retarget(itemId: "mug", position: SIMD3(3, 1, 0), surface: nil)
     _ = h.tick(now: 0, chest: .zero, ear: SIMD3(0, 0.45, 0), headYawDeg: 0)
     check(near(h.relAzimuthDeg, 90, 0.01), "moved event retargets: \(h.relAzimuthDeg)")
     h.handProximity(itemId: "mug", distanceM: 0.2, t: 0)
     _ = h.tick(now: 0.9, chest: .zero, ear: SIMD3(0, 0.45, 0), headYawDeg: 0)
     check(h.phase != .reach, "stale proximity doesn't count")
-    check(h.touched(itemId: "mug", t: 1) == [.silence, .haptic, .playLabel("/v1/audio/a")], "a labelled item plays its label")
+    check(h.touched(itemId: "mug", t: 1) == [.silence, .haptic, .playLabel("/v1/audio/a", fallback: "Got it.")], "a labelled item plays its label")
+}
+
+// MARK: - Audit regressions: request cancellation, pose validity, map-save lifetime, live target metadata
+
+do {
+    let scope = NavigationScope(captureGeneration: 1, mapId: "room-a", revision: 1)
+    let sample = NavigationPose(scope: scope, transform: matrix_identity_float4x4, timestamp: 10)
+    check(sample.usable(now: 10.1, in: scope), "fresh current-map pose is usable")
+    check(!sample.usable(now: 11, in: scope), "stalled camera invalidates directional guidance")
+    check(!sample.usable(now: 9, in: scope), "future timestamp is unusable")
+    check(!sample.usable(now: .infinity, in: scope), "non-finite clock is unusable")
+    check(!sample.usable(now: 10.1, in: nil), "missing coordinate frame is unusable")
+    let newMap = NavigationScope(captureGeneration: 1, mapId: "room-b", revision: 2)
+    let restarted = NavigationScope(captureGeneration: 2, mapId: "room-a", revision: 1)
+    let reset = NavigationScope(captureGeneration: 1, mapId: "room-a", revision: 2)
+    for changed in [newMap, restarted, reset] {
+        check(!sample.usable(now: 10.1, in: changed), "old pose cannot cross map/capture/reset: \(changed)")
+    }
+    var finds = FindRequests()
+    finds.begin(id: "first", name: "keys", scope: scope)
+    check(finds.consume(id: nil, in: scope) == nil && finds.pending?.id == "first", "uncorrelated Find cannot consume current request")
+    check(finds.consume(id: "unknown", in: scope) == nil && finds.pending?.id == "first", "unknown Find answer is ignored")
+    finds.cancel()
+    check(finds.consume(id: "first", in: scope) == nil, "voice Stop cancels a delayed Find answer")
+    finds.begin(id: "old", name: "keys", scope: scope)
+    finds.begin(id: "new", name: "mug", scope: scope)
+    check(finds.consume(id: "old", in: scope) == nil && finds.pending?.name == "mug", "superseded Find cannot replace newer search")
+    check(finds.consume(id: "new", in: scope)?.name == "mug", "matching current Find is accepted")
+    check(finds.consume(id: "new", in: scope) == nil, "duplicate Find answer cannot restart guidance")
+    for changed in [newMap, restarted, reset] {
+        finds.begin(id: "old-scope", name: "keys", scope: scope)
+        check(finds.consume(id: "old-scope", in: changed) == nil, "old answer cannot cross map/capture/reset: \(changed)")
+    }
+
+    var maps = WorldMapLifecycle()
+    maps.begin()
+    let firstId = maps.mapId
+    let discardedSave = maps.prepareSave()
+    maps.begin() // resetTracking without a restored map
+    check(maps.mapId != firstId, "unsaved capture restart allocates a new map ID")
+    check(!maps.accepts(discardedSave), "save from discarded map cannot write or publish")
+    let savedId = maps.mapId
+    let beforeRestart = maps.prepareSave()
+    maps.begin(restoredMapId: savedId)
+    check(maps.mapId == savedId, "restoration retains the saved map identity")
+    check(!maps.accepts(beforeRestart), "restoring same ID still invalidates previous capture's async save")
+    let olderSave = maps.prepareSave()
+    let newestSave = maps.prepareSave()
+    check(!maps.accepts(olderSave) && maps.accepts(newestSave), "older overlapping save cannot overwrite the latest snapshot")
+    maps.begin()
+    check(!maps.accepts(newestSave), "manual or timeout fresh-map reset invalidates all pending saves")
+    let currentSave = maps.prepareSave()
+    check(maps.accepts(currentSave), "valid save after reset is accepted")
+
+    var moving = Guidance()
+    moving.start(GuidanceTarget(itemId: "keys", name: "keys", position: SIMD3(0, 1, -2), surface: "table", labelText: nil, labelAudioURL: nil), now: 0)
+    moving.retarget(itemId: "keys", position: SIMD3(0, 1, -0.3), surface: "shelf")
+    let reached = moving.tick(now: 2, chest: .zero, ear: .zero, headYawDeg: 0)
+    check(reached.contains(.say("Within reach, on the shelf.")), "moved item speaks updated surface")
+    moving.retarget(itemId: "keys", position: SIMD3(0, 1, -0.3), surface: "shelf")
+    check(!moving.tick(now: 3, chest: .zero, ear: .zero, headYawDeg: 0).contains(.say("Within reach, on the shelf.")), "duplicate sighting does not repeat within-reach speech")
+    moving.retarget(itemId: "keys", position: SIMD3(0, 1, -0.3), surface: nil)
+    check(moving.tick(now: 4, chest: .zero, ear: .zero, headYawDeg: 0).contains(.say("Within reach.")), "unknown surface clears previous spoken surface")
+    moving.handProximity(itemId: "keys", distanceM: 0.1, t: 4)
+    check(moving.tick(now: 4.1, chest: .zero, ear: .zero, headYawDeg: 0).contains(.steadyTone(true)), "proximity starts steady tone before movement")
+    moving.retarget(itemId: "keys", position: SIMD3(0, 1, -2), surface: "table")
+    check(moving.tick(now: 4.2, chest: .zero, ear: .zero, headYawDeg: 0).contains(.steadyTone(false)), "moving target drops old proximity and stops steady tone")
+    moving.retarget(itemId: "other", position: .zero, surface: nil)
+    check(moving.target?.surface == "table", "other item's metadata does not overwrite target")
+
+    var labelled = Guidance()
+    let unlabelled = GuidanceTarget(itemId: "keys", name: "keys", position: SIMD3(0, 1, -2), surface: "table", labelText: nil, labelAudioURL: nil)
+    labelled.start(unlabelled, now: 0)
+    labelled.updateLabel(itemId: "keys", name: "front-door keys", text: "Your front-door keys.", audioURL: nil)
+    check(labelled.touched(itemId: "keys", t: 1).contains(.say("Your front-door keys.")), "label arriving during guidance is spoken at touch")
+    labelled.start(unlabelled, now: 2)
+    labelled.updateLabel(itemId: "keys", name: nil, text: "New label", audioURL: "/v1/audio/old")
+    labelled.updateLabel(itemId: "keys", name: nil, text: "Replacement label", audioURL: "/v1/audio/new")
+    check(labelled.touched(itemId: "keys", t: 3).contains(.playLabel("/v1/audio/new", fallback: "Replacement label")), "replacement label uses latest audio and text fallback")
+    labelled.start(unlabelled, now: 4)
+    labelled.updateLabel(itemId: "other", name: "other", text: "Wrong label", audioURL: "/wrong")
+    check(labelled.touched(itemId: "keys", t: 5).contains(.say("Got it.")), "label for another item is ignored by active guidance")
+    labelled.start(unlabelled, now: 6)
+    labelled.updateLabel(itemId: "keys", name: nil, text: "Text only", audioURL: "/old")
+    labelled.updateLabel(itemId: "keys", name: nil, text: "Text only", audioURL: nil)
+    check(labelled.touched(itemId: "keys", t: 7).contains(.say("Text only")), "text-only update clears obsolete audio URL")
 }
 
 // MARK: - What Marco says, and what it hears

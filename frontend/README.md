@@ -1,6 +1,6 @@
 # Marco Polo dashboard
 
-React + TypeScript + Vite implementation of the [Paper v2 designs](https://app.paper.design/file/01M55Z1GDRDK8E0XJMJE99EECZ/p-1-0).
+React + TypeScript + Vite implementation of the approved [Paper V3 designs](https://app.paper.design/file/01M55Z1GDRDK8E0XJMJE99EECZ/p-1-0). Instrument Sans is bundled locally; the web and iOS app share the palette and typography described in [design-v3.md](docs/design-v3.md).
 
 ## Run
 
@@ -18,6 +18,8 @@ Objects supports search, selection, last-seen history, explicit voice-label play
 
 ## Connect FastAPI
 
+The newly added `server/` uses `/v1/dashboard` messages from [the team contract](../docs/INTERFACES.md). It does **not** yet implement the three dashboard routes below. Live web integration needs a server adapter and phone Find/Stop forwarding; Demo mode is complete and independently runnable. The visual refresh does not change either message format or weaken server authentication.
+
 ```sh
 cp .env.example .env.local
 ```
@@ -27,6 +29,8 @@ Set `VITE_DATA_SOURCE=api` and restart Vite. Keep `VITE_API_BASE_URL=/api`; the 
 API mode has no silent demo fallback. API URLs are public configuration, not secrets. HTTP uses browser cookies (`credentials: include`); WebSockets use the same browser session. No auth provider or login screen is invented here. The backend must implement its chosen access policy for HTTP, media and WebSockets together.
 
 Read [the short FastAPI handoff](docs/fastapi-handoff.md), [the full contract](docs/frontend-backend-contract.md), [the example snapshot](docs/dashboard.snapshot.example.json), and [the JSON Schema](docs/dashboard.snapshot.schema.json).
+
+For taking on the API work after the backend core is ready, use [the backend integration plan](docs/backend-integration-plan.md). It covers current core access points, data mapping, the iOS command extension, ownership decisions and end-to-end verification. Implementation and ownership are still pending.
 
 ## Workflow reference
 
@@ -53,6 +57,8 @@ CI=1 npm run test:e2e
 
 Browser tests start two servers: demo at 5173 and API mode at 5174. API tests intercept HTTP and WebSocket traffic with contract-valid messages. They cover commands, reconnects, errors, stale/out-of-order data, media failures, accessibility scans, keyboard focus and 1440 / 768 / 390 px layouts. The tests do not validate real phone, Photon, LiDAR or spatial audio integration.
 
+The October 17 audit fixes pass **52 unit tests and 22 browser tests**. See [audit-fixes.md](docs/audit-fixes.md) for corrected map identity, command scoping, silent-connection recovery and camera empty-state behavior.
+
 `npm run schema:export` regenerates the backend JSON Schema from `src/lib/schema.ts`. Both the demo and shared example are validated by unit tests. Bounds must also have positive area and detection boxes must have positive width/height; these cross-field runtime checks are documented in the contract.
 
 ## Files
@@ -65,5 +71,7 @@ Browser tests start two servers: demo at 5173 and API mode at 5174. API tests in
 - `src/styles.css`: responsive layout, typography, colors, focus and reduced motion.
 
 ## Assets
+
+Instrument Sans is by Rodrigo Fuenzalida, with direction from Jordan Egstad for Instrument. The official font is bundled in `public/fonts/` under the included SIL Open Font License; no font CDN is used. Source: [Instrument/instrument-sans](https://github.com/Instrument/instrument-sans).
 
 The custom Marco Polo SVG mark follows the Paper identity. The demo keys photograph is by [Filip Szalbot on Unsplash](https://unsplash.com/photos/a-bunch-of-keys-sitting-on-top-of-a-wooden-table-PxiAc1aElFQ), used under the [Unsplash License](https://unsplash.com/license). Replace it with the team's actual object photo for the live demo. The local sample voice label says “Your house keys.” and was synthesized with macOS Samantha; it is not a family recording. No external image or audio service is contacted at runtime.

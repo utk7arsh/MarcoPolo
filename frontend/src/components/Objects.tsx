@@ -66,7 +66,7 @@ export function Objects({
         </div>
       ) : (
         <div className="objects-layout">
-          <section className="panel object-library" aria-label="Object library">
+          <section className="object-library" aria-label="Object library">
             <div className="library-heading">
               <h2>
                 All objects <span>· {data.items.length}</span>
@@ -146,7 +146,7 @@ export function Objects({
           </section>
           {selected && (
             <aside
-              className="panel object-detail"
+              className="object-detail"
               aria-label={`${selected.name} details`}
             >
               <div className="detail-title">

@@ -1,0 +1,24 @@
+{
+  "fileId": "01M55Z1GDRDK8E0XJMJE99EECZ",
+  "pageId": "p-1-0",
+  "artboards": {
+    "ready": {
+      "id": "1BZ-0",
+      "preview": "ready.png"
+    },
+    "running": {
+      "id": "1E2-0",
+      "preview": "running.png"
+    },
+    "attention": {
+      "id": "1FQ-0",
+      "preview": "attention.png"
+    }
+  },
+  "url": "https://app.paper.design/file/01M55Z1GDRDK8E0XJMJE99EECZ/p-1-0",
+  "v3": {
+    "ready": "1IX-0",
+    "webLive": "1KO-0",
+    "visualSystem": "1NW-0"
+  }
+}

@@ -229,23 +229,102 @@ test('a live socket with no updates becomes stale, then recovers from a fresh sn
   await expect(page.getByLabel('2.1 meters')).toBeVisible()
 })
 
-test('reset map identity hides guidance while preserving last-seen descriptions', async ({
+test('a silent socket automatically refetches current state and resumes without a page refresh', async ({
   page,
 }) => {
   const api = await mockApi(page)
-  api.value.data.wearer!.worldMapId = 'new-map'
+  let loads = 0
+  await page.route('**/api/dashboard/snapshot', (route) => {
+    if (++loads > 1) {
+      api.value.sequence++
+      const time = new Date().toISOString()
+      api.value.sentAt = time
+      api.value.data.navigation.updatedAt = time
+      api.value.data.devices.phone.lastMessageAt = time
+      api.value.data.wearer!.at = time
+    }
+    return route.fulfill({ json: api.value })
+  })
   await page.goto('/#live')
+  await expect(page.getByLabel('2.1 meters')).toBeVisible()
   await expect(
-    page.getByRole('heading', { name: 'Location unavailable' }),
+    page.getByText('Connection lost. Showing last-seen memory.', {
+      exact: true,
+    }),
+  ).toBeVisible({ timeout: 6000 })
+  await expect.poll(() => loads, { timeout: 10000 }).toBe(2)
+  await expect(page.getByLabel('2.1 meters')).toBeVisible()
+  await expect(page.locator('.position-status')).toHaveText('Live position')
+})
+
+for (const reset of ['session', 'wearer'] as const) {
+  test(`${reset} map reset suppresses live position while preserving last-seen descriptions`, async ({
+    page,
+  }) => {
+    const api = await mockApi(page)
+    await page.goto('/#live')
+    await expect(page.locator('.position-status')).toHaveText('Live position')
+    await expect(page.getByRole('button', { name: 'Recenter' })).toBeEnabled()
+    if (reset === 'session') api.value.data.session.worldMapId = 'new-map'
+    else api.value.data.wearer!.worldMapId = 'new-map'
+    api.publish()
+    await expect(
+      page.getByRole('heading', { name: 'Location unavailable' }),
+    ).toBeVisible()
+    await expect(page.locator('.position-status')).toHaveText(
+      'Position unavailable',
+    )
+    await expect(
+      page.locator('.room-map text').filter({ hasText: /^You$/ }),
+    ).toHaveCount(0)
+    await expect(page.locator('.room-map line[stroke-dasharray]')).toHaveCount(
+      0,
+    )
+    await expect(page.getByRole('button', { name: 'Recenter' })).toBeDisabled()
+    await expect(page.getByLabel('2.1 meters')).toHaveCount(0)
+    await page.getByRole('link', { name: 'Objects', exact: true }).click()
+    await expect(
+      page.getByRole('button', { name: /Keys Coffee table/ }),
+    ).toBeVisible()
+    await expect(
+      page.getByRole('button', { name: 'Find keys', exact: true }),
+    ).toBeDisabled()
+  })
+}
+
+test('a missing camera waits, an actual image failure is reported, and a new frame recovers', async ({
+  page,
+}) => {
+  const api = await mockApi(page)
+  const camera = structuredClone(api.value.data.camera!)
+  api.value.data.camera = null
+  await page.route('**/images/failed-camera.jpg', (route) => route.abort())
+  await page.goto('/#live')
+  await page.getByRole('button', { name: 'Camera', exact: true }).click()
+  await expect(
+    page.getByRole('heading', { name: 'Waiting for camera', exact: true }),
   ).toBeVisible()
-  await expect(page.getByLabel('2.1 meters')).toHaveCount(0)
-  await page.getByRole('link', { name: 'Objects', exact: true }).click()
+  api.value.data.camera = { ...camera, imageUrl: '/images/failed-camera.jpg' }
+  api.publish()
   await expect(
-    page.getByRole('button', { name: /Keys Coffee table/ }),
+    page.getByRole('heading', { name: 'Frame unavailable', exact: true }),
   ).toBeVisible()
+  api.value.data.camera = null
+  api.publish()
   await expect(
-    page.getByRole('button', { name: 'Find keys', exact: true }),
-  ).toBeDisabled()
+    page.getByRole('heading', { name: 'Waiting for camera', exact: true }),
+  ).toBeVisible()
+  api.value.data.camera = { ...camera, frameId: camera.frameId + 1 }
+  api.publish()
+  await expect(
+    page.getByRole('img', { name: 'Chest camera preview' }),
+  ).toBeVisible()
+  await expect(page.getByTestId('detection-box')).toHaveCount(1)
+  api.value.data.devices.phone.state = 'disconnected'
+  api.publish()
+  await expect(
+    page.getByRole('heading', { name: 'Camera disconnected', exact: true }),
+  ).toBeVisible()
 })
 
 test('a replacement voice label recovers after a media failure', async ({

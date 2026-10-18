@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { DashboardData } from '../lib/schema'
-import { locationIsValid } from '../lib/format'
+import { currentMapWearer, locationIsValid } from '../lib/format'
 import { Icon } from './Icon'
 import { itemIcon } from '../lib/itemIcon'
 import { EmptyState } from './Shared'
@@ -28,7 +28,7 @@ export function MapView({
   const scale = Math.min(650 / width, 440 / depth)
   const x = (value: number) => 400 + (value - (b.minX + b.maxX) / 2) * scale
   const z = (value: number) => 260 + (value - (b.minZ + b.maxZ) / 2) * scale
-  const wearer = data.wearer?.worldMapId === map.worldMapId ? data.wearer : null
+  const wearer = live ? currentMapWearer(data) : null
   const target = data.items.find((item) => item.id === targetId)
   const targetPosition =
     target && locationIsValid(data, target) ? target.lastSeen?.position : null
@@ -121,16 +121,16 @@ export function MapView({
               const selected = item.id === targetId
               return (
                 <g key={item.id} transform={`translate(${x(p.x)} ${z(p.z)})`}>
-                  {selected && <circle r="30" fill="#0066cc" opacity=".055" />}
+                  {selected && <circle r="30" fill="#1559d6" opacity=".055" />}
                   <circle
                     r={selected ? 19 : 13}
                     fill="white"
-                    stroke={selected ? '#0066cc' : '#c9ccd2'}
+                    stroke={selected ? '#1559d6' : '#c9ccd2'}
                     strokeWidth={selected ? 1.8 : 1}
                   />
                   <g
                     transform={`translate(${selected ? -9 : -7} ${selected ? -9 : -7})`}
-                    color={selected ? '#0066cc' : '#767b82'}
+                    color={selected ? '#1559d6' : '#767b82'}
                   >
                     <Icon
                       name={itemIcon(item.name)}
@@ -162,12 +162,12 @@ export function MapView({
               >
                 <path
                   d="M0 0 -25 -65 25 -65Z"
-                  fill="#0066cc"
+                  fill="#1559d6"
                   opacity=".065"
                   transform={`rotate(${wearer.bodyYawDeg})`}
                 />
-                <circle r="18" fill="#0066cc" opacity=".08" />
-                <circle r="10" fill="#0066cc" stroke="white" strokeWidth="4" />
+                <circle r="18" fill="#1559d6" opacity=".08" />
+                <circle r="10" fill="#1559d6" stroke="white" strokeWidth="4" />
                 <text y="34" textAnchor="middle" className="surface-label">
                   You
                 </text>
@@ -179,7 +179,7 @@ export function MapView({
       <div className="map-footer">
         <div className="map-legend">
           <span>
-            <i className={`dot ${live ? 'blue' : 'gray'}`} />
+            <i className={`dot ${wearer ? 'blue' : 'gray'}`} />
             You
           </span>
           <span>

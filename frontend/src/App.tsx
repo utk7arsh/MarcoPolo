@@ -76,7 +76,7 @@ export function App({
           <img src="/brand/marco-polo-mark.svg" width="32" height="32" alt="" />
           <span>Marco Polo</span>
         </a>
-        <nav className="segmented main-nav" aria-label="Main navigation">
+        <nav className="main-nav" aria-label="Main navigation">
           <a
             href="#objects"
             aria-current={page === 'objects' ? 'page' : undefined}

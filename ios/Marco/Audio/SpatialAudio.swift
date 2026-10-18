@@ -7,6 +7,7 @@ import simd
 /// -z ahead; Geo.listenerRelative with the fused head yaw), so the listener node itself never turns and there is no
 /// AVAudio yaw-sign convention to get wrong.
 final class SpatialAudio {
+    enum PlaybackError: Error { case unreadableAudio }
     let engine = AVAudioEngine()
     private let environment = AVAudioEnvironmentNode()
     private let beacon = AVAudioPlayerNode()     // beeps and dings
@@ -23,6 +24,7 @@ final class SpatialAudio {
     private var voiceAtItem = false
     private var observers: [NSObjectProtocol] = []
     private static let ahead = AVAudio3DPoint(x: 0, y: 0, z: -1)
+    private var itemPosition = SpatialAudio.ahead
 
     /// The route changed (AirPods in or out, the mic switched): its description, for the debug screen. Any thread.
     var onRoute: ((String) -> Void)?
@@ -118,9 +120,19 @@ final class SpatialAudio {
         voice.scheduleBuffer(blip, at: nil, options: [], completionHandler: nil)
     }
 
+    func stop() {
+        synth.stopSpeaking(at: .immediate)
+        for node in [beacon, tone, voice] { node.stop() }
+        engine.stop()
+        #if os(iOS)
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        #endif
+    }
+
     /// Where the guided item is now, listener-relative. Call every tick while guiding.
     func place(_ p: SIMD3<Float>) {
         let pt = AVAudio3DPoint(x: p.x, y: p.y, z: p.z)
+        itemPosition = pt
         beacon.position = pt
         tone.position = pt
         voice.position = voiceAtItem ? pt : Self.ahead
@@ -154,7 +166,7 @@ final class SpatialAudio {
     /// Marco's voice, rendered in 3D: at the guided item ("Polo!") or straight ahead.
     func say(_ text: String, atItem: Bool) {
         voiceAtItem = atItem
-        if !atItem { voice.position = Self.ahead }
+        voice.position = atItem ? itemPosition : Self.ahead
         let u = AVSpeechUtterance(string: text)
         u.voice = AVSpeechSynthesisVoice(language: "en-US")
         synth.write(u) { [weak self] buffer in
@@ -170,12 +182,16 @@ final class SpatialAudio {
     /// A label voice memo (any format AVAudioFile reads, such as the server's m4a), at the item or ahead.
     func playFile(_ url: URL, atItem: Bool) throws {
         let file = try AVAudioFile(forReading: url)
-        guard let pcm = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: AVAudioFrameCount(file.length)) else { return }
+        guard let pcm = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: AVAudioFrameCount(file.length)) else {
+            throw PlaybackError.unreadableAudio
+        }
         try file.read(into: pcm)
         guard let conv = AVAudioConverter(from: pcm.format, to: format),
-              let mono = Self.convert(pcm, with: conv, to: format, endOfStream: true) else { return }
+              let mono = Self.convert(pcm, with: conv, to: format, endOfStream: true) else {
+            throw PlaybackError.unreadableAudio
+        }
         voiceAtItem = atItem
-        if !atItem { voice.position = Self.ahead }
+        voice.position = atItem ? itemPosition : Self.ahead
         voice.scheduleBuffer(mono, at: nil, options: [.interrupts], completionHandler: nil)
     }
 

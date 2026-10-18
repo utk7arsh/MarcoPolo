@@ -29,6 +29,8 @@ final class Listener {
     static let armedS = 5.0                      // after "Marco" alone
     static let restartS = 50.0                   // server-side recognition stops after about a minute
 
+    private enum StartError: Error { case recognitionUnavailable }
+
     static func requestPermissions(_ done: @escaping (Bool) -> Void) {
         SFSpeechRecognizer.requestAuthorization { status in
             guard status == .authorized else { return done(false) }
@@ -42,6 +44,7 @@ final class Listener {
     }
 
     func start() throws {
+        guard recognizer?.isAvailable == true else { throw StartError.recognitionUnavailable }
         try startEngine()
         // A route change (AirPods in or out, the mic switched) stops the engine and can change the input format.
         configObserver = NotificationCenter.default.addObserver(forName: .AVAudioEngineConfigurationChange, object: engine,
@@ -57,8 +60,15 @@ final class Listener {
         engine.stop()
         engine.inputNode.removeTap(onBus: 0)
         queue.async {
+            self.generation += 1
+            self.debounce?.cancel()
+            self.debounce = nil
+            self.pushToTalk = false
             self.task?.cancel()
             self.task = nil
+            self.lock.lock()
+            self.request = nil
+            self.lock.unlock()
         }
     }
 
@@ -90,7 +100,10 @@ final class Listener {
             r?.append(buf)
         }
         engine.prepare()
-        try engine.start()
+        do { try engine.start() } catch {
+            input.removeTap(onBus: 0)
+            throw error
+        }
     }
 
     private func reconfigure(attempt: Int) {

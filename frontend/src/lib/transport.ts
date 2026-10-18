@@ -26,10 +26,11 @@ export function createApiTransport(base: string): Transport {
       let retry: ReturnType<typeof setTimeout> | undefined
       let abort: AbortController | undefined
       let attempts = 0
-      let lastReceived = 0
+      let lastProgress = Date.now()
       let current: Snapshot | undefined
       let authFailed = false
       const receive = (raw: unknown) => {
+        if (stopped || authFailed) return
         if (
           typeof raw === 'object' &&
           raw &&
@@ -52,28 +53,39 @@ export function createApiTransport(base: string): Transport {
         )
           return
         current = value
-        lastReceived = Date.now()
+        lastProgress = Date.now()
         attempts = 0
         onSnapshot(value)
         onConnection('live')
       }
       const schedule = () => {
-        if (!stopped && !authFailed)
+        if (!stopped && !authFailed && retry === undefined)
           retry = setTimeout(
             () => {
+              retry = undefined
               void connect()
             },
             Math.min(500 * 2 ** attempts++, 5000),
           )
       }
+      const disconnect = (closed: WebSocket, close = true) => {
+        if (stopped || authFailed || socket !== closed) return
+        // Detach first: error, close and heartbeat may all report the same dead socket.
+        socket = undefined
+        if (close) closed.close()
+        onConnection('offline')
+        schedule()
+      }
       const connect = async () => {
-        if (stopped) return
-        abort = new AbortController()
-        const timeout = setTimeout(() => abort?.abort(), 5000)
+        if (stopped || authFailed) return
+        lastProgress = Date.now() // Also bounds the wait for a first valid snapshot.
+        const controller = new AbortController()
+        abort = controller
+        const timeout = setTimeout(() => controller.abort(), 5000)
         try {
           const response = await fetch(apiUrl(base, '/dashboard/snapshot'), {
             credentials: 'include',
-            signal: abort.signal,
+            signal: controller.signal,
           })
           if (stopped) return
           if (response.status === 401 || response.status === 403) {
@@ -95,31 +107,32 @@ export function createApiTransport(base: string): Transport {
         if (stopped || authFailed) return
         const url = new URL(apiUrl(base, '/events'))
         url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
-        socket = new WebSocket(url)
-        socket.onmessage = (event) => {
-          if (stopped) return
-          try {
-            receive(JSON.parse(String(event.data)))
-          } catch {
-            onConnection('stale', 'Could not read a server update.')
+        try {
+          const connected = new WebSocket(url)
+          socket = connected
+          connected.onmessage = (event) => {
+            if (stopped || socket !== connected) return
+            try {
+              receive(JSON.parse(String(event.data)))
+            } catch {
+              onConnection('stale', 'Could not read a server update.')
+            }
           }
+          connected.onclose = () => disconnect(connected, false)
+          connected.onerror = () => disconnect(connected)
+        } catch {
+          onConnection(
+            'offline',
+            'Cannot open the live connection. Reconnecting…',
+          )
+          schedule()
         }
-        socket.onclose = () => {
-          if (!stopped) {
-            onConnection('offline')
-            schedule()
-          }
-        }
-        socket.onerror = () => socket?.close()
       }
       const heartbeat = setInterval(() => {
-        if (
-          !stopped &&
-          lastReceived &&
-          Date.now() - lastReceived > 3000 &&
-          !authFailed
-        )
-          onConnection('stale')
+        if (stopped || authFailed || retry !== undefined) return
+        const silence = Date.now() - lastProgress
+        if (silence > 10000 && socket) disconnect(socket)
+        else if (silence > 3000) onConnection('stale')
       }, 500)
       void connect()
       return () => {

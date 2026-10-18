@@ -1,4 +1,5 @@
 import ARKit
+import AVFoundation
 import Foundation
 import SwiftUI
 import UIKit
@@ -9,7 +10,11 @@ import UIKit
 ///   voice and buttons     -> queries
 /// and runs the §7 guidance loop at 60 Hz on the main thread.
 final class AppModel: ObservableObject {
-    // The debug screen (main thread only).
+    // UI state is published on the main thread. Sensor processing stays on its existing queues.
+    @Published private(set) var control = CaptureControl()
+    @Published private(set) var controlMessage: String?
+    @Published private(set) var voiceStatus: VoiceInputStatus = .off
+    @Published private(set) var audioProblem: String?
     @Published var serverText = Config.serverURL?.absoluteString ?? ""
     @Published var running = false
     @Published var socketUp = false
@@ -23,8 +28,8 @@ final class AppModel: ObservableObject {
     @Published var relAzimuth = 0.0
     @Published var distance = 0.0
     @Published var heard = ""
-    @Published var micInfo = ""
     @Published var log: [String] = []
+    @Published var micInfo = ""
     @Published var recording = false
     @Published var recordInfo = "off"
     @Published var linkInfo = ""
@@ -35,11 +40,20 @@ final class AppModel: ObservableObject {
     let sessionId = UUID().uuidString
 
     private struct Live {
-        var T: simd_float4x4?
+        var generation: Int?
+        var mapId: String?
+        var revision = 0
+        var pose: NavigationPose?
+        var trackingNormal = false
         var headYaw = 0.0
         var headSource = "phone"
         var signEvidence = 0.0
         var realignments = 0
+
+        var scope: NavigationScope? {
+            guard let generation, let mapId else { return nil }
+            return NavigationScope(captureGeneration: generation, mapId: mapId, revision: revision)
+        }
     }
 
     private let ar = ARSessionManager()
@@ -55,8 +69,7 @@ final class AppModel: ObservableObject {
     private let recorder = Recorder(root: Recorder.documents)
     private let poseRate = Locked(RateMeter())
     private let handRate = Locked(RateMeter())
-    private var frameRate = RateMeter()                                // main thread
-    private var uploader: Uploader?                                    // set once in start(), before ARKit runs
+    private var uploader: Uploader?
     private var socket: PhoneSocket?
 
     // ARKit queue only.
@@ -65,6 +78,7 @@ final class AppModel: ObservableObject {
     private var poseGate = Throttle(hz: Config.poseHz)
     private var handGate = Throttle(hz: Config.handHz)
     private var frameId = 0
+    private var reportedFrameTicket: Int?
     private var handBusy = false
 
     // Main thread only.
@@ -72,86 +86,200 @@ final class AppModel: ObservableObject {
     private var guidanceGate = Throttle(hz: Config.guidanceMsgHz)
     private var uiGate = Throttle(hz: 10)
     private var timer: Timer?
-    private var asked: [String: String] = [:]                          // find query_id -> the name asked for
+    private var finds = FindRequests()
+    private var guidanceScope: NavigationScope?
     private var labels: [String: (text: String?, url: String?)] = [:]  // item_id -> its label
     private var audioCache: [String: URL] = [:]                        // label_audio_url -> local file
+    private var listenerStarted = false
     private var vocabulary = ItemVocabulary()                          // registered item names, for the listener
+    private var frameRate = RateMeter()
+
+    var arSession: ARSession { ar.session }
+
+    init() {
+        if !ARSessionManager.supported { control.stop(reason: .unsupported) }
+    }
 
     /// The clock of ARFrame.timestamp and CMDeviceMotion.timestamp.
     private var now: Double { ProcessInfo.processInfo.systemUptime }
 
     // MARK: - Start
 
-    /// With a server URL: stream to it. With the field empty: record only (Record, then Export or Finder), for a
-    /// walk with no server or network; the recording is in the server's own layout (Core/Recorder.swift).
     func start() {
         guard !running else { return }
-        let text = serverText.trimmingCharacters(in: .whitespaces)
-        var url: URL?
-        if !text.isEmpty {
-            guard let u = URL(string: text), let scheme = u.scheme, ["https", "http"].contains(scheme) else {
-                return note("Server URL: https://<server-mac>.<tailnet>.ts.net, or leave it empty to record only.")
-            }
-            url = u
+        guard let url = ControlServerAddress.parse(serverText) else {
+            controlMessage = "Set the server address in Connection settings."
+            return
         }
-        guard ARSessionManager.supported else { return note("This device has no LiDAR scene depth.") }
-        if let url { Config.serverURL = url }
+        guard let ticket = control.begin(supported: ARSessionManager.supported) else { return }
+        controlMessage = nil
+        let permitted: (Bool) -> Void = { [weak self] granted in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                guard self.control.permission(granted: granted, ticket: ticket) else {
+                    if self.control.phase == .denied { self.controlMessage = "Allow camera access in Settings." }
+                    return
+                }
+                self.beginCapture(url: url, ticket: ticket)
+            }
+        }
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized: permitted(true)
+        case .notDetermined: AVCaptureDevice.requestAccess(for: .video, completionHandler: permitted)
+        default:
+            _ = control.permission(granted: false, ticket: ticket)
+            controlMessage = "Allow camera access in Settings."
+        }
+    }
+
+    private func beginCapture(url: URL, ticket: Int) {
+        Config.serverURL = url
         running = true
+        voiceStatus = .starting
+        audioProblem = nil
+        finds.cancel()
+        guidanceScope = nil
+        live.write { $0 = Live(generation: ticket) }
         UIApplication.shared.isIdleTimerDisabled = true          // ARKit stops when the screen locks
 
         audio.onRoute = { [weak self] route in DispatchQueue.main.async { self?.micInfo = route } }
-        do { try audio.start() } catch { note("audio: \(error.localizedDescription)") }
+        do { try audio.start() } catch {
+            audioProblem = "Navigation audio could not start. Stop and restart the camera to try again."
+            note("audio: \(error.localizedDescription)")
+        }
         micInfo = SpatialAudio.routeDescription()
 
-        if let url {
-            let up = Uploader(base: url)
-            up.onResult = { [weak self] code, body, ms in DispatchQueue.main.async { self?.uploaded(code, body, ms) } }
-            uploader = up
-            refreshItems()
+        let up = Uploader(base: url)
+        up.onResult = { [weak self] code, body, ms in DispatchQueue.main.async {
+            guard let self, self.running, self.control.generation == ticket else { return }
+            self.uploaded(code, body, ms)
+        } }
+        uploader = up
+        refreshItems(ticket: ticket)                         // labels made before this launch, audio cached now
 
-            let sock = PhoneSocket(base: url)
-            sock.onMessage = { [weak self] m in DispatchQueue.main.async { self?.handle(m) } }
-            sock.onState = { [weak self] isUp in
-                DispatchQueue.main.async {
-                    if isUp && self?.socketUp == false { self?.refreshItems() }   // items added while we were away
-                    self?.socketUp = isUp
-                }
-            }
-            sock.onUndecodable = { [weak self] s in DispatchQueue.main.async { self?.note("undecodable: \(s)") } }
-            sock.connect()
-            socket = sock
-            ServerCheck.run(base: url) { [weak self] line in self?.note(line) }   // Tailscale off? not on the allow-list?
-        } else {
-            note("No server: recording only. Press Record, walk, then Export.")
+        let sock = PhoneSocket(base: url)
+        sock.onMessage = { [weak self] m in DispatchQueue.main.async {
+            guard let self, self.running, self.control.generation == ticket else { return }
+            self.handle(m)
+        } }
+        sock.onState = { [weak self] isUp in DispatchQueue.main.async {
+            guard let self, self.running, self.control.generation == ticket else { return }
+            if isUp && !self.socketUp { self.refreshItems(ticket: ticket) }   // items added while we were away
+            self.socketUp = isUp
+        } }
+        sock.onUndecodable = { [weak self] s in DispatchQueue.main.async { self?.note("undecodable: \(s)") } }
+        sock.connect()
+        socket = sock
+        ServerCheck.run(base: url) { [weak self] line in                 // Tailscale off? not on the allow-list?
+            guard let self, self.running, self.control.generation == ticket else { return }
+            self.note(line)
         }
 
         head.start()
-        listener.onIntent = { [weak self] intent, text in DispatchQueue.main.async { self?.act(intent, text) } }
-        listener.onTranscript = { [weak self] text in DispatchQueue.main.async { self?.heard = text } }
-        listener.onWake = { [weak self] in
-            DispatchQueue.main.async {
-                self?.heard = "Marco... (listening)"
-                self?.audio.listening()
-            }
-        }
+        listener.onIntent = { [weak self] intent, text in DispatchQueue.main.async {
+            guard let self, self.running, self.control.generation == ticket else { return }
+            self.act(intent, text)
+        } }
+        listener.onTranscript = { [weak self] text in DispatchQueue.main.async {
+            guard let self, self.running, self.control.generation == ticket else { return }
+            self.heard = text
+        } }
+        listener.onWake = { [weak self] in DispatchQueue.main.async {
+            guard let self, self.running, self.control.generation == ticket else { return }
+            self.heard = "Marco... (listening)"
+            self.audio.listening()
+        } }
         listener.onError = { [weak self] e in DispatchQueue.main.async { self?.note("listener: \(e)") } }
         Listener.requestPermissions { [weak self] ok in
             DispatchQueue.main.async {
-                guard let self else { return }
-                guard ok else { return self.note("Speech or microphone permission denied: use the buttons.") }
-                do { try self.listener.start() } catch { self.note("listener: \(error.localizedDescription)") }
+                guard let self, self.running, self.control.generation == ticket else { return }
+                guard ok else {
+                    self.voiceStatus = .permissionDenied
+                    return self.note("Speech or microphone permission denied.")
+                }
+                do {
+                    try self.listener.start()
+                    self.listenerStarted = true
+                    self.voiceStatus = .listening
+                } catch {
+                    self.voiceStatus = .unavailable
+                    self.note("listener: \(error.localizedDescription)")
+                }
             }
         }
 
-        ar.onFrame = { [weak self] f in self?.onFrame(f) }
-        ar.onTracking = { [weak self] s in DispatchQueue.main.async { self?.tracking = s } }
-        ar.onMapEvent = { [weak self] e, id in self?.mapEvent(e, id) }
-        ar.onLost = { [weak self] in DispatchQueue.main.async { self?.speak(Lines.bearings) } }
+        ar.onFrame = { [weak self] f in self?.onFrame(f, ticket: ticket) }
+        ar.onTracking = { [weak self] s in
+            guard let self else { return }
+            if s != "normal" {
+                self.live.write {
+                    guard $0.generation == ticket else { return }
+                    if $0.trackingNormal { $0.revision += 1 }
+                    $0.trackingNormal = false
+                    $0.pose = nil
+                }
+            }
+            DispatchQueue.main.async {
+                guard self.running, self.control.generation == ticket else { return }
+                self.tracking = s
+                if s != "normal" { self.losePosition() }
+            }
+        }
+        ar.onFailure = { [weak self] message in DispatchQueue.main.async {
+            guard let self, self.running, self.control.generation == ticket else { return }
+            self.stop(reason: .failed, message: message)
+        } }
+        ar.onInterrupted = { [weak self] in DispatchQueue.main.async {
+            guard let self, self.running, self.control.generation == ticket else { return }
+            self.stop(reason: .interrupted, message: "Camera interrupted. Start again when ready.")
+        } }
+        ar.onMapEvent = { [weak self] e, id in
+            guard let self, self.live.read({ $0.generation == ticket }) else { return }
+            self.mapEvent(e, id, ticket: ticket)
+        }
+        ar.onLost = { [weak self] in DispatchQueue.main.async {
+            guard let self, self.running, self.control.generation == ticket else { return }
+            self.speak(Lines.bearings)
+        } }
+        ar.queue.async { self.fusion = HeadFusion() }
         ar.start()
 
         let t = Timer(timeInterval: 1.0 / 60, repeats: true) { [weak self] _ in self?.tick() }
         RunLoop.main.add(t, forMode: .common)
         timer = t
+    }
+
+    func stop(reason: CaptureControl.Phase = .ready, message: String? = nil) {
+        let finalReason: CaptureControl.Phase = reason == .ready && !ARSessionManager.supported ? .unsupported : reason
+        control.stop(reason: finalReason) // Invalidates permission callbacks, including before start.
+        controlMessage = message
+        let wasRunning = running
+        running = false
+        voiceStatus = .off
+        audioProblem = nil
+        live.write { $0.generation = nil; $0.pose = nil }
+        if recorder.isRecording { toggleRecording() }
+        finds.cancel()
+        timer?.invalidate(); timer = nil
+        UIApplication.shared.isIdleTimerDisabled = false
+        guard wasRunning else { return }
+        ar.saveMap()
+        ar.pause()
+        stopGuidance()
+        if listenerStarted { listener.stop(); listenerStarted = false }
+        head.stop()
+        audio.stop()
+        socket?.close(); socket = nil
+        uploader = nil
+        socketUp = false
+        tracking = "not started"
+    }
+
+    func refreshCameraAccess() {
+        if control.phase == .denied, AVCaptureDevice.authorizationStatus(for: .video) == .authorized {
+            control.stop()
+            controlMessage = nil
+        }
     }
 
     func saveMap() { ar.saveMap() }
@@ -167,10 +295,10 @@ final class AppModel: ObservableObject {
     }
 
     /// The registered items: their labels (audio cached now) and their names, which the listener matches speech to.
-    private func refreshItems() {
+    private func refreshItems(ticket: Int) {
         uploader?.items { [weak self] items in
             DispatchQueue.main.async {
-                guard let self, let items else { return }
+                guard let self, self.running, self.control.generation == ticket, let items else { return }
                 for it in items where it.label_text != nil || it.label_audio_url != nil {
                     self.labels[it.item_id] = (Lines.spokenLabel(name: it.name, labelText: it.label_text), it.label_audio_url)
                     self.cache(it.label_audio_url)
@@ -189,7 +317,12 @@ final class AppModel: ObservableObject {
 
     // MARK: - ARKit queue
 
-    private func onFrame(_ frame: ARFrame) {
+    private func onFrame(_ frame: ARFrame, ticket: Int) {
+        guard live.read({ $0.generation == ticket }) else { return }
+        if reportedFrameTicket != ticket {
+            reportedFrameTicket = ticket
+            DispatchQueue.main.async { [weak self] in self?.control.firstFrame(ticket: ticket) }
+        }
         let T = frame.camera.transform
         let t = frame.timestamp
         let torso = Geo.headingDeg(T)
@@ -201,34 +334,43 @@ final class AppModel: ObservableObject {
         }
         let source = fusion.source
         let evidence = fusion.signEvidence, realigned = fusion.realignments
+        let normal: Bool
+        if case .normal = frame.camera.trackingState { normal = !ar.relocalizing } else { normal = false }
+        let mapId = ar.mapId
         live.write {
-            $0.T = T
+            guard $0.generation == ticket else { return }
+            if $0.mapId != mapId {
+                $0.mapId = mapId
+                $0.revision += 1
+            }
+            if !normal && $0.trackingNormal { $0.revision += 1 }
+            $0.trackingNormal = normal
+            $0.pose = normal ? $0.scope.map { NavigationPose(scope: $0, transform: T, timestamp: t) } : nil
             $0.headYaw = yaw
             $0.headSource = source
             $0.signEvidence = evidence
             $0.realignments = realigned
         }
         // §3.1: nothing goes out while tracking is limited or before relocalization finishes.
-        guard case .normal = frame.camera.trackingState, !ar.relocalizing, socket != nil || recorder.isRecording else { return }
-        let mapId = ar.mapId
+        guard normal, socket != nil else { return }
         if poseGate.ready(t) {
             emit(PoseMsg(session_id: sessionId, map_id: mapId, t_device: t, camera_transform: Geo.flat(T),
                          head_yaw_deg: (yaw * 100).rounded() / 100, head_source: source))
             poseRate.write { $0.tick(t) }
         }
-        if frameGate.ready(t) { upload(frame, mapId: mapId) }
+        if frameGate.ready(t) { upload(frame, mapId: mapId, ticket: ticket) }
         if handGate.ready(t) && !handBusy {
             handBusy = true
             handQueue.async {
-                self.sendHand(frame, mapId: mapId)
+                self.sendHand(frame, mapId: mapId, ticket: ticket)
                 self.ar.queue.async { self.handBusy = false }
             }
         }
     }
 
-    private func upload(_ frame: ARFrame, mapId: String) {
+    private func upload(_ frame: ARFrame, mapId: String, ticket: Int) {
         guard let depth = frame.smoothedSceneDepth ?? frame.sceneDepth, let confMap = depth.confidenceMap,
-              uploader != nil || recorder.isRecording else { return }
+              let up = uploader else { return }
         frameId += 1
         let res = frame.camera.imageResolution
         let meta = FrameMeta(session_id: sessionId, map_id: mapId, frame_id: frameId, t_device: frame.timestamp,
@@ -238,6 +380,7 @@ final class AppModel: ObservableObject {
         let image = frame.capturedImage
         let depthMap = depth.depthMap
         encodeQueue.async {
+            guard self.live.read({ $0.generation == ticket }) else { return }
             guard let jpeg = self.encoder.jpeg(image) else { return }
             let d = FrameEncoder.plane(depthMap, as: Float32.self)
             let c = FrameEncoder.plane(confMap, as: UInt8.self)
@@ -245,7 +388,7 @@ final class AppModel: ObservableObject {
             if let m = try? JSONEncoder().encode(meta) {
                 self.recorder.frame(meta: m, frameId: meta.frame_id, jpeg: jpeg, depth: dz, confidence: cz)
             }
-            self.uploader?.submit(Uploader.Frame(meta: meta, jpeg: jpeg, depth: dz, confidence: cz))
+            up.submit(Uploader.Frame(meta: meta, jpeg: jpeg, depth: dz, confidence: cz))
         }
     }
 
@@ -258,20 +401,37 @@ final class AppModel: ObservableObject {
     }
 
     /// Hand queue.
-    private func sendHand(_ frame: ARFrame, mapId: String) {
-        guard let depth = frame.smoothedSceneDepth ?? frame.sceneDepth, let confMap = depth.confidenceMap,
+    private func sendHand(_ frame: ARFrame, mapId: String, ticket: Int) {
+        guard live.read({ $0.generation == ticket }),
+              let depth = frame.smoothedSceneDepth ?? frame.sceneDepth, let confMap = depth.confidenceMap,
               let found = try? hands.detect(frame.capturedImage) else { return }      // nil: no hand in view
         let d = FrameEncoder.plane(depth.depthMap, as: Float32.self)
         let c = FrameEncoder.plane(confMap, as: UInt8.self)
+        guard live.read({ $0.generation == ticket }) else { return }
         emit(HandMsg.make(sessionId: sessionId, mapId: mapId, t: frame.timestamp, transform: frame.camera.transform,
                           joints: found.joints, chirality: found.chirality, depth: d.values, conf: c.values,
                           width: d.width, height: d.height))
         handRate.write { $0.tick(frame.timestamp) }
     }
 
-    private func mapEvent(_ event: String, _ id: String) {
+    private func mapEvent(_ event: String, _ id: String, ticket: Int) {
+        live.write {
+            guard $0.generation == ticket else { return }
+            if event == "new_map" || $0.mapId != id {
+                $0.mapId = id
+                $0.revision += 1
+                $0.pose = nil
+                $0.trackingNormal = false
+            }
+        }
+        let scope = live.read { $0.scope }
         emit(MapMsg(session_id: sessionId, event: event, map_id: id), hold: true)
         DispatchQueue.main.async {
+            guard self.running, self.control.generation == ticket, self.live.read({ $0.scope == scope }) else { return }
+            if (self.guidance.active && self.guidanceScope != scope) ||
+                (self.finds.pending != nil && self.finds.pending?.scope != scope) {
+                self.losePosition()
+            }
             self.mapId = id
             if event != "saved" { self.note("map \(event) \(id.prefix(8))") }
         }
@@ -282,7 +442,12 @@ final class AppModel: ObservableObject {
     private func tick() {
         let l = live.read { $0 }
         let t = now
-        if let T = l.T, guidance.active {
+        if (guidance.active || finds.pending != nil), l.pose?.usable(now: t, in: l.scope) != true {
+            losePosition()
+        }
+        if guidance.active, guidanceScope != l.scope { losePosition() }
+        if let pose = l.pose, pose.usable(now: t, in: guidanceScope), guidance.active {
+            let T = pose.transform
             let chest = Geo.position(T)
             let ear = chest + SIMD3<Float>(0, Config.earAboveChestM, 0)
             play(guidance.tick(now: t, chest: chest, ear: ear, headYawDeg: l.headYaw))
@@ -301,7 +466,7 @@ final class AppModel: ObservableObject {
         }
     }
 
-    /// The debug screen's health rows (10/s): link, AirPods, recording.
+    /// The developer screen's health rows (10/s): link, AirPods, recording.
     private func refreshHealth(_ t: Double, _ l: Live) {
         let poses = poseRate.read { m -> Double in var c = m; return c.rate(t) }
         let hands = handRate.read { m -> Double in var c = m; return c.rate(t) }
@@ -345,7 +510,9 @@ final class AppModel: ObservableObject {
         case .handProximity(let p): guidance.handProximity(itemId: p.item_id, distanceM: p.distance_m, t: now)
         case .event(let e): worldEvent(e)
         case .labelReady(let l):
-            labels[l.item_id] = (Lines.spokenLabel(name: l.name, labelText: l.label_text), l.label_audio_url)
+            let text = Lines.spokenLabel(name: l.name, labelText: l.label_text)
+            labels[l.item_id] = (text, l.label_audio_url)
+            guidance.updateLabel(itemId: l.item_id, name: l.name, text: text, audioURL: l.label_audio_url)
             cache(l.label_audio_url)
             speak(Lines.labelReady(l))
         case .error(let e): note("server: \(e.detail)")
@@ -354,21 +521,31 @@ final class AppModel: ObservableObject {
     }
 
     private func found(_ a: FindAnswer) {
-        let asked = a.query_id.flatMap { self.asked.removeValue(forKey: $0) } ?? a.name ?? "thing"
-        guard a.found, let id = a.item_id, let p = Geo.vec(a.position), let T = live.read({ $0.T }) else {
-            return speak(Lines.notFound(a, asked: asked))
+        let l = live.read { $0 }
+        guard let request = finds.consume(id: a.query_id, in: l.scope), running else { return }
+        guard let pose = l.pose, pose.usable(now: now, in: request.scope) else {
+            return speak(Lines.positionUnavailable)
         }
+        guard a.found, let id = a.item_id, let p = Geo.vec(a.position) else {
+            return speak(Lines.notFound(a, asked: request.name))
+        }
+        guard !["stale", "missing", "picked_up", "registered"].contains(a.state ?? "") else {
+            return speak(Lines.positionUnavailable)
+        }
+        let T = pose.transform
         let chest = Geo.position(T)
-        let yaw = live.read { $0.headYaw }
+        let yaw = l.headYaw
         let bodyAz = Geo.relativeAzimuthDeg(from: chest, headingDeg: Geo.headingDeg(T), to: p)   // "behind you" means the body
         let label = labels[id]
         play(guidance.stop())
-        guidance.start(GuidanceTarget(itemId: id, name: a.name ?? asked, position: p, surface: a.surface,
+        audio.play(.silence)
+        guidanceScope = request.scope
+        guidance.start(GuidanceTarget(itemId: id, name: a.name ?? request.name, position: p, surface: a.surface,
                                       labelText: label?.text, labelAudioURL: label?.url), now: now)
         let ear = chest + SIMD3<Float>(0, Config.earAboveChestM, 0)
         audio.place(Geo.listenerRelative(ear: ear, headYawDeg: yaw, target: p))
         audio.say(Lines.polo(relAzimuthDeg: bodyAz, distanceM: Geo.horizontalDistance(chest, p), surface: a.surface), atItem: true)
-        note("find \(asked): \(a.surface ?? "?"), \(Int(bodyAz)) deg, \(String(format: "%.1f", Geo.horizontalDistance(chest, p))) m")
+        note("find \(request.name): \(a.surface ?? "?"), \(Int(bodyAz)) deg, \(String(format: "%.1f", Geo.horizontalDistance(chest, p))) m")
     }
 
     private func whatIsThis(_ a: WhatAnswer) {
@@ -381,6 +558,11 @@ final class AppModel: ObservableObject {
 
     /// On the guided item: the end of guidance. Otherwise name what the hand is on (telling identical jars apart).
     private func touched(_ tm: TouchMsg) {
+        let l = live.read { $0 }
+        if guidance.active, l.pose?.usable(now: now, in: guidanceScope) != true || l.scope != guidanceScope {
+            losePosition()
+            return
+        }
         let cues = guidance.touched(itemId: tm.item_id, t: now)
         if !cues.isEmpty { return play(cues) }
         guard let id = tm.item_id else { return }
@@ -392,7 +574,7 @@ final class AppModel: ObservableObject {
     private func worldEvent(_ e: WorldEventMsg) {
         switch e.kind {
         case "moved", "put_down", "seen":
-            if let p = Geo.vec(e.position) { guidance.retarget(itemId: e.item_id, position: p) }
+            if let p = Geo.vec(e.position) { guidance.retarget(itemId: e.item_id, position: p, surface: e.surface) }
         case "left_behind":
             haptic.impactOccurred()
             speak(Lines.leftBehind(e))
@@ -406,9 +588,9 @@ final class AppModel: ObservableObject {
             switch c {
             case .haptic: haptic.impactOccurred()
             case .say(let s): audio.say(s, atItem: true)
-            case .playLabel(let url):
+            case .playLabel(let url, let fallback):
                 if let f = audioCache[url], (try? audio.playFile(f, atItem: true)) != nil { continue }
-                audio.say("Got it.", atItem: true)
+                audio.say(fallback, atItem: true)
             default: audio.play(c)
             }
         }
@@ -428,54 +610,35 @@ final class AppModel: ObservableObject {
     }
 
     func stopGuidance() {
+        finds.cancel()
+        guidanceScope = nil
         let was = guidance.active
         play(guidance.stop())
         audio.play(.silence)
         if was { sendGuidance() }
+        phase = .off
+    }
+
+    /// Tracking recovery requires a fresh Find; old target coordinates never resume automatically.
+    private func losePosition() {
+        guard guidance.active || finds.pending != nil else { return }
+        stopGuidance()
+        speak(Lines.positionUnavailable)
     }
 
     private func query(_ kind: String, name: String? = nil) {
         guard socket != nil, socketUp else { return speak(Lines.noServer) }
         let qid = UUID().uuidString
-        if let name { asked[qid] = name }
+        if kind == "find" {
+            stopGuidance()
+            let l = live.read { $0 }
+            guard let scope = l.scope, l.pose?.usable(now: now, in: scope) == true else {
+                return speak(Lines.positionUnavailable)
+            }
+            finds.begin(id: qid, name: name ?? "thing", scope: scope)
+        }
         emit(QueryMsg(session_id: sessionId, query_id: qid, kind: kind, name: name), hold: true)
         note("-> \(kind) \(name ?? "")")
-    }
-
-    // MARK: - Recording (Core/Recorder.swift: the server's own layout, so server/tools read it as is)
-
-    func toggleRecording() {
-        if recorder.isRecording {
-            recorder.stop()
-            recording = false
-            recordInfo = "stopped: Documents/sessions/\(Recorder.folderName(sessionId))"
-        } else {
-            let d = recorder.start(sessionId: sessionId)
-            recording = true
-            note("recording to Documents/sessions/\(d.lastPathComponent)")
-        }
-    }
-
-    /// Zips this launch's recording for AirDrop (the Mac's Finder also shows Documents/sessions under Files).
-    func exportRecording() {
-        let dir = recorder.root.appendingPathComponent(Recorder.folderName(sessionId))
-        guard FileManager.default.fileExists(atPath: dir.appendingPathComponent("frames.jsonl").path) else {
-            return note("Nothing recorded in this launch yet.")
-        }
-        let rec = recorder
-        DispatchQueue.global(qos: .userInitiated).async {
-            rec.flush()
-            var zipped: URL?
-            var err: NSError?
-            NSFileCoordinator().coordinate(readingItemAt: dir, options: [.forUploading], error: &err) { zip in
-                let dest = FileManager.default.temporaryDirectory.appendingPathComponent("marco-\(dir.lastPathComponent).zip")
-                try? FileManager.default.removeItem(at: dest)
-                if (try? FileManager.default.copyItem(at: zip, to: dest)) != nil { zipped = dest }
-            }
-            DispatchQueue.main.async {
-                if let zipped { self.shareFile = ShareFile(url: zipped) } else { self.note("export failed: \(err?.localizedDescription ?? "zip")") }
-            }
-        }
     }
 
     func register(name: String, photo: Data) {
@@ -514,6 +677,42 @@ final class AppModel: ObservableObject {
         } else {
             lastUpload = "\(code): \(body.prefix(160))"
             note("frame upload \(code): \(body.prefix(240))")
+        }
+    }
+
+    // MARK: - Recording (Core/Recorder.swift: the server's own layout, so server/tools read it as is)
+
+    func toggleRecording() {
+        if recorder.isRecording {
+            recorder.stop()
+            recording = false
+            recordInfo = "stopped: Documents/sessions/\(Recorder.folderName(sessionId))"
+        } else {
+            let d = recorder.start(sessionId: sessionId)
+            recording = true
+            note("recording to Documents/sessions/\(d.lastPathComponent)")
+        }
+    }
+
+    /// Zips this launch's recording for AirDrop (the Mac's Finder also shows Documents/sessions under Files).
+    func exportRecording() {
+        let dir = recorder.root.appendingPathComponent(Recorder.folderName(sessionId))
+        guard FileManager.default.fileExists(atPath: dir.appendingPathComponent("frames.jsonl").path) else {
+            return note("Nothing recorded in this launch yet.")
+        }
+        let rec = recorder
+        DispatchQueue.global(qos: .userInitiated).async {
+            rec.flush()
+            var zipped: URL?
+            var err: NSError?
+            NSFileCoordinator().coordinate(readingItemAt: dir, options: [.forUploading], error: &err) { zip in
+                let dest = FileManager.default.temporaryDirectory.appendingPathComponent("marco-\(dir.lastPathComponent).zip")
+                try? FileManager.default.removeItem(at: dest)
+                if (try? FileManager.default.copyItem(at: zip, to: dest)) != nil { zipped = dest }
+            }
+            DispatchQueue.main.async {
+                if let zipped { self.shareFile = ShareFile(url: zipped) } else { self.note("export failed: \(err?.localizedDescription ?? "zip")") }
+            }
         }
     }
 

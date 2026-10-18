@@ -2,6 +2,10 @@
 
 Last updated: 2026-10-17. Keep this file current: update it whenever a decision is made or a piece lands.
 
+**Primary roadmap:** the user's approved whole-system diagram is recorded in
+[`docs/HACKATHON-ROADMAP.md`](docs/HACKATHON-ROADMAP.md). Read it and `AGENTS.md`
+before future edits; this status file records implementation evidence and remaining gaps.
+
 **Hardware (final):** iPhone 16 Pro (LiDAR) in a chest vest, and AirPods Pro 3. Until the phone recordings exist, iPad LiDAR data (ARKitScenes) is used for checking.
 
 ## What this repo is
@@ -46,7 +50,7 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
   - **1 frame/s inference holds:** the full per-frame pipeline on this Apple Silicon Mac (MPS), on real iPad frames, takes 0.33 s with 1 item, 0.37 s with 10 and 0.42 s with 20 (p95 0.43 s). That is `tools/bench_frame.py`; run it on the venue machine too.
   - Slower frames are dropped (latest frame wins), never queued. Touch uses the 15/s hand stream and no model, so it is independent of this.
   - Everything is reached through **Tailscale**; the server binds 127.0.0.1 only, behind a fail-closed auth gate.
-  - **Vultr (`deploy/vultr/`):** the only GPU plan deployable in `lax` today is the A40 48 GB at $1.71/h (~$41/day); the A16 16 GB in `sjc` is $0.47/h. Either is far more than the ~1.5 GB the models need. Billing stops only when the box is destroyed.
+  - **Vultr (`deploy/vultr/`):** the A16 16 GB in `sjc` ($0.47/h) is live. The only plan deployable in `lax` was the A40 48 GB at $1.71/h. Billing stops only when the box is destroyed.
 - **Wire details:**
   - depth and confidence may be zlib or raw DEFLATE (Apple's `.zlib` is raw DEFLATE; the server accepts both);
   - every phone message carries `session_id`, so the server files it into the same recording.
@@ -110,18 +114,12 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
   - AirPods head fusion;
   - "Marco" wake word and push-to-talk;
   - labels primed from `GET /v1/items`, with audio cached;
-  - a debug screen.
+  - the Paper V3 control panel, with the original diagnostics available in Debug builds.
 
   Verification:
-  - `sh ios/check.sh` type-checks every file that builds on macOS and runs 178 Swift unit tests.
+  - `sh ios/check.sh` type-checks every file that builds on macOS and runs 286 Swift checks (Sandeep's 204, plus the phone recorder, sturdier AirPods fusion, AirPods/link health, server check, mic route and item vocabulary).
   - `server/tests/test_ios_contract.py` builds the Swift core and feeds the exact bytes it sends to the server: the frame multipart, the poses, the hand patches (byte-exact against the server's reference) and the queries. It also checks the geometry angle for angle against `marco/geometry.py`.
-  - **The whole app now builds in Xcode** (2026-10-17, Xcode 26.6, iOS 26.5 SDK): `xcodebuild ... -destination 'generic/platform=iOS' build` succeeds with no errors or warnings, ARKit/UIKit glue included. Not yet run on the phone.
-  - **Merged in from Utkarsh's parallel ingestion build** (the rest of that build duplicated the scaffold and was dropped; it is archived outside the repo):
-    - **Recording on the phone** (`Core/Recorder.swift`) in the server's own layout, so a vest walk needs no server or network and goes into `server/tools` as is. Start with an empty server URL to record only; Export zips it for AirDrop, and Finder shows it under Files (`UIFileSharingEnabled`). Contract-tested: `test_ios_contract.py` reads a Swift-recorded walk with `Session` and passes `check_recording.py`.
-    - **Sturdier head fusion** (`HeadFusion`): keeps its alignment through Bluetooth gaps under 2 s (it used to re-align on any gap over 0.5 s, wrong whenever the head was turned), re-aligns at once on an AirPods re-zero, and re-aligns after 8 s if it was set while the head was turned. Plus an AirPods sign check from whole-body turns.
-    - **Debug screen:** upload round trip, frames/poses/hands per second, AirPods rate, jitter, latency and raw yaw (hour-one test 2), the sign check, Record and Export.
-    - **Uploads give up after 5 s** (was URLSession's 60 s), so a stuck request can't hold the latest-wins slot.
-    - Signed with Utkarsh's Personal Team as `com.utkarshlal.marco`; `NSLocalNetworkUsageDescription` added for a server on the local network.
+  - **Xcode compiled:** the complete app, including ARKit/UIKit glue, builds for an iOS device (Debug and Release) and Simulator (Debug). Device/runtime checks remain; see `ios/VERIFICATION.md`.
   - Setup: `ios/README.md`; project generation: `ios/project.yml` (XcodeGen).
 - **`photon-scaffold/` (JavaScript ESM with JSDoc types, reference for Utkarsh):** an iMessage caretaker bridge on `@photon-ai/imessage-kit` 3.x that speaks §5 exactly. Utkarsh's `photon/` is the team's bridge; this one shows the server wiring.
   - It handles label requests, text replies (name plus spoken words), voice notes before or after the name, setup photos with or without a caption, a caretaker allow-list, and expiry.
@@ -140,7 +138,7 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
   - **Status port:** 127.0.0.1 only (`/health`, plus `/dev/*` in sim mode). The phone never talks to `photon/`.
   - **Checks:** `npm run doctor` checks the Photon 2.0 key, line and event stream, plus `MARCO_SERVER_URL` (`GET /v1/items`, the `/v1/photon` socket and the allow-list), read-only.
   - **Verification:** `cd photon && npm test` runs 39 tests. One of them is end to end against the real `server/` (stub, loopback): `what_is_this` → `label_request` → iMessage → text then voice memo → `label_ready` with m4a audio → `what_is_this` known → setup photo → `GET /v1/items`. It runs when `server/.venv` (or `MARCO_SERVER_PYTHON`) has the stub dependencies.
-- **Totals (all passing):** server 78 tests (77 run here; 1 skips without the ARKitScenes download; including both client contract tests and the real-video tools), Swift 184, Photon scaffold 8, `photon/` 39 (Utkarsh's run).
+- **Verification totals:** server 76 passed, 1 skipped (the optional ARKitScenes sample is absent locally; includes 4 Swift/server contract checks), Swift 286, Photon scaffold 8 (current local runs); `photon/` 39 (Utkarsh's preceding run).
   - `photon-scaffold`'s `npm test` now runs `node --test test/*.test.js`, which works on Node 22 (thanks, Utkarsh).
 - **Teammates' code on `main`:** `frontend/` (Sandeep, the dashboard) was built against the earlier requirements, not this contract. See the next steps.
 - **`deploy/vultr/` (Utkarsh): the Vultr GPU deployment kit.**
@@ -185,7 +183,7 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
    - **Dashboard:** `frontend/` expects `GET /dashboard/snapshot`, `WS /events` and `POST /dashboard/commands` (`frontend/docs/fastapi-handoff.md`). Likely a server adapter, plus a phone message for dashboard Find/Stop.
 2. **Security fix for `photon/`: applied.** Its HTTP port binds 127.0.0.1 and serves only `/health` (and `/dev/*` in sim mode). The phone-facing routes and `BRIDGE_TOKEN` are gone; caretaker media is never served.
 3. **Utkarsh:**
-   - run `ios/` on the phone (it builds; Xcode > Run with the phone plugged in);
+   - run the compiled `ios/` app on the actual iPhone;
    - run the hour-one tests in `ios/README.md`;
    - point `photon/` at the server: set `MARCO_SERVER_URL` to its tailscale serve URL, add the bridge machine's login to `TAILSCALE_ALLOWED_LOGINS`, then `npm run doctor`. Photon 2.0 itself is live and was tested.
 4. **Vedant:** the real-video test in `docs/TESTING.md`.
@@ -230,8 +228,17 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
      - stub: guidance at 10/s starts overlapping fake guidance sequences (25 fake touches in 5 s).
    - **Dashboard (Sandeep):** `frontend/` still calls `/dashboard/snapshot`, `WS /events` and `/dashboard/commands`, so it shows nothing today. The adapter should push on every event, not on a 1 s timer, which would add 0.5 s on average. Over loopback the gate returns 403 with `MARCO_AUTH=tailscale`, so point `API_PROXY_TARGET` at the `ts.net` URL.
 
+8. **Vultr (Utkarsh): the box is up** (see "Built and verified"). Left to do:
+   - point the phone's Server field and `photon/`'s `MARCO_SERVER_URL` at `https://marco-gpu.taild6d426.ts.net`;
+   - invite teammates to the `utk7arsh` tailnet, add their logins to `TAILSCALE_ALLOWED_LOGINS`, and re-run `deploy`;
+   - measure the phone-to-Vultr round trip on venue Wi-Fi (`tailscale ping marco-gpu`);
+   - try OWLv2-large on it with `bench_frame.py` (step 6).
+
+   It bills $0.47/h until `marco-vultr.sh down`; stopping it doesn't stop billing.
+
 ## Open questions / hour-one tests (need the real phone)
-- **First run on the phone:** the app builds in Xcode, but nothing ARKit, LiDAR, Vision or AirPods has run on hardware yet.
+- **iPhone runtime checks** of the compiled ARKit/UIKit app; no installed simulator runtime is available on this Mac yet.
+- **Phone to Vultr:** the iPhone is on the tailnet and reaches `marco-gpu` (`GET /v1/items` from Safari); the app's streaming to it is not yet run.
 - **AirPods mic (hour-one test 7):** does high-quality recording turn on with the AirPods Pro 3, does the output stay 2 channels, and how much input latency does it add from the vest?
 - **Relocalization** after an app relaunch: time and anchor error.
 - **AirPods motion:** rate, drift, latency, and the yaw sign (there's a toggle on the debug screen).
@@ -240,3 +247,65 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
 - **Vision orientation** `.up` versus `.right` for the hand pose.
 - **Caretaker voice notes** (`.caf`) playing on the phone through `AVAudioFile`.
 - **Remote teammate eligibility** for prizes. Ask the organisers.
+
+## Frontend and iOS V3 integration (October 17, 2026)
+
+- Pulled main through `755ee6b` before implementation. The uncommitted standalone iOS panel was backed up and its design/project assets reconciled into the canonical `ios/Marco/` app. There is one compiled sensor pipeline and one app entry point.
+- Implemented approved Paper V3 in React and native SwiftUI: bundled Instrument Sans, shared palette, open status/guidance layouts, underlined web navigation, larger distance and direction, larger selected-object image, circular native Start/Stop. The iOS gear retains connection settings; original diagnostics stay available in Debug builds.
+- Added explicit camera permission and first-frame state, Stop/background cleanup, stale-callback invalidation, and live route/spatial-audio status. Kept the existing ARKit capture, world maps, uploads, speech, and HRTF guidance. The phone's Server row follows its actual `/v1/phone` socket.
+- Build setup: checked-in `ios/MarcoPolo.xcodeproj` compiles `Marco/`, using Swift 5 / iOS 17 like `project.yml`. The generator remains optional. Font registration is in both configurations.
+- Verification: web formatting/lint/schema/build passed, 22 unit tests and 19 browser tests passed (accessibility and 1440/768/390 widths). Swift 126 checks passed; Debug/Release device and Debug Simulator builds passed. No installed simulator runtime; physical camera/LiDAR/audio and runtime UI checks still require an iPhone.
+- Existing integration gap remains explicit: the web snapshot/command contract is not implemented by the new `/v1` server. The API mode needs the adapter and phone command forwarding described above; the dashboard remains runnable in Demo mode. This UI change modifies no wire formats or server authentication.
+
+## iOS VoiceOver support (October 17, 2026)
+
+- Researched Apple's native VoiceOver guidance; the system screen reader supplies panel speech and gestures without a separate in-app accessibility mode, speech service, package or new permission. References and rationale are in `ios/ACCESSIBILITY.md`.
+- The panel exposes current hardware values, specific camera failure reasons and recovery actions. Added Voice commands status and visible microphone/speech/audio startup failures; these had previously appeared only in diagnostics. Speech-recognition startup now rejects an unavailable recognizer and cleans up its tap if its audio engine cannot start.
+- With VoiceOver on, Read status replays the current summary. Magic Tap shares Start/Stop behavior, including unsupported/pending-permission guards. Native sheet escape/close actions remain available; decorative camera preview content is hidden from the accessibility tree.
+- Important camera, server, headphone, voice/audio failure and tracking changes use system announcements. Updates coalesce for 400 ms, identical updates stay quiet, automatic messages queue behind VoiceOver speech, and no focus movement is forced. A disconnected server gets a reminder after 12 seconds on the visible panel. A spatial-audio flag change alone is informational, not an HRTF failure.
+- Verification: 170 Swift checks passed (44 new accessibility checks); Xcode device and Simulator builds passed. No installed Simulator runtime; actual VoiceOver speech, gestures, modal focus, permission recovery, AirPods routing and coexistence with guidance still require the real iPhone. No wire formats or backend code changed.
+
+## Frontend audit fixes (October 17, 2026)
+
+- Fixed all four actionable findings from the supplied frontend audit. Existing V3 styling and iOS changes were preserved.
+- Live map position now requires matching session/map/wearer coordinate IDs in addition to connection, tracking and freshness; stale or mismatched data cannot enable the wearer marker, target line, live badge or Recenter. Remembered descriptions remain available.
+- Find/Stop command state and its timer are invalidated on phone/session replacement. Same-scope uncertain retries keep their ID; new-scope actions get a new ID. Late old errors/acknowledgements are ignored.
+- Silent WebSockets now close and reconnect/refetch through the existing backoff after more than 10 seconds without valid snapshot progress, including no first snapshot. Duplicate recovery, old socket messages, disposal and authorization failures are guarded.
+- A missing camera now shows Waiting for camera; actual image failure and disconnection remain distinct, and a new frame recovers normally.
+- Verification: complete `npm run check` passed formatting, lint, schema consistency, TypeScript/production build, **52 unit tests and 22 browser tests** (including automatic silent-stream recovery, reset maps and camera failure/recovery). `git diff --check` passed. Details: `frontend/docs/audit-fixes.md`.
+- The separate server dashboard adapter and phone command forwarding remain open integration work; these fixes change no backend wire format or authentication. Browser API tests use mocked endpoints.
+
+## Dashboard API preparation (October 17, 2026)
+
+- Added `frontend/docs/backend-integration-plan.md` for potentially taking on the API layer after the backend team's core is ready. Ownership remains undecided; no API implementation started.
+- Grounded the plan in the current FastAPI/core, browser schema and Swift decoder. It covers the three browser routes, media, world/map identity, health, Photon results, targeted Find/Stop delivery, phone acknowledgements, uncertain retries, rollout and live integration checks.
+- Flagged the older frontend contract's superseded ownership diagram. Proposed session IDs on browser commands and new phone command/health messages require a coordinated team-interface/code/test update when implemented; no existing wire format changed here.
+- Documentation-only change; implementation tests are specified in the plan and are not evidence that live integration already works.
+- Verification: Prettier passed for the four touched frontend documentation files; all 28 local links resolved; `git diff --check` passed. No application tests were rerun for this documentation-only change.
+
+## iOS audit fixes and main integration (October 17, 2026)
+
+- Fixed all six reproducible iOS audit findings: fresh normal pose/coordinate scope gates guidance; Stop and supersession invalidate pending Find replies; unsaved capture starts allocate new map IDs; queued save completion checks lifecycle before disk writes; movement updates spoken surfaces; new labels update active touch feedback with text fallback.
+- Tracking loss or a pose older than 0.5 seconds cancels guidance and gives a non-positional recovery message. A fresh Find is required after recovery. No device/server message formats changed. Details: `ios/AUDIT-FIXES.md`.
+- Verification: 204 portable Swift checks passed, plus 23 AppModel and 11 ARSessionManager controlled regressions using current code and deterministic doubles. Xcode Debug Simulator build passed. AirPods route interruption, physical LiDAR and VoiceOver runtime checks remain open.
+- Pulled the team's Photon 2.0 changes at `71268c6` and rebased onto the newer backend findings at `8aa0ae1`. The only conflicts were verification totals in this status file; preserved the newer backend/Photon work and our frontend/iOS progress.
+- Pre-push checks in this checkout: frontend formatting/lint/schema/build, **52 unit tests and 22 browser tests**, **204 Swift checks**, unsigned Xcode Debug Simulator and Release device builds, and **8 Photon scaffold tests** passed. A temporary backend test environment ran **4 Swift/server contract tests plus 72 remaining server tests** successfully; one optional ARKitScenes-sample test was skipped because its dataset is absent. Hardware and live dashboard-adapter integration remain open.
+
+## Approved roadmap and AirPods spatial verification (October 17, 2026)
+
+- Recorded the user's primary system diagram in `docs/HACKATHON-ROADMAP.md`; added repository and parent-workspace `AGENTS.md` instructions and linked the roadmap from this status and `CLAUDE.md`. Future edits must preserve the architecture, minimal accessible iOS controls, shared visual theme, component contracts and private deployment. Proposed features remain distinct from working integrations.
+- Fixed immediate spatial voice placement: both speech and label playback now use the last item position immediately, instead of waiting for the next guidance tick after switching from a general announcement.
+- Added `spatial/check-render.sh`: actual Apple offline HRTF rendering through the app's voice-file path. Six reproduced failures before the fix; **17 checks pass** after it, including left/right placement, front/back filtering and simulated head turns. Existing **204 Swift checks** and the full Debug Simulator Xcode build pass.
+- Confirmed connected AirPods Pro stereo output at **48 kHz / two channels** on this Mac. The app's HeadTracker received **308 samples at about 34.1 Hz**, spanning **77.46 degrees** of yaw. Generation, physical yaw sign and motion-to-audio latency are not established by that measurement.
+- Added `spatial/check-airpods.sh` for real motion and spatial speech checks using the production classes. Completed the five-position/live-head-turn voice run, with **1,029 motion samples at about 36.8 Hz**; perceived localization feedback and chest-mounted iPhone world anchoring remain pending. Detailed procedure and boundaries: `spatial/VERIFICATION.md`. No protocol changes or push.
+- Wearer feedback: **left/right sounded correct; front/back need improvement**. World anchoring was not independently confirmed. Rechecked the approved roadmap: spatial rendering/head fusion belong on the iPhone; the server supplies world positions and touch. The Mac helper exercises that existing phone code for development. No additional audio behavior changed after this feedback.
+- Rechecked Apple documentation and primary spatial-hearing research. The current mono/HRTF/manual-head-tracking architecture fits the plan. Apple's separate automatic listener-tracking API requires a head-pose entitlement; do not stack it with manual source rotation. The initial tour tracked head turns only during its final phrase and omitted the production beacon sequence, so a sustained front/back head-turn test is still needed. Sources and concrete next checks are in `spatial/VERIFICATION.md`; this review made no runtime changes or new localization claims.
+- Completed a focused **46-second** AirPods retest with live head compensation in every stage, repeated identical beacons for front/back A/B comparisons, and a separate spoken/muffled rear-cue demonstration. The helper waits for fresh motion and pauses on loss. **1,755 samples at about 38.2 Hz; zero missing-motion ticks**. Extended offline rendering tests: **21 passed**, including ±30° front/back head-turn checks. Perceived A/B localization and anchoring responses remain pending. Only test-helper/test/documentation behavior changed for this retest; no further production audio changes or push.
+- Replayed the same test at the user's request: **1,641 motion samples at about 36.6 Hz**. A/B ran with motion; a loss in the final rear-cue stage triggered the audio pause (65 missing-motion update ticks). Listening feedback remains pending; no further code changes.
+- Latest requested replay: **1,376 samples at about 33.2 Hz**, with three motion-loss pauses during B and the final segment (483 missing-motion update ticks). This run does not establish uninterrupted B/head-anchoring performance. No code changes; feedback pending.
+- Latest wearer feedback confirms left/right, but front/back, distance and movement instructions remain unclear. The Mac tours use a fixed 2 m target and 0.65 s beep interval, bypassing production distance/facing/reach logic. Documented a focused guidance proposal: spoken turn/distance, chest-heading validation before any forward-walk instruction, separate alignment cue, existing distance cadence and fingertip-based reach. A head-facing ding alone does not establish body alignment or a clear path. No runtime changes based on the supplied comparison; details in `spatial/VERIFICATION.md`.
+- Implemented requested `--guidance` test mode using production Guidance/SpatialAudio with real head yaw and explicitly simulated approach/reach. It includes alignment ding, 3 m→0.5 m distance cadence and speech, fingertip-proximity tone, touch confirmation, and honest alignment timeout. Motion loss freezes audio and simulated progress; no physical walking or Mac haptics are claimed. **18 new demo checks and 204 portable Swift checks passed**; helper compiled. Initial playback was rejected because AirPods disappeared and output reverted to Mac speakers. Awaiting reconnection; no successful new live run yet. The shell wrapper now requires a helper completion record instead of assuming LaunchServices success means playback. Details in `spatial/VERIFICATION.md`.
+- After reconnection, a second start timed out before audio because no motion sample arrived within five seconds. Corrected test startup: immediate ding/spoken preparation, 30-second motion window, spoken timeout reason and live logs. The corrected launch now reports **audio started, motion ready, intro running**. The 18 demo checks passed again; completion and user feedback still pending at this point.
+- Historical automatic guidance run executed: its internal alignment flag was set; **2,210 motion samples, zero missing-motion ticks, 34 scheduled beeps, three facing dings and one steady-tone entry**. Physical alignment is not confirmed. The wearer reported staying still while all stages ran, rejecting the automatic approach/reach/touch as an interaction test. Sample availability and an internal lock do not prove physical movement; startup yaw stability, drift and sign remain open. No production guidance changes.
+- At the user's request, moved the new Mac spatial tools, renderer/simulation tests and verification notes into top-level `spatial/`, with build output ignored. Scripts compile the canonical iOS audio/core sources, preserving the iPhone's runtime ownership and Xcode layout. The old `--guidance` entry now refuses to play; the scripted sequence is retained only as explicit `--simulate-approach`, documented as simulation. Latest device check showed Mac speakers as output, no AirPods audio route and no developer iPhone. No new listening or physical navigation pass is claimed.
+- Packaging validation: **21 offline renderer checks, 18 scripted-simulator checks, two withdrawn-option checks and 204 production Swift checks passed**. The relocated Mac helper compiles/signs, and the full unsigned iOS Debug Simulator build succeeds. Shell syntax and whitespace checks pass. Simulator checks describe generated input only; front/back localization and actual movement-dependent guidance remain unverified on the wearer/device.

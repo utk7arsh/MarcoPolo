@@ -1,5 +1,22 @@
 # Marco iPhone app (Utkarsh)
 
+The default screen is now the approved Paper V3 control panel: Instrument Sans, open Camera / LiDAR / Audio / Server rows, a Voice commands status, and a circular Start/Stop control. It uses this app's existing ARKit, upload, speech, head tracking and spatial-audio engine. There is one app source tree, `Marco/`; the earlier standalone AVFoundation panel is not compiled alongside it.
+
+Mac spatial-audio test tools and verification notes live in [`../spatial/`](../spatial/README.md).
+They compile this app's audio classes; production audio remains in `Marco/Audio/`.
+
+Open **`MarcoPolo.xcodeproj`**, select the **MarcoPolo** scheme and your signing team, then Run. This checked-in project uses the same `Marco/` sources as the XcodeGen option below, so XcodeGen is optional. Both projects use Swift 5 and iOS 17+. The three bundled Instrument Sans fonts and licence are in `Marco/Design/Fonts/`; font names are registered in `Marco/Info.plist` and `project.yml`.
+
+Use the gear to set the server's Tailscale address. Start waits for camera permission, and **Running** appears after the first real AR frame. The Server row reflects the actual phone WebSocket, so it is **Not connected** before starting. The Audio row reports the active route and its OS spatial-audio flag; this does not identify a headphone model or certify active head tracking. This ARKit pipeline requires a LiDAR-capable phone.
+
+Stop cancels listening/guidance, pauses capture, closes the phone socket and releases the audio session. Backgrounding performs the same stop and saves the world map; returning does not auto-start. The running screen offers **Check camera view**, which reuses the existing AR session. Debug builds retain the original tools under Connection → Developer tools; the main panel does not expose analytics or item setup.
+
+See [VERIFICATION.md](VERIFICATION.md) for build/test results and device checks still required.
+
+The six reproducible iOS audit findings are fixed; see [AUDIT-FIXES.md](AUDIT-FIXES.md). Guidance cancels on tracking loss, a stale pose or a coordinate reset; ask Find again after tracking recovers. Voice Stop also cancels pending Find replies. The portable suite now passes 204 checks.
+
+With iPhone **VoiceOver** enabled, the panel exposes hardware status and recovery instructions through native accessibility. **Read status** replays the current summary; two-finger double-tap starts/stops capture. Important failures and connection changes are announced without moving focus. No separate app mode or new permission is needed for screen-reader speech. See [ACCESSIBILITY.md](ACCESSIBILITY.md) for Apple research and the required hands-on VoiceOver checks.
+
 The phone half of [docs/INTERFACES.md](../docs/INTERFACES.md):
 - **Sensors in:** ARKit + LiDAR, Vision hands, AirPods head motion, speech.
 - **To the server:** frames, poses, hands and queries.
@@ -52,7 +69,8 @@ A free Apple ID works. Apps signed with a free Personal Team expire after 7 days
 ## Files
 | File | What it does | Builds on macOS? |
 |---|---|---|
-| `App/MarcoApp.swift`, `App/ContentView.swift` | app entry, debug screen (buttons for every voice command) | no (UIKit/SwiftUI iOS) |
+| `App/MarcoApp.swift`, `App/ContentView.swift` | app entry, V3 control panel, connection settings and camera preview | no (UIKit/SwiftUI iOS) |
+| `App/DiagnosticsView.swift` | original sensor and voice-command tools, accessible in Debug builds | no (UIKit/SwiftUI iOS) |
 | `App/AppModel.swift` | wiring: AR frames to uploads/poses/hands, server messages to audio, voice to queries, the 60 Hz guidance tick | no (ARKit) |
 | `Capture/ARSessionManager.swift` | ARKit + LiDAR (`smoothedSceneDepth`), ARWorldMap save every 30 s, relocalize on launch, fresh map after 30 s | no (ARKit) |
 | `Capture/FrameEncoder.swift` | sensor JPEG 960x720 (no rotation, no EXIF tag), depth/confidence maps as arrays (handles padded rows) | yes, tested |
@@ -82,7 +100,7 @@ ARFrames are only held while their data is copied out; ARKit stalls if they pile
 
 ## Test
 ```
-sh ios/check.sh                                     # type-checks the macOS-buildable files, runs 178 unit tests
+sh ios/check.sh                                     # type-checks the macOS-buildable files, runs 286 checks
 cd server && ../poc/.venv/bin/python -m pytest -q tests/test_ios_contract.py
 ```
 The second command builds the Swift core and feeds the exact bytes it produces to the real server:
