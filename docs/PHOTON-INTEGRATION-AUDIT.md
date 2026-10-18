@@ -1,5 +1,7 @@
 # Photon integration audit and Vultr handoff
 
+> This is a dated investigation log, not a live inventory or deployment guide. Older findings describe the state observed at that time. Use [the bridge README](../photon/README.md), [the interfaces](INTERFACES.md) and [STATUS.md](../STATUS.md) for current behavior. `<local-evidence>` denotes private diagnostic artifacts omitted from Git; contact and deployment details use placeholders.
+
 2026-10-18. Code/configuration audit requested by Sandeep. The wearer phone is
 unavailable for a live retest. The fixes were subsequently deployed with the
 user's authorization; the deployment evidence is recorded below.
@@ -65,7 +67,7 @@ and threaded replies once capability is known. Any queue restructuring must
 preserve event order, durable cursor handling and idempotency. These changes are
 suggestions and have not been implemented in this diagnostic pass.
 
-Evidence: `/private/tmp/marco-full-release-20261018/slow-replies-journal.log`,
+Evidence: `<local-evidence>/marco-full-release-20261018/slow-replies-journal.log`,
 `attachment-trace.log` (passive observation received no fresh photos), and
 `sdk-retry-probe.mjs` (isolated fake-clock test; no external requests).
 
@@ -104,13 +106,13 @@ typecheck passed**. Skips are three missing local OWLv2-processor cases and the
 external ARKitScenes sample. All 27 new template tests pass. The synthetic
 `bench_frame.py` run at 1/5/10 items is within budget, with p95
 0.009/0.009/0.010 s; no real-model GPU benchmark was possible with the locally
-cached assets. Evidence: `/private/tmp/marco-reset-audit-20261018/templates-*`.
+cached assets. Evidence: `<local-evidence>/marco-reset-audit-20261018/templates-*`.
 
 Full release rerun also passes frontend formatting/lint/schema/build, **90 unit
 and 26 Chromium tests**, **8 reference-client tests**, **461 Swift checks**, the
 unsigned iOS Release build and **19 audio/ARKit emulator tests**. The missing
 audio fixtures were generated offline into ignored data; they are not committed.
-Release evidence: `/private/tmp/marco-full-release-20261018/`.
+Release evidence: `<local-evidence>/marco-full-release-20261018/`.
 
 ### Deployment verification
 
@@ -194,7 +196,7 @@ frontend TypeScript/Vite build pass. Isolated reproductions confirm both
 unresolved list and crop bugs. A second fetch still reports `651edc7` as latest
 main; a second SSH read confirms Vultr still reloads all photos with `gate=False`
 and the server process has not restarted since 10:48:40 UTC.
-Evidence: `/private/tmp/marco-reset-audit-20261018/`.
+Evidence: `<local-evidence>/marco-reset-audit-20261018/`.
 
 ## Dashboard visibility follow-up
 
@@ -225,7 +227,7 @@ Loopback binding, HTTP 403 without authentication and root-owned 0600 secret
 files remain intact. No new shared item or caretaker message was created.
 
 Rollback copy: `/opt/marco/backups/dashboard-f56e7d6-20261018T095358Z`.
-Evidence and browser screenshots: `/private/tmp/marco-dashboard-deploy-20261018/`.
+Evidence and browser screenshots: `<local-evidence>/marco-dashboard-deploy-20261018/`.
 The later `14a1d16` commit adds POC reports, without changing runtime code. Live
 room-map rendering still needs a streaming phone; this check used no sensors.
 
@@ -265,7 +267,7 @@ room-map rendering still needs a streaming phone; this check used no sensors.
   The complete unsigned iOS Release build for a generic physical iPhone passes.
   Keys remain outside Git and in root-owned 0600 environment files.
 
-Evidence: `/private/tmp/marco-readiness-20261018/`. These are real backend,
+Evidence: `<local-evidence>/marco-readiness-20261018/`. These are real backend,
 iMessage and ElevenLabs checks with **synthetic sensor input and silent Mac
 rendering**. Actual camera/LiDAR, physical touch, iPhone/AirPods head tracking,
 perceived spatial directions and VoiceOver remain device checks.
@@ -286,7 +288,7 @@ preserved. The running Photon service loads its file explicitly with
   24.22.0 and enabled `marco-photon.service`, running as the unprivileged `marco`
   user with automatic restart and private persistent state.
 - Stopped the Mac bridge before starting Vultr. Preserved the original Mac state
-  at `/private/tmp/marco-photon-handoff-20261018T091213Z/original-data.tar.gz`.
+  at `<local-evidence>/marco-photon-handoff-20261018T091213Z/original-data.tar.gz`.
   Migrated one caretaker link, five bridge-local items, media and cursor 12245.
   The old unsent request `req_a2e7216234` remains recorded as `failed` in the
   migrated copy; it was not sent, and no backend items were deleted.
@@ -341,8 +343,8 @@ dashboard connects directly to the bridge. Wire details: `INTERFACES.md` §5.
   text and delivered agent text, but no photo. The original provider exception
   is absent from the available process log, so its exact cause is unconfirmed.
 - Credentials, iMessage platform, line assignment, event subscription and the
-  private server connection pass read-only diagnostics. Caretaker sender ends
-  **7418**; Marco's assigned line is **+1 628-316-7976**. These roles are correct.
+  private server connection pass read-only diagnostics. The configured caretaker
+  sender and Marco's assigned line were verified as distinct, correct roles.
   No new key is required for the handoff.
 
 ## Reproduced bugs and local fixes

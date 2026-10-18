@@ -1,6 +1,8 @@
 # Dashboard API integration plan
 
-Status: **prepared, implementation not started; ownership undecided**. Written October 17, 2026 against main at `755ee6b` and the current local frontend/iOS changes. Recheck this plan against the backend team's final code before starting.
+> **Historical plan — October 17, 2026.** The dashboard adapter, command relay and acknowledgements described here have since been implemented. Statements below about missing routes and proposed ownership record the planning baseline, not the current code. For current setup and behavior, use [the handoff](fastapi-handoff.md), [the browser contract](frontend-backend-contract.md), [team interfaces](../../docs/INTERFACES.md) and [STATUS.md](../../STATUS.md).
+
+Original status: **prepared, implementation not started; ownership undecided**. Written against main at `755ee6b` and the then-local frontend/iOS changes.
 
 Rebaseline note: the subsequent team push at `71268c6` implements `photon/` on Photon 2.0 using the existing §5 interfaces. Its server routes and loopback security are reconciled. Dashboard registration progress still depends on actual bridge lifecycle events; the existing label/item results can be reused.
 
@@ -24,7 +26,7 @@ The deliverable is a working flow: a real item appears on the website, Find star
 | [Minimum handoff](fastapi-handoff.md)                                                        | Existing browser transport, freshness and command behavior        |
 | [Audit fixes](audit-fixes.md)                                                                | Map identity, session replacement and reconnect cases to preserve |
 
-The [older frontend contract](frontend-backend-contract.md) describes a POC-era split in which the phone owns world memory and 3D placement. **That ownership diagram is superseded by the current team interfaces and backend.** Retain its browser field definitions where they match the schema; do not implement its old architecture.
+At the time of this plan, the frontend contract described a POC-era split in which the phone owned world memory and 3D placement. **That split was superseded by the team interfaces and backend.** The linked [frontend contract](frontend-backend-contract.md) now reflects server ownership.
 
 This file proposes work. It does not amend the device protocol. When implementing new messages, update `docs/INTERFACES.md`, regenerate its `.docx` with `poc/tools/md2docx.py`, and change the corresponding sender, receiver and contract tests together. Record the final owner handoff in the repo.
 

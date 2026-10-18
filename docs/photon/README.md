@@ -1,27 +1,16 @@
-# Photon 2.0 docs (local copy)
+# Photon 2.0 vendor reference archive
 
-Pulled from https://photon.codes/docs/beta on 2026-10-17: every Beta (2.0) page, one Markdown file per page, under `beta/`. Photon's 174-page generated SDK reference is left out. `INDEX-llms.txt` is Photon's full page index.
+These vendor documentation snapshots were copied from [Photon's Beta documentation](https://photon.codes/docs/beta/photon) on October 17, 2026. They are reference material, not Marco's implementation or a promise that Marco uses every documented feature. Original vendor attribution is retained.
 
-The machine-readable specs are too large to copy (the OpenAPI spec is 3.3 MB), so fetch them live:
-- REST endpoints: https://api.photon.codes/openapi.json
-- Event schemas: https://api.photon.codes/asyncapi.yaml
+Start with [the Marco bridge README](../../photon/README.md) for the implemented photo/typed-name flows and required configuration. Use the [canonical team interfaces](../INTERFACES.md) for Marco's server contract. ElevenLabs TTS belongs to the Marco server, not this bridge; vendor voice-agent cookbook examples are outside the demo's scope.
 
-## Which Photon
+The archived `beta/` pages retain vendor site-root links and documentation components that GitHub may not render. Read them on the [Photon documentation site](https://photon.codes/docs/beta/photon) when necessary. `INDEX-llms.txt` is the vendor's page index; SDK and API details may have changed since the snapshot.
 
-The LA Hacks track requires **Photon 2.0** ("must be built on Photon 2.0 and live on at least one Photon channel").
+## Relevant archived sections
 
-- **The guidelines link is wrong.** They link `photon.co/beta`, a parked domain. The real pages are https://photon.codes/beta and the dashboard at https://app.beta.photon.codes.
-- **2.0 is not the Spectrum SDK.** The guidelines' "SDK reference" links Spectrum (`spectrum-ts`), but `spectrum-ts` 12.11.0 has no Photon 2.0 support. Photon's docs call Stable and Beta "documentation channels, not interchangeable API versions" ([skill.md](https://photon.codes/docs/skill.md)), and 2.0 uses its own dashboard, `pho_prj_` project IDs and bearer API keys.
-- **So `photon/` is built on 2.0 directly.** It uses the official client `@photon-ai/api` 0.5.0 and the Socket.IO event stream.
-- **History.** The earlier Spectrum build, and the Stable docs, are in git history at commit `c3ad80f`.
+- `beta/get-started/project.md`: project, API key and permissions.
+- `beta/get-started/imessage.md`: iMessage setup and send/receive examples.
+- `beta/websocket/`: event streams, cursors and reconnects.
+- `beta/api-client/`: credentials, retries and idempotency.
 
-## Read these first
-
-| Page | Why |
-|---|---|
-| `beta/get-started/project.md` | Project, API key and permissions |
-| `beta/get-started/imessage.md` | Shared-line assignment, and a complete send and receive program |
-| `beta/websocket/*.md` | The event stream: connect, subscribe, cursors, reconnects |
-| `beta/api-client/*.md` | Credentials, errors, retries, idempotency |
-| `beta/plans-and-billing.md` | Shared iMessage assignments per plan |
-| `beta/cookbooks/voice/*.md` | Voice agents on an SMS number (the separate Best Voice Agent prize) |
+Machine-readable vendor specifications are available from [OpenAPI](https://api.photon.codes/openapi.json) and [event schemas](https://api.photon.codes/asyncapi.yaml); they are not bundled here. Consult current vendor documentation before changing dependencies or API behavior.

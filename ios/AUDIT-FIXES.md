@@ -18,7 +18,7 @@ All six reproducible findings in the supplied iOS audit are addressed. These cha
 - Unsigned Xcode Debug Simulator and Release device builds passed. The complete ARKit/UIKit app is compiled by these checks; the portable suite alone does not compile it.
 - All four Swift/server contract tests passed against rebased backend `8aa0ae1`. The remaining backend suite passed 72 tests, with one optional ARKitScenes sample check skipped because that dataset is absent locally. Eight Photon scaffold checks also passed. Test dependencies were installed in temporary environments outside the repository.
 
-The temporary reproduction harnesses are under `/private/tmp/marco-ios-fix-regressions/`; the maintained pure-state regressions are in `Tests/main.swift`.
+The temporary reproduction harnesses are under `<local-evidence>/marco-ios-fix-regressions/`; the maintained pure-state regressions are in `Tests/main.swift`.
 
 ## Hardware checks remain
 

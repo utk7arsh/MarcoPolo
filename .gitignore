@@ -42,6 +42,8 @@ poc/research/datasets_probe/
 poc/research/repos_psychoacoustics/
 poc/research/orbit_readme.md
 poc/research/landscape/research_raw/
+# Internal search-progress logs; public technical research stays in Markdown.
+poc/research/landscape/*harvest*.log
 poc/research/.scratch/
 
 # Server recordings and downloaded sample data: camera images of people's homes, and third-party datasets.

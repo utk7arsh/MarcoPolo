@@ -20,7 +20,7 @@ Feature codes: F1 spatial-audio guidance to object; F2 LiDAR/ARKit 3D/anchors; F
 - Find My Things (MSR story, 2024-10-24): teach with four short videos; few-shot model personalizes on device; "audio, visual, and vibration cues to guide the person to within arm's reach"; came from the ORBIT dataset work. [VERIFIED] https://www.microsoft.com/en-us/research/story/find-my-things/
 - Android: Seeing AI on Android since Dec 2023 [SNIPPET, MS accessibility blog]; Find My Things "only available on iOS devices" [SNIPPET, YouTube demo]. World needs LiDAR so effectively iPhone/iPad Pro only [INFERENCE].
 - Codes: F1, F2, F3 (fixed detector classes + taught items), F9, F11. Not F4 (beacons are live-session; no passive log), not F5, F6, F7, F8.
-- Implication [INFERENCE]: "the word 'chair' seems to emanate from the chair itself" with head-tracked AirPods and LiDAR shipped in 2020-2023. Hackathon finders that pair an LLM detector with this interaction re-implement it. Judges who know Seeing AI may see them as derivative.
+- Implication [INFERENCE]: object finding with head-tracked audio has prior implementations. Evaluate Marco through measured persistence, identity errors and hand guidance rather than claims of novelty.
 
 ## 2. Biped NOA (biped.ai, Switzerland)
 

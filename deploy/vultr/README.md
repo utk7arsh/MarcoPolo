@@ -42,7 +42,7 @@ Keys stay in your shell, never in a file in this repo:
 ```bash
 export VULTR_API_KEY=...            # Vultr → Account → API
 export TS_AUTHKEY=tskey-auth-...    # the one-off key from step 2
-export TAILSCALE_ALLOWED_LOGINS=utkarshlal@gmail.com,vedant@...   # tailnet logins allowed to call the server
+export TAILSCALE_ALLOWED_LOGINS=operator@example.com,helper@example.com   # tailnet logins allowed to call the server
 ```
 
 ## Run it

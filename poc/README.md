@@ -1,5 +1,7 @@
 # Marco Polo POCs: how to run
 
+These are research experiments, including rejected approaches and features outside the current demo. Their results do not establish physical-device performance or the current product scope. Start with [the roadmap](../docs/HACKATHON-ROADMAP.md) and [STATUS.md](../STATUS.md) for the implemented system.
+
 Everything is local. Python lives in a venv in this folder. The Swift tools build with Xcode Command Line Tools on macOS 15+.
 
 ```bash

@@ -11,7 +11,7 @@
 >    - add it to this list and to `docs/INTERFACES.md`.
 > 3. **After deploying to Vultr:**
 >    - run `deploy/vultr/marco-vultr.sh status`. The local call without a login must give 403, and yours through the tailnet must give 200;
->    - run an end-to-end pass with `server/tools/live_check.py --server https://marco-gpu.taild6d426.ts.net ...`.
+>    - run an end-to-end pass with `server/tools/live_check.py --server https://marco-gpu.example-tailnet.ts.net ...`.
 >
 > No route may ever answer without a login. `/docs`, `/redoc` and `/openapi.json` stay switched off.
 
@@ -19,7 +19,7 @@ Checked against `server/marco/app.py` and the Photon replay fixes (2026-10-18). 
 
 ## Base URL and login
 
-- **On Vultr:** `https://marco-gpu.taild6d426.ts.net`. Reachable only from the tailnet.
+- **On Vultr:** `https://marco-gpu.example-tailnet.ts.net`. Reachable only from the tailnet.
 - **On a laptop, for development:** `http://127.0.0.1:8000` with `AUTH_TEST_BYPASS=1`. Never set that bypass while `tailscale serve` points at the port.
 - **Login:** every route requires a tailnet login on `TAILSCALE_ALLOWED_LOGINS`. `tailscale serve` adds the caller's identity.
   - HTTP calls without it get **403**.

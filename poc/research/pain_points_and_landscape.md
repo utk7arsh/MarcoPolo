@@ -1,4 +1,6 @@
-# Marco Polo: pain points, competitive landscape, and feature ideas
+# Marco Polo: pain points, prior work, and feature ideas
+
+> Historical research and proposed features, compiled before implementation. Product descriptions reflect the source dates, not a current exhaustive comparison. Use [the roadmap](../../docs/HACKATHON-ROADMAP.md) and [STATUS.md](../../STATUS.md) for Marco's implemented scope. This survey does not establish novelty or Marco's performance.
 
 Compiled 2026-10-14. Read-only web research. Raw fetched text for most sources is in
 `poc/research/pain_points_src/` (not in the repository) (filenames noted as [src: file]).
@@ -10,13 +12,13 @@ snippet, page not fetched (403 or not attempted); [INFERENCE] = my reasoning, no
 ## Key takeaways
 
 1. **Locating things is a large, recurring, unsolved part of blind life.** Be My Eyes' co-founder (who is visually impaired) says he uses it "regularly around the house, mainly to locate things I have dropped or [when I] have forgotten where I put something." Be My Eyes now handles 43M+ AI and video requests a year. Blind Redditors describe 20-minute hands-and-knees searches for a ring that was "back left of my left foot", and items that stay lost "for six months".
-2. **Every shipping tool only finds what the camera can see right now.** Seeing AI Find My Things, Lookout Find (7 fixed categories), Envision Find Objects, Magnifier Detection, Be My AI, and Ray-Ban Meta all need you to sweep the camera around the room. AirTag needs a tag on every item. **None of them remember where you put something.** NaviSense (ASSETS 2025) puts it this way: tools are either precise but need pre-scanning, or open-world but give no spatial guidance.
+2. **Memory needs explicit evaluation.** Compare live object search with a saved last-seen location, then test persistence and relocalization. This survey cannot establish that every other tool lacks those features.
 3. **Describing a location is not the same as guiding someone to it.** NaviSense P11: "Be My AI says it is there on the table, but it doesn't tell me where the remote is." Be My AI took 48 s of search time per object, against 16 s for audio-haptic guidance.
 4. **What people lose (quantified).** In ORBIT (77 blind/low-vision collectors, 486 objects), the biggest clusters were remotes, keys, wallets/purses, guide canes, doors, AirPods/headphones, phones, watches and sunglasses. In the Pixie 2017 general-population survey, the weekly losses were TV remote 45%, phone 33%, keys 28% and glasses 27%. That is the same list, which is the curb-cut argument.
 5. **"Someone moved it" is a pain point on its own.** Etiquette guides (APH VisionAware: "don't move things without asking; always put things back") and hotel housekeeping both break blind users' location memory. One blind travel writer does a "tactile reset" after cleaning: "Is my cane still where I propped it?" In the general public, 63% blame someone else for a lost item, and 1 in 3 couples argue about it. In dementia, missing items turn into accusations of theft.
 6. **Coping today means systematic hand or cane sweeps, a fixed "home" for every item, asking a sighted person, Siri/HomePod pinging the phone, or Be My Eyes.** Training starts with "listen to hear where it lands". A drop-detection feature that does this listening for you is a direct fit.
 7. **Spatial audio works, but continuous beacons and blocked ears are the top complaints.** Loomis 2005: spatialized repeated speech was fastest and best rated, but there were "many negative comments about the headphones ... blocking environmental sounds" and complaints about "continuous presence of tones". A Soundscape user muted the beacon because "the constant sound was making me nervous" and "I couldn't really tell where the sound was coming from." Design implications: a sparse on-demand "Polo", AirPods Transparency mode, and a haptic fallback.
-8. **Novelty: the closest prior work.** Several 2026 hackathon finders do ask, then an LLM, then ARKit/LiDAR, then AirPods head-tracked sound. Their memory lasts one AR session at most and they search on demand. MemPal (MIT, 2025) and GO-Finder (IUI 2021) remember passively but answer with text or images, with no spatial guidance. Project Astra and Ray-Ban Meta remember but answer only in words. **Marco Polo's defensible gap is continuous passive memory that persists across sessions, plus egocentric head-tracked guidance to the remembered 3D point, built for blind users first.** Proactive events (dropped, moved, leaving without keys) add to that.
+8. **Prior work covers object search, memory and spatial guidance.** The papers and products below provide research context. Measure Marco's behavior directly; this survey does not establish a unique feature combination or limitations shared by all other systems.
 9. **Best demo moments for a 36-hour build:** (a) drop keys, hear "Polo" from the floor where they landed; (b) a teammate moves the mug, and Marco says "your mug was moved from the desk; last seen on the shelf"; (c) nod to confirm "guide me there?"; (d) at the door, "you don't have your keys; they're on the couch."
 10. **Voice-first and hands-free is required, not optional.** Seeing AI review: "how do the developers expect a blind person to touch the screen?" NaviSense D3: participants "strongly preferred natural voice interaction." Apple's 2026 accessibility preview moves Live Recognition onto the Action button. Use App Intents/Siri, the Action button and head gestures.
 
@@ -172,14 +174,14 @@ Prior work, ordered from closest to Marco Polo to least close:
 - **Vision Pro.** No known app does passive object memory. visionOS Live Recognition can "find objects" in view [VERIFIED]. Vision Pro itself "lacks Find My" [SNIPPET, The Verge].
 - **Not object memory:** Project Daredevil (MIT Assistive Technology) does iPhone LiDAR plus AirPods depth sonification ("digital echolocation"). [VERIFIED README]
 
-**What makes Marco Polo different** [INFERENCE, synthesized from the above]:
-1. **Passive, registration-free, persistent memory.** It logs object sightings with 3D positions in a relocalizable world map (ARWorldMap) across sessions. Find My Things, AirTag and Envision need setup or tags. Search-on-ask finders remember for one session at most. Lookout and Magnifier have none.
-2. **Guidance to a remembered point, even when the item is out of view.** It answers "where are my keys" when the keys are behind you, in another room, or under the couch edge, not only when they are in frame.
-3. **Egocentric head-tracked "Polo" on everyday AirPods.** Astra, Meta, MemPal and Halo only describe the location in words. NaviSense, Find My Things and AirTag use phone pointing.
-4. **Proactive memory events.** Detects drops, objects moved by others, and leaving home without an item. No competitor found does these.
-5. **Blind-first defaults.** Voice and Siri, the Action button, head gestures, haptics for DeafBlind users, and a sparse beacon compatible with Transparency mode. The same flow works for anyone who loses things (Pixie, ADHD, older adults).
+**Questions to evaluate in Marco** [research directions, not validated claims]:
+1. Do registered items and usable map associations survive a restart and relocalization?
+2. Can a user follow guidance to a remembered point when the item is out of view, while understanding that the item may have moved?
+3. Do head-tracked cues help with turning, walking and final hand placement on the physical setup?
+4. Do observed moves and left-behind events remain accurate under occlusion and tracking loss?
+5. Do voice commands, VoiceOver and status feedback support the intended blind-user flow?
 
-Risk: the core "LLM, ARKit, spatial cue" loop has already been built in 48 hours at hackathons. Lead the pitch with memory and proactive events, not with spatial audio alone.
+Treat persistence, accessibility and false-positive performance as testable requirements. Do not infer superiority from a feature list.
 
 ---
 

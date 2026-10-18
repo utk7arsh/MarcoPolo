@@ -1,10 +1,10 @@
 # FastAPI: minimum dashboard handoff
 
-**Integration status, October 17:** `server/` now exists and implements the separate `/v1` contract in `../../docs/INTERFACES.md`. These dashboard snapshot/command routes still need an adapter. Keep the server's existing authentication and Tailscale access policy when adding it; do not change message formats to make the visual refresh work.
+**Integration status, October 18:** the browser adapter is implemented in `server/marco/dashboard.py` and `dashboard_commands.py`, with routes in `app.py`. It runs alongside the device `/v1` API in [the team interfaces](../../docs/INTERFACES.md). HTTP, media and WebSockets retain the server's Tailscale identity gate.
 
-See [the implementation plan](backend-integration-plan.md) for preparing to add that adapter after the backend core is ready. It also identifies proposed session/command and phone-health extensions that require a coordinated contract update; they are not implemented by this handoff.
+The [original implementation plan](backend-integration-plan.md) records the preimplementation handoff. Use [STATUS.md](../../STATUS.md) for release results and remaining physical-device checks.
 
-The frontend is implemented in the repository’s `frontend/` folder. The backend is not implemented by this change. Start by serving [the example fixture](dashboard.snapshot.example.json) through these three interfaces, then replace its data with real observations. The [full contract](frontend-backend-contract.md) defines all fields; the [generated JSON Schema](dashboard.snapshot.schema.json) and [TypeScript/Zod source](../src/lib/schema.ts) agree on the payload shape.
+The frontend lives in `frontend/`. The [example fixture](dashboard.snapshot.example.json), [full contract](frontend-backend-contract.md), [generated JSON Schema](dashboard.snapshot.schema.json) and [TypeScript/Zod source](../src/lib/schema.ts) describe the browser payload. Registered items load without a phone; camera, pose and guidance require phone telemetry.
 
 | Interface                  | Required behavior                                                                                                                          |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -24,4 +24,4 @@ The frontend is implemented in the repository’s `frontend/` folder. The backen
 
 If separate origins are required, set `VITE_API_BASE_URL` to the FastAPI origin, configure the exact dashboard origin with credentials, and validate WebSocket origins/session access too. See [FastAPI CORS](https://fastapi.tiangolo.com/tutorial/cors/) and [FastAPI WebSockets](https://fastapi.tiangolo.com/advanced/websockets/).
 
-The first live integration check is simple: serve the example, confirm Objects loads, publish a newer sighting through `/events`, then send Find and acknowledge its command ID from the phone. No browser or storage implementation needs to change for that step.
+A useful integration check is to confirm Objects loads, publish a newer sighting through `/events`, then send Find and acknowledge its command ID from the phone. An example fixture verifies rendering only; real phone guidance and headphone playback need device checks.

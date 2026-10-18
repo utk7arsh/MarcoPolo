@@ -3,8 +3,10 @@
 A wearable for blind and low-vision people: an **iPhone 16 Pro** in a chest vest (LiDAR + camera), **AirPods Pro 3** (spatial audio), and a server that remembers where things are.
 
 - **"Marco, where are my keys?"** *"Polo! Behind you, two steps, on the table,"* then a beacon that comes from the keys, until your hand touches them.
-- **Touch a jar** and hear which one it is, in the voice of the person who labelled it.
-- **Family labels things over iMessage:** Marco texts them a photo of anything it doesn't know.
+- **Touch a registered item** and hear its name in Marco's voice.
+- **Family labels things over iMessage:** send a photo with a typed name, or answer Marco's question about an unknown item.
+
+ElevenLabs provides text-to-speech for Marco's responses; Apple speech is the phone's fallback. It does not generate answers or transcribe caretaker voice labels. The phone and server choose the words. This is a hackathon prototype: detection can confuse objects, and the latest build still needs physical iPhone/AirPods verification. See [the roadmap](docs/HACKATHON-ROADMAP.md) and [current release notes](STATUS.md).
 
 ```
  iPhone app (ios/)  -- frames 1/s, pose 10/s, hands 15/s, voice queries -->  server (server/)  -- label_request -->  Photon bridge (photon/)
@@ -21,7 +23,7 @@ The contract between the parts is [docs/INTERFACES.md](docs/INTERFACES.md): ever
 | Caretaker labelling over iMessage (Utkarsh) | `photon/` | [photon/README.md](photon/README.md) |
 | Photon reference wiring: speaks the contract's §5 exactly, tested against the server | `photon-scaffold/` | [photon-scaffold/README.md](photon-scaffold/README.md) |
 | Dashboard (Sandeep) | `frontend/` | [frontend/README.md](frontend/README.md), [frontend/docs/fastapi-handoff.md](frontend/docs/fastapi-handoff.md) |
-| The research and 26 POCs behind every decision | `poc/` | [poc/README.md](poc/README.md), [poc/REQUIREMENTS.md](poc/REQUIREMENTS.md) |
+| Research and proof-of-concept experiments | `poc/` | [poc/README.md](poc/README.md), [poc/REQUIREMENTS.md](poc/REQUIREMENTS.md) |
 
 ## Quick start
 The server runs in stub mode with no models (fake items, real geometry), so each part can be built against it straight away.
@@ -54,7 +56,7 @@ python tools/bench_frame.py data/sessions/arkitscenes-41069021 --items 1 10 20  
 
 You'll receive `frame` (upright JPEG plus boxes), `world` (items and the user), `map_points` (coloured voxels), `guidance` (for the radar) and `timeline` messages (§6 of the contract). There are also `GET /v1/items` and `GET /v1/timeline`.
 
-The dashboard in `frontend/` expects routes the server doesn't serve yet: `GET /dashboard/snapshot`, `WS /events` and `POST /dashboard/commands` (see `frontend/docs/fastapi-handoff.md`). Adding them is the next server step (STATUS.md).
+The browser dashboard uses the implemented adapter: `GET /dashboard/snapshot`, `WS /events` and `POST /dashboard/commands`, also available under `/api`. It displays registered objects even when the phone is disconnected. Live pose, camera and guidance require phone telemetry. Follow [frontend/README.md](frontend/README.md) for Demo/API mode and proxy setup. Production access stays behind the Tailscale identity gate; the local auth bypass above is for development only.
 
 ## Tests
 ```
@@ -72,3 +74,7 @@ The contract tests:
 - **Private only:** the server binds 127.0.0.1 and is reached through `tailscale serve` (tailnet only, never `funnel`).
 - **Fail-closed gate:** every route goes through `server/marco/auth.py`, which admits only the logins in `TAILSCALE_ALLOWED_LOGINS`.
 - **Nothing sensitive in git:** no secrets, recordings or downloaded datasets (see `.gitignore`).
+
+## Documentation
+
+[The roadmap](docs/HACKATHON-ROADMAP.md) and [interfaces](docs/INTERFACES.md) describe the current system. Dated audits and POC reports record their original test conditions, including approaches that were later replaced. `<local-evidence>` and `<local-recordings>` in those notes stand for private artifacts outside this repository. Example hostnames and login identities must be replaced with your own deployment settings.

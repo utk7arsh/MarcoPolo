@@ -2,6 +2,32 @@
 
 Last updated: 2026-10-18. Keep this file current: update it whenever a decision is made or a piece lands.
 
+Entries are dated historical records, not live service health or a current object inventory. Operational identities and hostnames use examples. `<local-evidence>` and `<local-recordings>` refer to private artifacts outside Git.
+
+## Public documentation cleanup (October 18, 2026)
+
+- Fast-forwarded to main `c0e5c5e`, preserving the two new Photon greeting commits.
+  Updated READMEs, the browser ownership diagram and architecture page to match
+  the implemented adapter, typed caretaker labels and output-only ElevenLabs.
+- Replaced contact/deployment identities with examples. Marked dated audits and
+  local evidence as historical/private. Condensed superseded concept, competitive
+  pitch and sponsor plans; removed four raw search-progress logs and ignored
+  future copies. Technical research, source/asset attribution and font licenses
+  remain. Originals were backed up outside the repository before cleanup.
+- No application logic, protocol, schema, dependency, active workflow or asset
+  changed. The sole source-file edit changes two comments; TypeScript's parsed
+  output is identical with comments removed. The architecture page's renderer
+  and CSS are unchanged; its displayed connections now show server-side TTS.
+- Verification: Photon typecheck and **53 tests pass**; **127 relative Markdown
+  targets** resolve; frontend Markdown formatting and Git whitespace checks pass.
+  The architecture page renders all 13 connections at desktop width and its
+  table at mobile width with no script errors. The credential scan found no
+  matches in the current files or **1,058 reachable history blobs**.
+- Cleanup remains local: no commit, push, deployment, visibility change or Git
+  history rewrite was performed. Earlier commits still contain their original
+  documentation and operational references. These checks are documentation
+  verification, not a new physical-device or production end-to-end test.
+
 ## Full-stack release and fresh demo (October 18, 2026, 15:32 UTC)
 
 - Pushed runtime release `e8de7f5` on latest main and deployed server, Photon and
@@ -29,7 +55,7 @@ Last updated: 2026-10-18. Keep this file current: update it whenever a decision 
 - Release rollback backup:
   `/opt/marco/backups/release-e8de7f5-20261018T153051Z/`; release/test/verification
   receipts: `/opt/marco/deploy/release-e8de7f5/` and locally
-  `/private/tmp/marco-listen-release-20261018/`.
+  `<local-evidence>/marco-listen-release-20261018/`.
 - iOS passes its Release build but has not been installed or tested on the
   physical phone for these additions. Install that build for detailed sound
   reporting. The phone's ARKit map is local: use Developer tools' "Forget the
@@ -53,8 +79,8 @@ Last updated: 2026-10-18. Keep this file current: update it whenever a decision 
   playback; Photon passes **52 tests** and typechecking, the reference client
   passes **8 tests**, and audio/ARKit emulators pass **19 tests**. Deployment shell
   syntax checks pass. The full unsigned iOS Release build succeeds. Logs:
-  `/private/tmp/marco-listen-{server,swift,xcode,photon,scaffold}.log` and
-  `/private/tmp/marco-listen-release-20261018/frontend-check.log`.
+  `<local-evidence>/marco-listen-{server,swift,xcode,photon,scaffold}.log` and
+  `<local-evidence>/marco-listen-release-20261018/frontend-check.log`.
 - Pushed and deployed with the full-stack release above. No device playback.
   To use the additional details live, rebuild/install iOS. Browser
   HRTF and network timing remain an approximation of Apple's headphone output.
@@ -74,7 +100,7 @@ Last updated: 2026-10-18. Keep this file current: update it whenever a decision 
 ## Read-only recording handoff (October 18, 2026)
 
 - Downloaded the four Vultr session folders matching the 10:50 UTC cutoff to
-  `~/marco-live/marco-live.tgz`, together with the current registry JSON, photos
+  `<local-recordings>/marco-live.tgz`, together with the current registry JSON, photos
   and detector templates. The sessions contain 1,814 frames (10:54–13:17 UTC),
   374,215,708 uncompressed session bytes; the archive is 322,565,843 bytes.
 - Recovered the five deleted morning items' registry/photos/templates from the
@@ -113,7 +139,7 @@ Last updated: 2026-10-18. Keep this file current: update it whenever a decision 
   still need a physical walking/listening check. The user authorized pushing this
   iOS fix; no backend redeployment is required. Rebuild/install the phone app to
   use it. No device installation was performed. Evidence logs:
-  `/private/tmp/marco-facing-confirmation-{swift,contract,xcode}.log`.
+  `<local-evidence>/marco-facing-confirmation-{swift,contract,xcode}.log`.
 
 ## Photon reply-latency diagnosis (October 18, 2026)
 
@@ -176,7 +202,7 @@ Last updated: 2026-10-18. Keep this file current: update it whenever a decision 
 - Rollback files and data are under
   `/opt/marco/backups/release-b11519b-20261018T115513Z/`; deployment/test evidence
   is in `/opt/marco/deploy/release-b11519b/` and
-  `/private/tmp/marco-full-release-20261018/`. The wearer phone is disconnected:
+  `<local-evidence>/marco-full-release-20261018/`. The wearer phone is disconnected:
   capture, real movement, command execution and audible playback still need a
   physical-device run. This follow-up changes only release documentation.
 
@@ -296,7 +322,7 @@ Last updated: 2026-10-18. Keep this file current: update it whenever a decision 
 - [Server/Photon CI passed](https://github.com/utk7arsh/LAHacks-2026/actions/runs/39116888768)
   and [frontend CI passed](https://github.com/utk7arsh/LAHacks-2026/actions/runs/39117020363).
   Rollback copy: `/opt/marco/backups/dashboard-f56e7d6-20261018T095358Z`.
-  Evidence: `/private/tmp/marco-dashboard-deploy-20261018/`. Subsequent main commit
+  Evidence: `<local-evidence>/marco-dashboard-deploy-20261018/`. Subsequent main commit
   `14a1d16` contains POC reports only; no additional runtime deployment is needed.
 
 ## Pre-mobile live integration audit (October 18, 2026)
@@ -339,7 +365,7 @@ Last updated: 2026-10-18. Keep this file current: update it whenever a decision 
   macOS-only HEIC fixture-generation skip (conversion separately verified).
 - Fix `761e1ed` is pushed and [GitHub integration checks pass](https://github.com/utk7arsh/LAHacks-2026/actions/runs/39116085128).
   The complete unsigned iOS Release build for a generic physical iPhone passes.
-  Evidence is under `/private/tmp/marco-readiness-20261018/`. The test used
+  Evidence is under `<local-evidence>/marco-readiness-20261018/`. The test used
   synthetic sensors and silent Mac rendering; physical iPhone capture, actual
   fingertip contact, AirPods routing/head tracking and VoiceOver still need the
   device. For the demo, handle one unknown-item question at a time.
@@ -444,7 +470,7 @@ Last updated: 2026-10-18. Keep this file current: update it whenever a decision 
 ## Main push verification (October 18, 2026)
 
 - User authorized integrating and pushing the local changes. Preserved tracked
-  edits and untracked source under `/private/tmp/marco-before-push-20261018T082732Z/`.
+  edits and untracked source under `<local-evidence>/marco-before-push-20261018T082732Z/`.
   Fetched and pulled `origin/main` with fast-forward only: already current at
   `cc38be3`, no conflicts or teammate commits to reconcile.
 - Re-ran all checks: **110 server tests passed, one external dataset skipped**;
@@ -516,7 +542,7 @@ Last updated: 2026-10-18. Keep this file current: update it whenever a decision 
   the three HTTP boundary checks above.
 - Re-ran regressions: **110 server tests passed, 1 external-dataset skip**;
   **375 Swift checks passed**; **47 Photon tests and typecheck passed**.
-- Evidence and generated audio: `/private/tmp/marco-local-speech-evidence-20261018/`
+- Evidence and generated audio: `<local-evidence>/marco-local-speech-evidence-20261018/`
   (`report.json`, `reply.wav`, left/right renders, Apple fallback and run log).
   All temporary test servers were stopped. The Mac reported built-in speakers;
   no audible playback, physical iPhone, AirPods/head-motion, walking, front/back
@@ -567,7 +593,7 @@ Last updated: 2026-10-18. Keep this file current: update it whenever a decision 
   conflicts. The remote version is the working baseline; no local commit or push.
 - Preserved every prior tracked/untracked edit in Git stash
   `Preserve local dashboard Photon and speech plan before latest main sync 2026-10-17`
-  and a separate patch/archive at `/private/tmp/marco-before-main-sync-20261018T064652Z/`.
+  and a separate patch/archive at `<local-evidence>/marco-before-main-sync-20261018T064652Z/`.
   Ignored credentials and data stayed in place. The old frontend raw-v1 adapter
   and Scribe additions were not reapplied over the new server adapter.
 - Reconciled only still-needed fixes: pinned bundled `ffmpeg-static@5.3.0`,
@@ -598,9 +624,9 @@ Last updated: 2026-10-18. Keep this file current: update it whenever a decision 
   loaded a 960×720 chest-camera frame. The phone reported connected. No page
   errors, failed API responses, browser writes or commands occurred. Two Diet
   Coke registrations already exist and were left untouched. Evidence:
-  `/private/tmp/marco-latest-main-live-browser.json`,
-  `/private/tmp/marco-latest-main-objects.png`,
-  `/private/tmp/marco-latest-main-camera.png`.
+  `<local-evidence>/marco-latest-main-live-browser.json`,
+  `<local-evidence>/marco-latest-main-objects.png`,
+  `<local-evidence>/marco-latest-main-camera.png`.
 - No shared-server deployment, real iMessage send, physical iPhone install,
   Find/Stop command or AirPods test was performed in this synchronization.
   The existing live Photon process was not restarted; runtime adoption of the
@@ -677,10 +703,10 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
 - **Vultr GPU box `marco-gpu`** (NVIDIA A16, 16 GB), deployed by Utkarsh:
   - `marco.service` runs under its own `marco` user from `/opt/marco/server`, with `MARCO_MODE=real` and the hardened systemd settings in `/opt/marco/deploy/`;
   - `/opt/marco/deploy/remote-setup.sh` re-runs after each code sync; his `marco-vultr.sh deploy` does both.
-- **URL:** `https://marco-gpu.taild6d426.ts.net`, through `tailscale serve`, tailnet only. The bare URL answers with a status; the API is `/v1/...`.
+- **URL:** `https://marco-gpu.example-tailnet.ts.net`, through `tailscale serve`, tailnet only. The bare URL answers with a status; the API is `/v1/...`.
 - **Login is Tailscale itself:**
   1. A device must be signed in to Utkarsh's tailnet even to reach the URL.
-  2. `tailscale serve` adds that user's login, and the server admits only `TAILSCALE_ALLOWED_LOGINS` (now `utk7arsh@github`).
+  2. `tailscale serve` adds that user's login, and the server admits only `TAILSCALE_ALLOWED_LOGINS` (now `operator@example.com`).
   3. Everyone else gets 403 (WebSocket close 1008).
 - **From the internet:** ports 80, 443 and 8000 are closed (probed 2026-10-17). The app listens on 127.0.0.1, and ufw allows only SSH.
 - **Remaining risk:** root SSH with a password. Anyone with SSH can call 127.0.0.1:8000 directly. Change the password (it was shared in chat) and switch to keys only.
@@ -688,7 +714,7 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
 - **Deployed 2026-10-18 03:15 UTC: commit `f778d18`.** It brings the floor-relative surfaces, the 4 m range gate, the gated status at `/` and FastAPI's docs off. It was deployed with the kit's own steps over SSH.
   - The previous code is at `/opt/marco/backup-server-20261018-031539.tgz`.
   - **Checked on the box:**
-    - `/` shows the status, signed in as `utk7arsh@github`;
+    - `/` shows the status, signed in as `operator@example.com`;
     - `/docs` and `/openapi.json` give 404;
     - `/v1/items` gives 200 through the URL and 403 on 127.0.0.1 without a login;
     - a forged `Tailscale-User-Login` header sent through `tailscale serve` is replaced by the real login.
@@ -793,7 +819,7 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
   - The box has no inbound ports. It joins the tailnet at first boot (cloud-init) and is reached by Tailscale SSH.
   - The server runs as a hardened systemd unit with `MARCO_MODE=real` and `MARCO_AUTH=tailscale`. `tailscale serve` publishes it only after the gate is checked to return 403.
   - PyTorch is a CUDA build matched to the driver.
-  - **Live since 2026-10-18:** `marco-gpu` (A16 16 GB, `sjc`, driver 580 / CUDA 13.0, torch `cu130`) at `https://marco-gpu.taild6d426.ts.net`, with `TAILSCALE_ALLOWED_LOGINS=utk7arsh@github`.
+  - **Live since 2026-10-18:** `marco-gpu` (A16 16 GB, `sjc`, driver 580 / CUDA 13.0, torch `cu130`) at `https://marco-gpu.example-tailnet.ts.net`, with `TAILSCALE_ALLOWED_LOGINS=operator@example.com`.
     - **Checked with `status`:** an unauthenticated local call gets 403; an allowed tailnet call gets 200.
     - **`bench` on the box (full per-frame pipeline):**
 
@@ -908,7 +934,7 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
    - **Possible §5 additions (proposals, not built):** `label_request_seen` (the caretaker opened the photo: "Mom is looking at it") and `label_unknown` ("Mom isn't sure either"). `photon/` already detects both and only logs them.
    - **Local audit fix (2026-10-18):** the server buffers up to 128 unanswered `label_request` events for 10 minutes and replays on bridge reconnect; this is memory-only and not deployed yet. See the Photon audit above.
 7. **Vultr (Utkarsh): the box is up** (see "Built and verified"). Left to do:
-   - point the phone's Server field and `photon/`'s `MARCO_SERVER_URL` at `https://marco-gpu.taild6d426.ts.net`;
+   - point the phone's Server field and `photon/`'s `MARCO_SERVER_URL` at `https://marco-gpu.example-tailnet.ts.net`;
    - invite teammates to the `utk7arsh` tailnet, add their logins to `TAILSCALE_ALLOWED_LOGINS`, and re-run `deploy`;
    - measure the phone-to-Vultr round trip on venue Wi-Fi (`tailscale ping marco-gpu`).
 
@@ -916,12 +942,12 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
 
 8. **Phone to Vultr, and Vultr to the dashboard (decided: Vultr is primary; measured 2026-10-17):**
    - **Phone → `marco-gpu`, connected and tested from this Mac over the tailnet** (the same path the phone takes):
-     - Tailscale path **direct** to the box (`via 45.32.136.225:41641`, no relay), 49–65 ms;
-     - `GET /v1/items` → 200 through the allow-list (login `utk7arsh@github`);
+     - Tailscale path **direct** to the box (`via <server-ip>:41641`, no relay), 49–65 ms;
+     - `GET /v1/items` → 200 through the allow-list (login `operator@example.com`);
      - `POST /v1/frames` with the Swift-encoded bytes → 202 in 83–118 ms per frame on a kept-alive connection (40 KB synthetic frame, no items registered);
      - `WSS /v1/phone` opens in about 0.4 s; message round trip median 67 ms.
    - **Expected on the phone:** about 60–100 ms network plus the A16's 0.18–0.40 s pipeline per frame, well inside 1 s. Touch: hand messages up, about a 5-message vote, `touch` down, so about 0.4 s.
-   - **To connect the phone:** install the Tailscale app, sign in with the same login (`utk7arsh@github`, already on the allow-list; any other login must be added to `TAILSCALE_ALLOWED_LOGINS` and redeployed), set Server to `https://marco-gpu.<tailnet>.ts.net`, press Start. The app's log then says "Server OK", or what to fix (`ios/Marco/Net/ServerCheck.swift`).
+   - **To connect the phone:** install the Tailscale app, sign in with the same login (`operator@example.com`, already on the allow-list; any other login must be added to `TAILSCALE_ALLOWED_LOGINS` and redeployed), set Server to `https://marco-gpu.<tailnet>.ts.net`, press Start. The app's log then says "Server OK", or what to fix (`ios/Marco/Net/ServerCheck.swift`).
    - **Is the phone's path direct?** `marco-vultr.sh ssh`, then `tailscale status` on the box: the iPhone's line should not say `relay`. If it does, venue Wi-Fi is blocking UDP; try the phone's cellular data.
    - **Dashboard on the Mac:** it reads `marco-gpu` over the tailnet (`API_PROXY_TARGET=https://marco-gpu.<tailnet>.ts.net`; this Mac's login is allowed).
    - **Fallback (server on the venue Mac), measured on this M2 Pro:** upload start to dashboard `frame` median 428 ms with real OWLv2 (408 ms of it detection), 16 ms in stub mode; pose to `world` 1.2 ms. Put the Mac on the iPhone's Personal Hotspot so the link stays direct.
@@ -936,7 +962,7 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
    - **Dashboard (Sandeep):** `frontend/` still calls `/dashboard/snapshot`, `WS /events` and `/dashboard/commands`, so it shows nothing today. The adapter should push on every event, not on a 1 s timer, which would add 0.5 s on average. Over loopback the gate returns 403 with `MARCO_AUTH=tailscale`, so point `API_PROXY_TARGET` at the `ts.net` URL.
 
 8. **Vultr (Utkarsh): the box is up** (see "Built and verified"). Left to do:
-   - point the phone's Server field and `photon/`'s `MARCO_SERVER_URL` at `https://marco-gpu.taild6d426.ts.net`;
+   - point the phone's Server field and `photon/`'s `MARCO_SERVER_URL` at `https://marco-gpu.example-tailnet.ts.net`;
    - invite teammates to the `utk7arsh` tailnet, add their logins to `TAILSCALE_ALLOWED_LOGINS`, and re-run `deploy`;
    - measure the phone-to-Vultr round trip on venue Wi-Fi (`tailscale ping marco-gpu`);
    - try OWLv2-large on it with `bench_frame.py` (step 6).

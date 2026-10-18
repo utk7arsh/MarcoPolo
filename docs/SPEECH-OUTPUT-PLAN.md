@@ -88,7 +88,7 @@ fallback/cooldown, actual Apple fallback synthesis and cache reuse after local
 server shutdown. Separate HTTP checks returned expected 403, 503 and 422.
 Fresh reply time was **1.071 s**; cached reply was synchronous (~0.009 ms).
 All temporary servers were stopped; nothing was deployed or played audibly.
-Evidence: `/private/tmp/marco-local-speech-evidence-20261018/report.json` and WAV
+Evidence: `<local-evidence>/marco-local-speech-evidence-20261018/report.json` and WAV
 samples alongside it. Regression suites again passed: server 110 (one dataset
 skip), Swift 375 and Photon 47. These checks do not prove physical head tracking
 or perceived spatial directions on AirPods.

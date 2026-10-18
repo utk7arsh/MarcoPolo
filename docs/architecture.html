@@ -130,8 +130,8 @@
 <div class="wrap">
   <header>
     <h1>Marco Polo: build map</h1>
-    <p>The target system and the demo it should deliver, coloured by what actually works today. Source of truth: <code>docs/HACKATHON-ROADMAP.md</code>, <code>docs/INTERFACES.md</code> v0.3, <code>STATUS.md</code> and the code at <code>cc38be3</code> (2026-10-18). Hover anything for the evidence.</p>
-    <div class="banner"><b>Where we really are:</b> the server on Vultr is live and keeps registrations and labels across restarts; the Photon bridge runs against it; the dashboard adapter now exists on the server (tested, not yet connected in a browser or deployed). The app installs and launches on the iPhone, but the full "where are my keys?" run, from the vest to the server and back into the AirPods, has not happened yet. Everything on the body is <b>Built</b>, not proven.</div>
+    <p>The implemented architecture and its verification boundaries. Source of truth: <a href="HACKATHON-ROADMAP.md">the roadmap</a>, <a href="INTERFACES.md">interfaces v0.4</a> and <a href="../STATUS.md">release notes</a> (2026-10-18). Hover cards for context. Colours describe recorded checks, not real-time service health.</p>
+    <div class="banner"><b>Release scope:</b> the private server, Photon bridge and dashboard are deployed. Caretakers send photos and typed names. The server obtains ElevenLabs speech from exact text; the phone renders it spatially, with Apple speech as fallback. Software and live-service checks are recorded in STATUS.md. The latest iOS build still needs physical iPhone/AirPods verification; object false positives remain unresolved.</div>
     <p class="legend-title">Progress colours</p>
     <div class="legend">
       <span data-status="e2e"><i></i><b>End to end</b>&nbsp;works across its connections in software (loopback, replayed real recordings, or from the Mac)</span>
@@ -164,13 +164,13 @@
       <div class="cmd" data-status="e2e" data-kind="cmd" title="Known and unknown both covered by the Photon end-to-end test against the server (stub, loopback). Needs a real touch on the vest.">
         <div class="top"><span>Identify</span><span class="pill" data-status="e2e"></span></div>
         <div class="say">"Marco, what is this?"</div>
-        <p>Known item: plays its label, in the labeller's voice if they recorded one. Unknown: asks the caretaker (next card).</p>
-        <div class="path">Touch from the hand stream &#9315; &rarr; <code>what_is_this</code> &rarr; label audio &#9319;</div>
+        <p>Known item: speaks its typed label in Marco's voice. Unknown: asks the caretaker (next card).</p>
+        <div class="path">Touch from the hand stream &#9315; &rarr; <code>what_is_this</code> &rarr; spoken label &#9319;</div>
       </div>
-      <div class="cmd" data-status="e2e" data-kind="cmd" title="Photon 2.0 is live; the whole loop (label_request, iMessage, text then voice memo, label_ready with m4a) passes end to end against the server on loopback, including a server restart (labels persist) and /restart. The bridge now runs against marco-gpu; a full label round trip through Vultr isn't recorded yet.">
+      <div class="cmd" data-status="e2e" data-kind="cmd" title="Photo registration and typed caretaker replies have been tested with the deployed bridge and server. New voice labels and Scribe are outside the current scope. The latest full wearer-device interaction still needs a physical check.">
         <div class="top"><span>Caretaker labels</span><span class="pill" data-status="e2e"></span></div>
         <div class="say">Mom gets a photo: "What is this?"</div>
-        <p>She replies "cumin" or sends a voice memo; the jar is registered where it was touched and speaks in her voice from then on.</p>
+        <p>She types "cumin"; the server stores that label for the touched item and Marco speaks it. No caretaker voice recording is required.</p>
         <div class="path"><code>label_request</code> &#9320; &rarr; iMessage &#9323; &rarr; reply &#9313; &rarr; <code>POST /v1/labels</code> &#9317; &rarr; <code>label_ready</code> &#9319;</div>
       </div>
       <div class="cmd" data-status="built" data-kind="cmd" title="Server touch detector tested on synthetic data only (touch 67 ms after contact); phone plays the label from the touched jar's position (room-anchored audio). Needs real hands and a refit of CONTACT_M.">
@@ -185,16 +185,16 @@
         <p>Remembers the exit; walking out while your keys, wallet or phone stay in the room triggers a spoken warning and a buzz.</p>
         <div class="path"><code>set_place door</code> &#9315; &rarr; <code>event left_behind</code> &#9319;</div>
       </div>
-      <div class="cmd" data-status="built" data-kind="cmd" title="3c82c6a: POST /dashboard/commands sends a command to the bound phone; command_ack drives lastCommand (pending, accepted, completed, rejected). Server 8 tests (idempotent retries, conflicts, timeout, session replacement); Swift CommandGate 9 tests. Not verified: the browser against these routes, AppModel in Xcode, a real Find from the dashboard.">
+      <div class="cmd" data-status="built" data-kind="cmd" title="POST /dashboard/commands sends a command to the bound phone; command_ack drives lastCommand. Browser, server and Swift command checks pass. The latest app builds in Xcode; a real dashboard-driven Find still needs a physical-device check.">
         <div class="top"><span>Operator</span><span class="pill" data-status="built"></span></div>
         <div class="say">Press Find / Stop on the dashboard</div>
         <p>A teammate starts or stops guidance to a chosen item from the big screen; the phone runs exactly the same guidance as a voice Find.</p>
         <div class="path"><code>POST /dashboard/commands</code> &#9321; &rarr; <code>command</code> &#9319; &rarr; <code>command_ack</code> &#9315;</div>
       </div>
-      <div class="cmd" data-status="e2e" data-kind="cmd" title="POST /v1/items with the retake check works against the server and from Photon setup photos (end-to-end test). Done by a sighted helper: in the app only on the Debug diagnostics screen. Registrations now survive a server restart (registry.py, deployed and verified on marco-gpu). Open bug: registering the same name twice adds a second item, and find answers with the older one.">
+      <div class="cmd" data-status="e2e" data-kind="cmd" title="POST /v1/items accepts photo/name registration from Photon or app diagnostics, checks quality, and persists the detector template. Restart/crop persistence has regression coverage. A passing registration is not proof of reliable object identity.">
         <div class="top"><span>Register</span><span class="pill" data-status="e2e"></span></div>
         <div class="say">One photo + a name</div>
-        <p>Set up by a sighted helper: the app's setup screen, or a captioned photo texted by the caretaker. A bad photo gets "I can't see the wallet clearly, try again."</p>
+        <p>Set up by a sighted helper: a captioned photo texted by the caretaker, or the app's diagnostic registration tool. A bad photo gets "I can't see the wallet clearly, try again."</p>
         <div class="path"><code>POST /v1/items</code> &#9316; / &#9317;</div>
       </div>
     </div>
@@ -202,7 +202,7 @@
 
   <section>
     <h2>The find experience, stage by stage</h2>
-    <p class="sub">What the wearer hears after "where are my keys?". All seven stages exist in code (<code>ios/Marco/Core/Guidance.swift</code>, <code>Lines.swift</code>, server <code>touch.py</code>); none has been heard on the vest yet. The demo needs every one of them.</p>
+    <p class="sub">What the wearer hears after "where are my keys?". These stages are implemented in <code>ios/Marco/Core/Guidance.swift</code>, <code>Lines.swift</code> and server <code>touch.py</code>. Software checks cover them; the latest build still needs physical playback, walking and hand-guidance checks.</p>
     <div class="stages">
       <div class="stage" data-status="built" data-kind="stage" title="Wake word, phrasing and vocabulary: 60 Swift tests. The AirPods high-quality mic mode is unverified on hardware (iPhone mic fallback).">
         <div class="heard">"Marco, where are my keys?"</div>
@@ -222,9 +222,9 @@
         <div class="where"><code>Guidance</code> phase <code>behind</code></div>
         <span class="pill" data-status="built"></span>
       </div>
-      <div class="stage" data-status="built" data-kind="stage" title="Lock within max(12 degrees, atan(0.3 m / distance)): a corridor 30 cm either side of the item, so it widens up close. Releases 8 degrees outside; drifting off swaps to the plain beep at once. Logic tested; not felt on the vest yet.">
+      <div class="stage" data-status="built" data-kind="stage" title="The beam widens up close. Confirmation needs 350 ms aligned; rearming needs 700 ms beyond the wider exit boundary, with at least 3 s between confirmations. Ordinary off-beam cues remain responsive. Latest device behavior unverified.">
         <div class="heard">Turn: double ding + a buzz when facing</div>
-        <div class="how">A 30 cm corridor, not a cone; drift off it and the beep changes at once.</div>
+        <div class="how">A widening corridor with a stable confirmation latch; small movements do not repeatedly trigger the double ding.</div>
         <div class="where"><code>Guidance</code> phase <code>facing</code></div>
         <span class="pill" data-status="built"></span>
       </div>
@@ -242,7 +242,7 @@
       </div>
       <div class="stage" data-status="built" data-kind="stage" title="On the server's touch for the target: silence, haptic, then the label or 'Got it.' Touch detection only proven on synthetic data.">
         <div class="heard">Touch: silence, then "Got it."</div>
-        <div class="how">Or the item's own label, in the labeller's voice.</div>
+        <div class="how">Or the item's typed label, spoken in Marco's voice.</div>
         <div class="where">server <code>touch</code> &rarr; <code>Guidance</code> phase <code>touched</code></div>
         <span class="pill" data-status="built"></span>
       </div>
@@ -265,7 +265,7 @@
             </div>
             <div class="card people" id="caretakerIn" data-status="live" title="Real iMessage replies through Photon 2.0 tested.">
               <div class="hd">Caretaker <small>Messages app</small></div>
-              <div class="bd"><ul><li>Replies: name, words, voice memo</li><li>Captioned setup photos</li></ul></div>
+              <div class="bd"><ul><li>Replies with a typed name</li><li>Captioned setup photos</li></ul></div>
             </div>
           </div>
         </div>
@@ -274,7 +274,7 @@
           <div class="colhd">Pre-processing</div>
           <div class="colsub">Capture, package and send to the brain</div>
           <div class="stack">
-            <div class="card in" id="phoneIn" data-status="built" title="Installs and launches on the iPhone (camera crash fixed in 601a730); 348 Swift checks; wire bytes contract-tested. Capture and upload not yet verified on the device.">
+            <div class="card in" id="phoneIn" data-status="built" title="Latest unsigned Release build and Swift core checks pass. Physical capture and route behavior must be checked on the installed build.">
               <div class="hd">iPhone app: capture <small>ios/ &middot; same app as the right side</small></div>
               <div class="bd"><div class="mods">
                 <div class="mod" data-status="built" title="ARKit + LiDAR + world maps; not yet verified capturing on the phone."><b>ARKit + LiDAR</b> frames 1/s, pose 10/s</div>
@@ -285,12 +285,9 @@
                 <div class="mod" data-status="built" title="Full-screen live depth map (1a06d00); shader checked on the Mac GPU; not yet run on the phone."><b>LiDAR view</b> local debug view</div>
               </div></div>
             </div>
-            <div class="card people" id="bridgeIn" data-status="live" title="Runs on the Mac against marco-gpu with the real Photon 2.0 line (verified live: GET /v1/items, DELETE ?source=photon). 45 tests, including an end-to-end run across a server restart. /restart wipes Photon's items for testing.">
+            <div class="card people" id="bridgeIn" data-status="live" title="Runs as marco-photon on Vultr, using the Photon 2.0 event stream and a saved cursor. Caretaker photo/typed-name flows have live checks. Keep other bridge copies stopped to avoid duplicate replies.">
               <div class="hd">Photon bridge: intake <small>photon/ &middot; same process as the right side</small></div>
-              <div class="bd"><ul><li>Photon cloud event stream (Socket.IO, saved cursor)</li><li>HEIC &rarr; JPEG, CAF &rarr; m4a; caretaker allow-list</li><li>Posts labels and setup photos (<code>source=photon</code>); <code>/restart</code> to wipe</li></ul></div>
-            </div>
-            <div class="card ext" id="eleven" data-status="built" title="Client + tests in photon/; needs ELEVENLABS_API_KEY; not verified live.">
-              <div class="hd">ElevenLabs Scribe <small>voice memo &rarr; text</small></div>
+              <div class="bd"><ul><li>Photon cloud event stream (Socket.IO, saved cursor)</li><li>HEIC/PNG &rarr; JPEG; caretaker allow-list</li><li>Posts typed labels and setup photos (<code>source=photon</code>); <code>/restart</code> clears Photon items</li></ul></div>
             </div>
           </div>
         </div>
@@ -298,6 +295,7 @@
         <div>
           <div class="colhd">The brain on Vultr</div>
           <div class="colsub">Memory and decisions, private on the tailnet</div>
+          <div class="stack">
           <div class="tailnet" id="tailnet" data-status="live" title="Gate verified on the box: 403 without login, 200 with; forged login header replaced; ports 80/443/8000 closed.">
             <p class="cap">tailscale serve HTTPS &rarr; 127.0.0.1 &middot; fail-closed allow-list <span class="pill" data-status="live"></span></p>
             <div class="card brain" id="server" data-status="live" title="marco-gpu (A16) in real mode behind tailscale serve, answering the tailnet.">
@@ -312,8 +310,8 @@
                   <div class="mod" data-status="built" title="Synthetic data only; refit CONTACT_M on real hands."><b>5 &middot; Touch</b> fingertip vote, proximity</div>
                   <div class="mod" data-status="e2e" title="find answered on live replay; what_is_this in the Photon end-to-end test."><b>6 &middot; Answers + events</b> find, what_is_this, set_place</div>
                   <div class="mod" data-status="e2e" title="Fixed (d6c2b26): every socket has its own bounded outbox, so a stalled dashboard can't block the phone. Live uvicorn test: 40/40 frames and the find answer get through (was 1/40). map_points still goes every frame."><b>7 &middot; Feeds</b> per-socket outboxes</div>
-                  <div class="mod" data-status="live" title="registry.py saves every item and label (photo, crop, voice note) atomically and reloads them at start; deployed to marco-gpu (6f4c0ee) and verified live: GET 200, DELETE ?source=photon 200. Open: the same name registered twice adds a duplicate."><b>8 &middot; Registry</b> items + labels survive restarts</div>
-                  <div class="mod wide" data-status="built" title="3c82c6a (Vedant): GET /dashboard/snapshot, WS /events (on change, at least 1/s), GET /media/..., /app/..., POST /dashboard/commands; also under /api/...; all behind the gate. 8 tests with schema-valid snapshots. Not yet deployed to marco-gpu or opened in a browser."><b>9 &middot; Dashboard adapter</b> snapshot, events, media, Find/Stop</div>
+                  <div class="mod" data-status="live" title="registry.py atomically persists item photos, detector templates and labels. App and Photon registration crop reloads have regression coverage. Legacy audio remains compatible; new caretaker labels are typed."><b>8 &middot; Registry</b> items + labels survive restarts</div>
+                  <div class="mod wide" data-status="live" title="Deployed browser adapter: GET /dashboard/snapshot, WS /events, media and POST /dashboard/commands, also under /api. Snapshot, reconnect, commands and sound relay are software-tested behind the identity gate."><b>9 &middot; Dashboard adapter</b> snapshot, events, media, Find/Stop</div>
                 </div>
                 <div class="hosts">
                   <div class="mod" data-status="live" title="0.18-0.40 s/frame measured on the box; no inbound ports."><b>Vultr A16</b> primary</div>
@@ -322,31 +320,36 @@
               </div>
             </div>
           </div>
+            <div class="card ext" id="eleven" data-status="live" title="Server-side TTS from exact short text. Live generation and cache checks passed; no Scribe or conversational agent. API key stays in the server environment.">
+              <div class="hd">ElevenLabs <small>cloud text-to-speech</small></div>
+              <div class="bd"><ul><li>Exact text &rarr; mono WAV</li><li>Server cache; Apple fallback on the phone</li></ul></div>
+            </div>
+          </div>
         </div>
 
         <div>
           <div class="colhd">Post-processing</div>
           <div class="colsub">Turn decisions into sound, messages and views</div>
           <div class="stack">
-            <div class="card out" id="phoneOut" data-status="built" title="Guidance, room-anchored lines, keep-looking, route watch, label cache and haptics: 348 Swift checks, every server message contract-tested; never heard on the vest.">
+            <div class="card out" id="phoneOut" data-status="built" title="Guidance, anchored speech, sound reporting, route watch and haptics pass software checks and the unsigned Release build. Latest physical phone/AirPods playback remains to verify.">
               <div class="hd">iPhone app: guidance <small>ios/ &middot; same app as the left side</small></div>
               <div class="bd"><div class="mods">
                 <div class="mod" data-status="built" title="Phases behind / turning / facing / approach / reach / touched; 21 offline HRTF checks."><b>60 Hz guidance</b> HRTF beacon, head fusion</div>
                 <div class="mod" data-status="built" title="Every line has a SoundAnchor: Marco's own lines ahead; labels and what-is-this from the touched jar; 'You left your keys' from the keys; label_ready from the item's last spot. Re-projected through the head yaw every tick."><b>Spoken lines</b> anchored in the room</div>
                 <div class="mod" data-status="built" title="Lookout: not seen / stale / picked up -> 'turn slowly', watch 60 s, start guidance on the next sighting. 20 checks."><b>Keep looking</b> 60 s watch for unseen items</div>
                 <div class="mod" data-status="built" title="RouteWatch: if output stops being 2-channel headphones, the beacon goes quiet and Marco says so; 'Headphones connected' when they return."><b>Route watch</b> AirPods drop-out</div>
-                <div class="mod" data-status="built" title="DashboardCommands.swift CommandGate (duplicates, other sessions, late commands; 9 tests) + AppModel.command(_:) sharing the voice Find's guidance start. Not run in Xcode or on the phone."><b>Dashboard commands</b> Find / Stop + ack</div>
-                <div class="mod" data-status="built" title="Label audio cached from /v1/audio; CAF/m4a playback on the phone unverified."><b>Label playback</b> cached, offline</div>
+                <div class="mod" data-status="built" title="DashboardCommands.swift and AppModel share the voice Find guidance path. Software checks and the Xcode build pass; physical dashboard-to-phone control needs verification."><b>Dashboard commands</b> Find / Stop + ack</div>
+                <div class="mod" data-status="built" title="Typed labels use the spatial voice node, cached server speech and Apple fallback. Optional legacy audio remains compatible; the bridge does not create new voice labels."><b>Label playback</b> cached, offline</div>
                 <div class="mod" data-status="built" title="Facing lock, touch and left-behind buzz."><b>Haptics</b> facing, touch, alerts</div>
               </div></div>
             </div>
-            <div class="card people" id="bridgeOut" data-status="e2e" title="label_request handling and iMessage sends pass end to end on loopback; connected to marco-gpu and reconnects after a server restart. A label_request from Vultr hasn't been recorded yet (it needs a real touch).">
+            <div class="card people" id="bridgeOut" data-status="e2e" title="Deployed bridge receives label_request from the private server, fetches the crop and sends an iMessage question. Real typed replies have been linked back to the correct test item. Latest wearer-device touch flow needs verification.">
               <div class="hd">Photon bridge: outreach <small>photon/ &middot; same process</small></div>
               <div class="bd"><ul><li>Fetches the touched item's crop</li><li>Texts it: "What is this?"</li></ul></div>
             </div>
-            <div class="card ext" id="dashboard" data-status="built" title="52 unit + 22 browser tests; runs in Demo mode only: the server adapter is not built.">
+            <div class="card ext" id="dashboard" data-status="live" title="Deployed static frontend and server adapter. Browser, real HTTP/WebSocket and synthetic-phone checks pass; Listen in reconstructs reported cues, not exact headphone output.">
               <div class="hd">Dashboard <small>frontend/ (React + Vite)</small></div>
-              <div class="bd"><ul><li>Chest view + boxes, map, sound radar, timeline</li><li><span class="pill" data-status="built"></span> server adapter built; browser not yet connected (<code>VITE_DATA_SOURCE=api</code>)</li></ul></div>
+              <div class="bd"><ul><li>Chest view + boxes, map, sound radar, timeline</li><li><span class="pill" data-status="live"></span> API mode connected; saved items load without the phone</li></ul></div>
             </div>
           </div>
         </div>
@@ -363,7 +366,7 @@
               <div class="hd">Caretaker <small>Messages app</small></div>
               <div class="bd"><ul><li>Gets the photo + question</li></ul></div>
             </div>
-            <div class="card ext" id="team" data-status="built" title="The adapter exists; nothing live has reached a browser yet (Sandeep runs the integration, then redeploy to marco-gpu).">
+            <div class="card ext" id="team" data-status="live" title="The observer dashboard receives the deployed private API. Live camera, pose and guidance require a streaming phone; saved registrations do not.">
               <div class="hd">Team + judges <small>big screen</small></div>
             </div>
           </div>
@@ -384,19 +387,19 @@
   </section>
 
   <section>
-    <h2>Next to turn green</h2>
+    <h2>Remaining device and perception checks</h2>
     <div class="next">
       <ol>
-        <li><b>First real run on the vest</b> against <code>marco-gpu</code>: capture + upload (&#9314;&#9315;&#9316;), then hear stages 1&ndash;5 of the find flow. This turns most blue boxes green.</li>
-        <li><b>Touch with real hands</b>: refit <code>CONTACT_M</code> so stages 6&ndash;7, "touch to name" and "what is this" work on the vest.</li>
-        <li><b>Connect the dashboard</b> (&#9321;): run it with <code>VITE_DATA_SOURCE=api</code> against the new routes, redeploy the server to <code>marco-gpu</code>, then a real Find from the dashboard.</li>
-        <li><b>Fix duplicate registration</b>: the same name registered twice adds a second item and find answers with the older one; a retake should replace it.</li>
-        <li><b>Tune detection on our props</b> (recall 4/9 on the first clips), fix AirPods front/back, set <code>ELEVENLABS_API_KEY</code>.</li>
+        <li><b>Install the latest iOS build</b> and check capture, LiDAR, VoiceOver, headphone routing and head motion on the physical setup.</li>
+        <li><b>Exercise a complete find</b>: turn, walk, stable facing confirmation, stop, reach and touch. Software checks do not establish perceived direction or stop distance.</li>
+        <li><b>Check phone-backed dashboard control</b>: Find and Stop on the intended phone, reconnects and honest stale states.</li>
+        <li><b>Measure false positives and misses</b> on fixed, labeled footage, including unknown look-alikes and transparent objects. Recognition is not solved.</li>
+        <li><b>Repeat the caretaker flow</b> with both phones: unknown crop, typed reply and spatial playback. Keep one bridge process active.</li>
       </ol>
     </div>
   </section>
 
-  <footer>Updated 2026-10-18 at commit <code>cc38be3</code>. To update progress, change a <code>data-status</code> attribute (<code>live</code> / <code>e2e</code> / <code>built</code> / <code>todo</code>) or an entry in the <code>EDGES</code> list in the script. Below 1180 px wide the wires hide; use the table.</footer>
+  <footer>Documentation refreshed 2026-10-18 against main <code>c0e5c5e</code>. Runtime verification records are in STATUS.md; this page is not a live health check. Below 1180 px wide the wires hide; use the table.</footer>
 </div>
 
 <script>
@@ -412,18 +415,18 @@
   // n, from, side, frac, to, side, frac, transport, status, label, transport text, endpoint, rate, payload, evidence
   const EDGES = [
     [1, 'airpodsIn', 'right', 0.5, 'phoneIn', 'left', 0.12, 'bt', 'built', 'AirPods &rarr; iPhone', 'Bluetooth', '<code>CMHeadphoneMotionManager</code>; mic route', 'motion ~25-38 Hz', 'Head attitude; mic audio', 'Checked AirPods to a Mac only.'],
-    [2, 'caretakerIn', 'right', 0.5, 'bridgeIn', 'left', 0.3, 'imsg', 'live', 'Caretaker &rarr; Photon bridge', 'iMessage &rarr; Photon cloud &rarr; Socket.IO', '<code>@photon-ai/api</code> event stream', 'per message', 'Text, voice memo (CAF), captioned photo', 'Photon 2.0 live and tested.'],
+    [2, 'caretakerIn', 'right', 0.5, 'bridgeIn', 'left', 0.3, 'imsg', "live", "Caretaker &rarr; Photon bridge", "iMessage &rarr; Photon cloud &rarr; Socket.IO", "<code>@photon-ai/api</code> event stream", "per message", "Captioned photo, typed name or reply", "Photo and typed-name flows tested with Photon 2.0."],
     [3, 'phoneIn', 'right', 0.18, 'server', 'left', 0.1, 'https', 'e2e', 'iPhone &rarr; server', 'HTTPS POST', '<code>/v1/frames</code> (multipart)', '~1/s, latest wins', 'JPEG 960x720 + DEFLATE float16 depth + confidence + pose/intrinsics', 'From the Mac to Vultr with Swift-encoded bytes; not yet from the phone.'],
     [4, 'phoneIn', 'right', 0.5, 'server', 'left', 0.3, 'ws', 'e2e', 'iPhone &rarr; server', 'WSS (up)', '<code>/v1/phone</code>', 'pose 10/s, hand 15/s, guidance 10/s', 'pose, hand, guidance, query, map', 'Opened and round-tripped from the Mac; live replay on loopback.'],
     [5, 'phoneIn', 'right', 0.82, 'server', 'left', 0.48, 'https', 'e2e', 'iPhone &rarr; server', 'HTTPS', '<code>POST /v1/items</code>, <code>GET /v1/items</code>', 'setup, launch', 'Photo + name &rarr; item_id / retake; item list', 'iPhone Safari reached GET /v1/items on Vultr; app registration is on the Debug screen.'],
-    [6, 'bridgeIn', 'right', 0.5, 'server', 'left', 0.7, 'https', 'live', 'Photon bridge &rarr; server', 'HTTPS', '<code>POST /v1/labels</code>, <code>POST /v1/items</code>, <code>GET /v1/touch/&hellip;/crop.jpg</code>', 'per label', 'Name + text + m4a; setup photos (<code>source=photon</code>); <code>DELETE /v1/items?source=</code>', 'Bridge runs against marco-gpu: GET and DELETE ?source=photon verified live; label posts tested end to end on loopback.'],
-    [7, 'bridgeIn', 'bottom', 0.5, 'eleven', 'top', 0.5, 'https', 'built', 'Photon bridge &rarr; ElevenLabs', 'HTTPS POST', '<code>/v1/speech-to-text</code> (Scribe)', 'per voice memo', 'Audio &rarr; transcript', 'Needs a key; not verified live.'],
-    [8, 'server', 'right', 0.2, 'phoneOut', 'left', 0.3, 'ws', 'e2e', 'Server &rarr; iPhone', 'WSS (down) + HTTPS', '<code>/v1/phone</code>; <code>GET /v1/audio/{id}</code>', 'events; proximity 15/s', 'answer, touch, hand_proximity, event, label_ready; label audio', 'Answers on live replay and contract tests; not yet on the phone.'],
-    [9, 'server', 'right', 0.5, 'bridgeOut', 'left', 0.5, 'ws', 'e2e', 'Server &rarr; Photon bridge', 'WSS', '<code>/v1/photon</code>', 'per unknown item', '<code>label_request {touch_id, crop_url}</code>', 'Connected to marco-gpu (reconnects after restarts); a request from Vultr needs a real touch.'],
-    [10, 'server', 'right', 0.82, 'dashboard', 'left', 0.5, 'ws', 'built', 'Server &harr; dashboard', 'WSS + HTTPS', '<code>GET /dashboard/snapshot</code>, <code>WS /events</code>, <code>GET /media/&hellip;</code>, <code>POST /dashboard/commands</code>', 'on change, at least 1/s', 'Snapshot (schema.ts): frame + boxes, world, map, guidance, timeline, lastCommand; Find/Stop up', 'Adapter built and tested on the server (8 tests); browser integration and deploy pending.'],
+    [6, 'bridgeIn', 'right', 0.5, 'server', 'left', 0.7, 'https', "live", "Photon bridge &rarr; server", "HTTPS", "<code>POST /v1/labels</code>, <code>POST /v1/items</code>, <code>GET /v1/touch/&hellip;/crop.jpg</code>", "per label", "Typed name + text; setup photo (<code>source=photon</code>); source-scoped delete", "Deployed bridge and server; registration and typed reply checks recorded in STATUS.md."],
+    [7, 'server', 'bottom', 0.6, 'eleven', 'top', 0.5, 'https', "live", "Server &rarr; ElevenLabs", "HTTPS POST", "<code>/v1/text-to-speech/{voice_id}</code>", "per uncached phrase", "Exact text &rarr; mono WAV", "Live generation and cache verified; key stays on the server."],
+    [8, 'server', 'right', 0.2, 'phoneOut', 'left', 0.3, 'ws', "e2e", "Server &rarr; iPhone", "WSS (down) + HTTPS", "<code>/v1/phone</code>; <code>POST /v1/speech</code>", "events; proximity 15/s", "answer, touch, hand_proximity, event, label_ready; speech WAV", "Server/Swift contracts and speech rendering tested; latest physical app playback pending."],
+    [9, 'server', 'right', 0.5, 'bridgeOut', 'left', 0.5, 'ws', "e2e", "Server &rarr; Photon bridge", "WSS", "<code>/v1/photon</code>", "per unknown item", "<code>label_request {touch_id, crop_url}</code>", "Deployed bridge reconnects and handles server questions; real typed test replies verified."],
+    [10, 'server', 'right', 0.82, 'dashboard', 'left', 0.5, 'ws', "live", "Server &harr; dashboard", "WSS + HTTPS", "<code>GET /dashboard/snapshot</code>, <code>WS /events</code>, <code>GET /media/&hellip;</code>, <code>POST /dashboard/commands</code>", "on change, at least 1/s", "Snapshot, sound reports and command outcomes; Find/Stop up", "Deployed adapter and browser checked with real HTTP/WebSockets and synthetic phone data."],
     [11, 'phoneOut', 'right', 0.5, 'airpodsOut', 'left', 0.5, 'bt', 'built', 'iPhone &rarr; AirPods', 'Bluetooth', 'AVAudioEnvironmentNode HRTF', 'continuous', 'Stereo spatial audio (+ phone haptics)', '48 kHz stereo on a Mac; not on the vest.'],
     [12, 'bridgeOut', 'right', 0.5, 'caretakerOut', 'left', 0.5, 'imsg', 'live', 'Photon bridge &rarr; caretaker', 'Photon REST &rarr; iMessage', '<code>@photon-ai/api</code> sends', 'per request', 'Photo + "What is this?"', 'Photon 2.0 live and tested.'],
-    [13, 'dashboard', 'right', 0.5, 'team', 'left', 0.5, 'https', 'built', 'Dashboard &rarr; screen', 'Browser', 'Vite proxy (<code>API_PROXY_TARGET</code>) or <code>/app/</code> from the server', 'live', 'The observer view + Find/Stop', 'Runs in Demo mode; live data waits on the browser integration.'],
+    [13, 'dashboard', 'right', 0.5, 'team', 'left', 0.5, 'https', "live", "Dashboard &rarr; screen", "Browser", "Vite proxy (<code>API_PROXY_TARGET</code>) or <code>/app/</code> from the server", "live", "Observer view + Find/Stop; opt-in Listen in", "Saved objects load without a phone. Live telemetry depends on a connected streaming phone."],
   ];
 
   for (const el of document.querySelectorAll('[data-status]')) {

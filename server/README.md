@@ -241,7 +241,7 @@ python tools/investigate_live.py --data /var/lib/marco/data --since "2026-10-18 
 Wipe the server for a clean start. From a tailnet laptop:
 
 ```
-curl -X POST https://marco-gpu.taild6d426.ts.net/v1/reset -H 'Content-Type: application/json' -d '{"confirm": "reset"}'
+curl -X POST https://marco-gpu.example-tailnet.ts.net/v1/reset -H 'Content-Type: application/json' -d '{"confirm": "reset"}'
 ```
 
 This forgets every item (with its photo, crop, label and voice note), every event, the room map, and any pending label question. The dashboard empties too. Recordings under `MARCO_DATA/sessions/` are kept. Two lists live elsewhere:

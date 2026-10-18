@@ -59,8 +59,8 @@ and freeze labels/settings before comparing again. Unknown look-alike rejection
 remains unresolved. These would be object-agnostic code changes that survive
 resetting the library; they have not been implemented by this evaluation.
 
-Full report, labels, frame sheets, scores and reproducible scripts are in
-`/private/tmp/marco-preprocessing-eval-20261018/`; replay and original investigation
-are in `/private/tmp/marco-investigation-20261018-Hgw72c/`. Raw private recordings
-remain outside Git. Few targets, correlated frames and imperfect annotations
+Private report, labels, frame sheets, scores and reproduction artifacts were saved under
+`<local-evidence>/marco-preprocessing-eval-20261018/`; replay and original investigation
+are in `<local-evidence>/marco-investigation-20261018-Hgw72c/`. Raw private recordings
+remain outside Git; these local-evidence placeholders are not repository paths. Few targets, correlated frames and imperfect annotations
 limit generalization; these counts are not a product-level false-positive rate.

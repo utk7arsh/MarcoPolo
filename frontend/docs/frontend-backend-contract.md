@@ -1,8 +1,8 @@
 # Marco Polo: frontend / backend contract
 
-Status: **frontend implemented against v0.1; FastAPI API pending**, 2026-10-17. See [the short backend handoff](fastapi-handoff.md) and [frontend run instructions](../README.md). The existing prototype does not implement the dashboard endpoints yet.
+Status: **implemented browser adapter**, updated 2026-10-18. See [the short backend handoff](fastapi-handoff.md), [frontend run instructions](../README.md) and [release verification](../../STATUS.md).
 
-**Architecture update:** the current `server/` owns 3D placement and world memory under [the team interfaces](../../docs/INTERFACES.md). The POC inventory and ownership diagram below predate that implementation. Use [the backend integration plan](backend-integration-plan.md) for current ownership and access points, and [the browser schema](../src/lib/schema.ts) for implemented payloads.
+The `server/` owns 3D placement and world memory under [the team interfaces](../../docs/INTERFACES.md). Use that contract for the device protocol and [the browser schema](../src/lib/schema.ts) for implemented browser payloads. The [original integration plan](backend-integration-plan.md) is historical context.
 
 ## 1. Build against a shared contract
 
@@ -10,7 +10,7 @@ Neither the frontend nor the backend should dictate the other's internals. Agree
 
 - Frontend: render the example payload and wire the controls.
 - Backend: produce the same payload from storage, Photon, and the phone.
-- iPhone: supply tracking, spatial memory, camera frames, and actual navigation state.
+- iPhone: supply tracking, camera/depth/hand data, and actual navigation state; render spatial audio.
 
 The contract describes what crosses these boundaries. It does not prescribe the database schema or require a production messaging system.
 
@@ -22,41 +22,41 @@ Design reference: [Marco Polo in Paper](https://app.paper.design/file/01M55Z1GDR
 
 ```mermaid
 flowchart LR
-    P[iPhone: pose, depth, memory, guidance] -->|frames| B[Backend]
-    B -->|2D detections tied to frame ID| P
-    P -->|position, sightings, navigation state| B
-    H[Photon / family messages] -->|photo, name, voice label| B
+    P[iPhone: capture, tracking, guidance] -->|frames, depth, pose, hands| B[Backend: detection, geometry, world memory]
+    B -->|answers, touch, proximity, labels| P
+    P -->|navigation, health, sound reports| B
+    H[Photon / family messages] -->|photo, typed name| B
     B -->|label / registration result| H
     B -->|labels and Find / Stop requests| P
     B -->|snapshot and updates| W[Web dashboard]
     W -->|Find / Stop commands| B
 ```
 
-| Component | Owns                                                                                                                | Does not need to do                                                       |
-| --------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| iPhone    | World coordinates, relocalization, last-seen observations, head/body direction, audio, within-reach and found state | Render the dashboard                                                      |
-| Backend   | Detection, persistent metadata/history, Photon adapter, media access, current session snapshot, command relay       | Infer 3D locations from a 2D box alone                                    |
-| Dashboard | Objects / Live views, selected item, Map / Camera switch, visual overlays, connection feedback                      | Run LiDAR, detect touch, calculate spatial audio, or invent a found event |
+| Component | Owns                                                                                                      | Does not need to do                                                       |
+| --------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| iPhone    | ARKit tracking and relocalization, sensor capture, head/body direction, audio and guidance state          | Render the dashboard or duplicate server perception                       |
+| Backend   | Detection, 3D placement from frame pose/depth, world memory, touch, media, Photon feeds and command relay | Invent missing sensor geometry                                            |
+| Dashboard | Objects / Live views, selected item, Map / Camera switch, visual overlays, connection feedback            | Run LiDAR, detect touch, calculate spatial audio, or invent a found event |
 
-The browser mirrors the phone's spoken instruction; it does not automatically play a second copy. Playing a family voice label on the dashboard is an explicit user action, and so is **Listen in** on the Live page, which plays what the phone reports in `dashboard.sound` (below), from the same directions. Captions are always the phone's own words.
+The browser mirrors the phone's spoken instruction; it does not automatically play a second copy. Label playback and **Listen in** are explicit user actions. Listen in reconstructs the cues reported in `dashboard.sound` (below), with browser audio rather than a recording of the headphone output. Captions use the phone's reported words. Caretakers supply typed names; retained legacy audio fields remain compatible.
 
-## 3. What exists versus what needs building
+## 3. Implemented integration
 
-The inspected prototype is [`poc/pocs/poc26_server/app.py`](../../poc/pocs/poc26_server/app.py).
+The running implementation is in [`server/marco/app.py`](../../server/marco/app.py), [`dashboard.py`](../../server/marco/dashboard.py) and [`dashboard_commands.py`](../../server/marco/dashboard_commands.py). The earlier [`POC 26`](../../poc/pocs/poc26_server/app.py) remains a research prototype.
 
-| Interface                                              | Current state                                                         |
-| ------------------------------------------------------ | --------------------------------------------------------------------- |
-| `POST /items`                                          | Prototype: photo + name registration; returns quality / retake result |
-| `GET /items`                                           | Prototype: returns item IDs and names only                            |
-| `POST /frames`                                         | Prototype: returns 2D detections, not a camera stream or room map     |
-| Dashboard snapshot, WebSocket, commands, media URLs    | **Proposed below; not implemented**                                   |
-| Photon callbacks, stored history, phone telemetry feed | Still need implementation / integration                               |
+| Interface                                           | Current state                                          |
+| --------------------------------------------------- | ------------------------------------------------------ |
+| `POST /v1/items`                                    | Photo + name registration with quality / retake result |
+| `GET /v1/items`                                     | Persistent registered items and available metadata     |
+| `POST /v1/frames`, `WS /v1/phone`                   | Sensor ingestion, phone state and guidance             |
+| Dashboard snapshot, WebSocket, commands, media URLs | Implemented, also available under `/api`               |
+| Photon feeds, stored history, phone telemetry       | Implemented; live fields require actual observations   |
 
-The prototype's authentication gate currently rejects requests until a verifier is configured. Browser access and WebSocket authentication need wiring before live integration. Do not build the dashboard around the test-only authentication bypass.
+HTTP, media and WebSockets share the server's fail-closed Tailscale identity gate. The development-only authentication bypass is not a deployment strategy.
 
 ## 4. Minimum browser-facing API
 
-Use these unversioned paths for the hackathon to stay consistent with the existing prototype. Payloads carry `schemaVersion: 1`.
+These browser paths are implemented alongside the versioned device API. Payloads carry `schemaVersion: 1`.
 
 | Method | Path                  | Purpose                                                                            |
 | ------ | --------------------- | ---------------------------------------------------------------------------------- |

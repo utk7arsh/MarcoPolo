@@ -21,7 +21,7 @@ export interface Registration {
   reason?: string;
 }
 
-/** POST /v1/labels reply: the item the label landed on (a later voice note is posted to it). */
+/** POST /v1/labels reply: the item the typed label landed on. */
 export interface LabelResult {
   status: string;
   item_id: string | null;
@@ -36,7 +36,7 @@ export interface LabelPost {
   name: string;
   /** The caretaker's words, which the phone speaks. */
   text?: string | null;
-  /** The voice memo, any format; the server keeps the file's extension. */
+  /** Legacy audio compatibility; the active bridge supplies typed labels only. */
   audioPath?: string | null;
 }
 

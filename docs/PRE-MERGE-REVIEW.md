@@ -1,12 +1,14 @@
 # Local pre-merge review — October 18, 2026
 
+> **Historical review at `cc38be3`.** Later releases added the root CI workflows and deployed the speech/dashboard integration. The deployment and CI gaps below describe this review's original snapshot. See [STATUS.md](../STATUS.md) for later release evidence; local log paths are private evidence placeholders, not files shipped in this repository.
+
 ## Authorized push recheck
 
 The user subsequently authorized pulling and pushing. `git pull --ff-only origin
 main` reported already up to date at `cc38be3`; all suites and the unsigned iOS
 Release build in the table below passed again. The real speech integration's
 14 assertions and HTTP boundaries passed again, with a fresh provider response
-of **0.810 s**. Logs for this run are `/private/tmp/marco-push-*.log`.
+of **0.810 s**. Logs for this run are `<local-evidence>/marco-push-*.log`.
 Initial sandbox attempts could not use loopback sockets and compiler caches;
 the complete checks passed with local system access and no tests disabled.
 
@@ -76,6 +78,6 @@ successful recovery removed to get a passing run.
 - Vultr has not been updated by this work. Activating the new voice needs the
   endpoint deployed with its private environment and the updated app installed.
 
-Logs: `/private/tmp/marco-review-{swift,server,photon,frontend-final,integration}.log`
-and `/private/tmp/marco-review-xcode-release.log`. Audio/results from the corrected
-client are under `/private/tmp/marco-pre-merge-evidence-20261018/`.
+Logs: `<local-evidence>/marco-review-{swift,server,photon,frontend-final,integration}.log`
+and `<local-evidence>/marco-review-xcode-release.log`. Audio/results from the corrected
+client are under `<local-evidence>/marco-pre-merge-evidence-20261018/`.
