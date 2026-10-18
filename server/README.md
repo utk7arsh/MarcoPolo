@@ -93,6 +93,11 @@ Stream any session into a running server, as if the phone were live (for the das
 python tools/replay.py data/sessions/fake --server http://127.0.0.1:8000 --speed 4
 ```
 
+**Test detection on real video:** [docs/TESTING.md](../docs/TESTING.md).
+- `inspect_session.py` checks that video, depth and poses agree.
+- `label_truth.py` takes one click per item.
+- `eval_detection.py` scores hits, misses and false alarms against the 1 frame/s budget, and sweeps the thresholds.
+
 Check a phone recording against the contract (run it on the first recording from the vest):
 ```
 python tools/check_recording.py data/sessions/<session_id>

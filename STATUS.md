@@ -68,6 +68,10 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
   - `bench_frame.py`: per-frame time for 1–20 registered items, against the 1 s budget.
   - `replay.py`: streams a session into a running server, as if the phone were live (for the dashboard and Photon).
   - `check_recording.py`: validates a phone recording against the contract.
+  - **Real-video testing ([docs/TESTING.md](docs/TESTING.md)):**
+    - `inspect_session.py`: blur, LiDAR coverage, and frame-to-frame pose and depth consistency (real ARKit 1.5 cm; above 8 cm means something is wrong), with a picture of the depth over the image;
+    - `label_truth.py`: one click per item, made into 3D truth with LiDAR;
+    - `eval_detection.py`: per-item hits, misses, false alarms per minute, passes caught, placement error, time per frame, a threshold sweep and `sheet.jpg`.
 - **Results so far:**
   - **Synthetic:** 6 items placed within 0.7–5.6 cm of ground truth; the jar touch detected 67 ms after contact; no false events.
   - **Real iPad data, real OWLv2:**
@@ -75,6 +79,9 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
     - the table was rejected by the DINOv2 check (large objects);
     - thresholds must be refit on the real demo props.
   - **1 frame/s:** the full pipeline takes 0.33 s per frame with 1 item and 0.42 s with 20 (p95 0.43 s), on MPS on this Mac.
+  - **Real iPad video scored with `eval_detection.py`:**
+    - the oven was hit in 2 of its 2 visible frames, 11 cm from the truth;
+    - with "table" registered, three other tables and a chair were false alarms, which moved the stored table 3.2 m. That's the look-alike problem: thresholds need tuning on our props.
 - **`ios/` (Swift, for Utkarsh):** the full app scaffold:
   - ARKit + LiDAR capture, with ARWorldMap save and relocalize;
   - frame upload (latest wins), pose and hand streams, and the WebSocket;
@@ -100,7 +107,7 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
   - `docs/INTERFACES.md` v0.2 (+ `.docx`), with a changelog in §11;
   - top-level `README.md`, `server/README.md`, `server/requirements.txt`;
   - `.gitignore` covers recordings, datasets, build output and `node_modules`.
-- **Totals (all passing):** server 68 tests (including both client contract tests), Swift 102, Photon scaffold 8.
+- **Totals (all passing):** server 74 tests (including both client contract tests and the real-video tools), Swift 102, Photon scaffold 8.
 - **Teammates' code on `main`:** `photon/` (Utkarsh, Spectrum/TypeScript) and `frontend/` (Sandeep, the dashboard). Both were built against the earlier requirements and POC 26 routes, not this contract. See the next steps.
 - **Security sweep:**
   - no wildcard binds, tunnels or tokens in the repo;
@@ -118,10 +125,11 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
    - build `ios/` in Xcode;
    - run the hour-one tests in `ios/README.md`;
    - run `photon/` (or `photon-scaffold/`) on the Mac with Messages.
-4. **Vedant:**
-   - record a Stray Scanner session of the demo room with the real props;
-   - refit the presence thresholds (`TH_*`) and the touch `CONTACT_M` on it;
-   - re-run `bench_frame.py` on the venue machine.
+4. **Vedant:** the real-video test in `docs/TESTING.md`.
+   - Record recordings A–D with Stray Scanner, plus one registration photo per prop.
+   - Inspect each recording, label it, and score it.
+   - Tune `TH_*` on one recording and confirm on another; refit the touch `CONTACT_M`.
+   - Re-run `bench_frame.py` on the venue machine.
 5. **Dashboard:** live data through the adapter (step 1); until then, the stub plus `tools/replay.py` give real feeds on `/v1/dashboard`.
 6. **Possible server work:** convert caretaker voice notes (`.caf`) to m4a with ffmpeg if the phone can't play them.
 

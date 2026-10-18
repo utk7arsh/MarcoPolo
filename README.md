@@ -42,6 +42,11 @@ python tools/stray_session.py <Stray Scanner export> --out data/sessions/my-kitc
 python tools/bench_frame.py data/sessions/arkitscenes-41069021 --items 1 10 20       # does 1 frame/s hold here?
 ```
 
+**Test on real video** (our own props, recorded on the iPhone 16 Pro): [docs/TESTING.md](docs/TESTING.md). Record with Stray Scanner, then:
+- check the recording (`inspect_session.py`);
+- click each item once to label it (`label_truth.py`);
+- score detection (`eval_detection.py`): passes caught, false alarms per minute, placement error and time per frame, plus a picture of every hit and miss.
+
 **Dashboard data:**
 1. Start the stub (above).
 2. Connect a WebSocket to `ws://127.0.0.1:8000/v1/dashboard`.
