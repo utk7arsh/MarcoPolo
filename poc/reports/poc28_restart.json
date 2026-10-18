@@ -1,0 +1,74 @@
+{
+ "rec1-normal/bottle": {
+  "first registration (crop)": {
+   "hits": 0,
+   "box_on_item": 2,
+   "frames": 10
+  },
+  "after restart (whole photo)": {
+   "hits": 0,
+   "box_on_item": 2,
+   "frames": 10
+  }
+ },
+ "rec2-find/bottle": {
+  "first registration (crop)": {
+   "hits": 1,
+   "box_on_item": 3,
+   "frames": 14
+  },
+  "after restart (whole photo)": {
+   "hits": 1,
+   "box_on_item": 3,
+   "frames": 14
+  }
+ },
+ "rec2-find/power bank": {
+  "first registration (crop)": {
+   "hits": 2,
+   "box_on_item": 5,
+   "frames": 14
+  },
+  "after restart (whole photo)": {
+   "hits": 3,
+   "box_on_item": 4,
+   "frames": 14
+  }
+ },
+ "rec2-find/wallet": {
+  "first registration (crop)": {
+   "hits": 0,
+   "box_on_item": 3,
+   "frames": 14
+  },
+  "after restart (whole photo)": {
+   "hits": 4,
+   "box_on_item": 5,
+   "frames": 14
+  }
+ },
+ "rec3-moved/bottle": {
+  "first registration (crop)": {
+   "hits": 1,
+   "box_on_item": 4,
+   "frames": 13
+  },
+  "after restart (whole photo)": {
+   "hits": 2,
+   "box_on_item": 4,
+   "frames": 13
+  }
+ },
+ "rec3-moved/power bank": {
+  "first registration (crop)": {
+   "hits": 1,
+   "box_on_item": 1,
+   "frames": 13
+  },
+  "after restart (whole photo)": {
+   "hits": 1,
+   "box_on_item": 1,
+   "frames": 13
+  }
+ }
+}

@@ -1,0 +1,1544 @@
+{
+ "summary": {
+  "crop dino>=0.38": {
+   "hits": 5,
+   "boxes_on_item": 18,
+   "false_alarms": 1,
+   "per_item": {
+    "rec1-normal/bottle": "0/2",
+    "rec2-find/bottle": "1/3",
+    "rec2-find/power bank": "2/5",
+    "rec2-find/wallet": "0/3",
+    "rec3-moved/bottle": "1/4",
+    "rec3-moved/power bank": "1/1"
+   }
+  },
+  "crop dino>=0.33": {
+   "hits": 8,
+   "boxes_on_item": 18,
+   "false_alarms": 1,
+   "per_item": {
+    "rec1-normal/bottle": "0/2",
+    "rec2-find/bottle": "2/3",
+    "rec2-find/power bank": "3/5",
+    "rec2-find/wallet": "1/3",
+    "rec3-moved/bottle": "1/4",
+    "rec3-moved/power bank": "1/1"
+   }
+  },
+  "crop dino>=0.3": {
+   "hits": 8,
+   "boxes_on_item": 18,
+   "false_alarms": 1,
+   "per_item": {
+    "rec1-normal/bottle": "0/2",
+    "rec2-find/bottle": "2/3",
+    "rec2-find/power bank": "3/5",
+    "rec2-find/wallet": "1/3",
+    "rec3-moved/bottle": "1/4",
+    "rec3-moved/power bank": "1/1"
+   }
+  },
+  "crop dino>=0.25": {
+   "hits": 11,
+   "boxes_on_item": 18,
+   "false_alarms": 4,
+   "per_item": {
+    "rec1-normal/bottle": "1/2",
+    "rec2-find/bottle": "2/3",
+    "rec2-find/power bank": "3/5",
+    "rec2-find/wallet": "1/3",
+    "rec3-moved/bottle": "3/4",
+    "rec3-moved/power bank": "1/1"
+   }
+  },
+  "crop dino>=0.2": {
+   "hits": 13,
+   "boxes_on_item": 18,
+   "false_alarms": 9,
+   "per_item": {
+    "rec1-normal/bottle": "2/2",
+    "rec2-find/bottle": "2/3",
+    "rec2-find/power bank": "3/5",
+    "rec2-find/wallet": "2/3",
+    "rec3-moved/bottle": "3/4",
+    "rec3-moved/power bank": "1/1"
+   }
+  },
+  "whole dino>=0.38": {
+   "hits": 9,
+   "boxes_on_item": 19,
+   "false_alarms": 1,
+   "per_item": {
+    "rec1-normal/bottle": "0/2",
+    "rec2-find/bottle": "1/3",
+    "rec2-find/power bank": "3/4",
+    "rec2-find/wallet": "2/5",
+    "rec3-moved/bottle": "2/4",
+    "rec3-moved/power bank": "1/1"
+   }
+  },
+  "whole dino>=0.33": {
+   "hits": 10,
+   "boxes_on_item": 19,
+   "false_alarms": 1,
+   "per_item": {
+    "rec1-normal/bottle": "1/2",
+    "rec2-find/bottle": "1/3",
+    "rec2-find/power bank": "3/4",
+    "rec2-find/wallet": "2/5",
+    "rec3-moved/bottle": "2/4",
+    "rec3-moved/power bank": "1/1"
+   }
+  },
+  "whole dino>=0.3": {
+   "hits": 10,
+   "boxes_on_item": 19,
+   "false_alarms": 1,
+   "per_item": {
+    "rec1-normal/bottle": "1/2",
+    "rec2-find/bottle": "1/3",
+    "rec2-find/power bank": "3/4",
+    "rec2-find/wallet": "2/5",
+    "rec3-moved/bottle": "2/4",
+    "rec3-moved/power bank": "1/1"
+   }
+  },
+  "whole dino>=0.25": {
+   "hits": 10,
+   "boxes_on_item": 19,
+   "false_alarms": 4,
+   "per_item": {
+    "rec1-normal/bottle": "1/2",
+    "rec2-find/bottle": "1/3",
+    "rec2-find/power bank": "3/4",
+    "rec2-find/wallet": "2/5",
+    "rec3-moved/bottle": "2/4",
+    "rec3-moved/power bank": "1/1"
+   }
+  },
+  "whole dino>=0.2": {
+   "hits": 13,
+   "boxes_on_item": 19,
+   "false_alarms": 4,
+   "per_item": {
+    "rec1-normal/bottle": "1/2",
+    "rec2-find/bottle": "2/3",
+    "rec2-find/power bank": "3/4",
+    "rec2-find/wallet": "2/5",
+    "rec3-moved/bottle": "4/4",
+    "rec3-moved/power bank": "1/1"
+   }
+  }
+ },
+ "rows": {
+  "crop": [
+   {
+    "session": "rec1-normal",
+    "frame": 1,
+    "name": "bottle",
+    "photo_name": 3.441129446029663,
+    "dino": 0.23998266458511353,
+    "vs_others": null,
+    "on_item": true
+   },
+   {
+    "session": "rec1-normal",
+    "frame": 2,
+    "name": "bottle",
+    "photo_name": 1.302743673324585,
+    "dino": 0.26608309149742126,
+    "vs_others": null,
+    "on_item": true
+   },
+   {
+    "session": "rec1-normal",
+    "frame": 3,
+    "name": "bottle",
+    "photo_name": 3.773265838623047,
+    "dino": 0.5859050750732422,
+    "vs_others": null,
+    "on_item": false
+   },
+   {
+    "session": "rec1-normal",
+    "frame": 4,
+    "name": "bottle",
+    "photo_name": 1.2951065301895142,
+    "dino": 0.2884292006492615,
+    "vs_others": null,
+    "on_item": false
+   },
+   {
+    "session": "rec1-normal",
+    "frame": 5,
+    "name": "bottle",
+    "photo_name": 0.33344709873199463,
+    "dino": 0.24147459864616394,
+    "vs_others": null,
+    "on_item": false
+   },
+   {
+    "session": "rec1-normal",
+    "frame": 6,
+    "name": "bottle",
+    "photo_name": -2.9177043437957764,
+    "dino": 0.01525619812309742,
+    "vs_others": null,
+    "on_item": false
+   },
+   {
+    "session": "rec1-normal",
+    "frame": 7,
+    "name": "bottle",
+    "photo_name": -3.14190936088562,
+    "dino": 0.31400376558303833,
+    "vs_others": null,
+    "on_item": null
+   },
+   {
+    "session": "rec1-normal",
+    "frame": 8,
+    "name": "bottle",
+    "photo_name": -2.2156574726104736,
+    "dino": 0.1749570369720459,
+    "vs_others": null,
+    "on_item": null
+   },
+   {
+    "session": "rec1-normal",
+    "frame": 9,
+    "name": "bottle",
+    "photo_name": -6.276141166687012,
+    "dino": 0.2717438340187073,
+    "vs_others": null,
+    "on_item": null
+   },
+   {
+    "session": "rec1-normal",
+    "frame": 10,
+    "name": "bottle",
+    "photo_name": -3.8461976051330566,
+    "dino": 0.33936816453933716,
+    "vs_others": null,
+    "on_item": null
+   },
+   {
+    "session": "rec2-find",
+    "frame": 1,
+    "name": "bottle",
+    "photo_name": 0.8918036222457886,
+    "dino": 0.14138497412204742,
+    "vs_others": 2.1332998275756836,
+    "on_item": null
+   },
+   {
+    "session": "rec2-find",
+    "frame": 1,
+    "name": "power bank",
+    "photo_name": -3.2572131156921387,
+    "dino": 0.09786493331193924,
+    "vs_others": -0.40627020597457886,
+    "on_item": null
+   },
+   {
+    "session": "rec2-find",
+    "frame": 1,
+    "name": "wallet",
+    "photo_name": -4.04677152633667,
+    "dino": 0.306104838848114,
+    "vs_others": 0.9157818555831909,
+    "on_item": null
+   },
+   {
+    "session": "rec2-find",
+    "frame": 2,
+    "name": "bottle",
+    "photo_name": -3.8086750507354736,
+    "dino": 0.10028015077114105,
+    "vs_others": -0.3746197819709778,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 2,
+    "name": "power bank",
+    "photo_name": -3.2995553016662598,
+    "dino": 0.016006844118237495,
+    "vs_others": 0.10521948337554932,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 2,
+    "name": "wallet",
+    "photo_name": -2.9592785835266113,
+    "dino": 0.2508033514022827,
+    "vs_others": -0.10521948337554932,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 3,
+    "name": "bottle",
+    "photo_name": -0.029088616371154785,
+    "dino": 0.21103736758232117,
+    "vs_others": 0.7201395034790039,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 3,
+    "name": "power bank",
+    "photo_name": 3.7505621910095215,
+    "dino": 0.14455288648605347,
+    "vs_others": 4.948114395141602,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 3,
+    "name": "wallet",
+    "photo_name": -2.8967361450195312,
+    "dino": -0.01499237958341837,
+    "vs_others": -1.631893515586853,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 4,
+    "name": "bottle",
+    "photo_name": 0.19230413436889648,
+    "dino": 0.18559372425079346,
+    "vs_others": 1.249446153640747,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 4,
+    "name": "power bank",
+    "photo_name": 5.443488597869873,
+    "dino": 0.25243860483169556,
+    "vs_others": 5.390354156494141,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 4,
+    "name": "wallet",
+    "photo_name": -2.460872173309326,
+    "dino": 0.2726634740829468,
+    "vs_others": -0.1271752119064331,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 5,
+    "name": "bottle",
+    "photo_name": -2.6105923652648926,
+    "dino": 0.12775662541389465,
+    "vs_others": 0.37436428666114807,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 5,
+    "name": "power bank",
+    "photo_name": -4.734406471252441,
+    "dino": 0.025001589208841324,
+    "vs_others": 3.372868299484253,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 5,
+    "name": "wallet",
+    "photo_name": -5.296474456787109,
+    "dino": 0.19867992401123047,
+    "vs_others": -0.6751025319099426,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 6,
+    "name": "bottle",
+    "photo_name": -2.5832693576812744,
+    "dino": 0.03474682942032814,
+    "vs_others": 0.24671590328216553,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 6,
+    "name": "power bank",
+    "photo_name": -4.680170059204102,
+    "dino": 0.046277545392513275,
+    "vs_others": -0.24671590328216553,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 6,
+    "name": "wallet",
+    "photo_name": -5.006552696228027,
+    "dino": 0.1367224007844925,
+    "vs_others": 2.370161771774292,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 7,
+    "name": "bottle",
+    "photo_name": -3.124952793121338,
+    "dino": -0.015251579694449902,
+    "vs_others": 0.1778414249420166,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 7,
+    "name": "power bank",
+    "photo_name": -3.157855749130249,
+    "dino": 0.11399106681346893,
+    "vs_others": -0.1778414249420166,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 7,
+    "name": "wallet",
+    "photo_name": -3.6773576736450195,
+    "dino": 0.12265124917030334,
+    "vs_others": -0.3796796202659607,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 8,
+    "name": "bottle",
+    "photo_name": 0.13225781917572021,
+    "dino": 0.23812155425548553,
+    "vs_others": 0.5417447686195374,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 8,
+    "name": "power bank",
+    "photo_name": 1.1729791164398193,
+    "dino": 0.1469573676586151,
+    "vs_others": 2.6964755058288574,
+    "on_item": true
+   },
+   {
+    "session": "rec2-find",
+    "frame": 8,
+    "name": "wallet",
+    "photo_name": 0.9990150332450867,
+    "dino": 0.16448535025119781,
+    "vs_others": -1.548932671546936,
+    "on_item": true
+   },
+   {
+    "session": "rec2-find",
+    "frame": 9,
+    "name": "bottle",
+    "photo_name": -2.6710050106048584,
+    "dino": 0.3522820472717285,
+    "vs_others": 0.8638845086097717,
+    "on_item": true
+   },
+   {
+    "session": "rec2-find",
+    "frame": 9,
+    "name": "power bank",
+    "photo_name": 2.1311347484588623,
+    "dino": 0.06239214912056923,
+    "vs_others": 3.643310308456421,
+    "on_item": true
+   },
+   {
+    "session": "rec2-find",
+    "frame": 9,
+    "name": "wallet",
+    "photo_name": -0.9560527801513672,
+    "dino": 0.08592069149017334,
+    "vs_others": 0.004870176315307617,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 10,
+    "name": "bottle",
+    "photo_name": 5.524561405181885,
+    "dino": 0.5815353989601135,
+    "vs_others": 2.7276997566223145,
+    "on_item": true
+   },
+   {
+    "session": "rec2-find",
+    "frame": 10,
+    "name": "power bank",
+    "photo_name": 3.6016955375671387,
+    "dino": 0.36627793312072754,
+    "vs_others": 2.3723082542419434,
+    "on_item": true
+   },
+   {
+    "session": "rec2-find",
+    "frame": 10,
+    "name": "wallet",
+    "photo_name": -0.20692062377929688,
+    "dino": 0.20893928408622742,
+    "vs_others": 0.7859574556350708,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 11,
+    "name": "bottle",
+    "photo_name": -1.663907766342163,
+    "dino": 0.10198644548654556,
+    "vs_others": 0.2144840955734253,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 11,
+    "name": "power bank",
+    "photo_name": 3.7322702407836914,
+    "dino": 0.3855232298374176,
+    "vs_others": 2.6120667457580566,
+    "on_item": true
+   },
+   {
+    "session": "rec2-find",
+    "frame": 11,
+    "name": "wallet",
+    "photo_name": 3.846172571182251,
+    "dino": 0.23665739595890045,
+    "vs_others": 0.74649977684021,
+    "on_item": true
+   },
+   {
+    "session": "rec2-find",
+    "frame": 12,
+    "name": "bottle",
+    "photo_name": -2.4015398025512695,
+    "dino": 0.08852463960647583,
+    "vs_others": -3.398805618286133,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 12,
+    "name": "power bank",
+    "photo_name": 5.089573383331299,
+    "dino": 0.43008697032928467,
+    "vs_others": 3.398805618286133,
+    "on_item": true
+   },
+   {
+    "session": "rec2-find",
+    "frame": 12,
+    "name": "wallet",
+    "photo_name": 3.248427152633667,
+    "dino": 0.37389451265335083,
+    "vs_others": 0.3416922092437744,
+    "on_item": true
+   },
+   {
+    "session": "rec2-find",
+    "frame": 13,
+    "name": "bottle",
+    "photo_name": 3.9691543579101562,
+    "dino": 0.3632359802722931,
+    "vs_others": 2.131204843521118,
+    "on_item": true
+   },
+   {
+    "session": "rec2-find",
+    "frame": 13,
+    "name": "power bank",
+    "photo_name": 2.275851249694824,
+    "dino": 0.03435009717941284,
+    "vs_others": 2.565042018890381,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 13,
+    "name": "wallet",
+    "photo_name": -0.5417619943618774,
+    "dino": 0.20933514833450317,
+    "vs_others": 0.07058835029602051,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 14,
+    "name": "bottle",
+    "photo_name": -3.9908065795898438,
+    "dino": 0.05533720180392265,
+    "vs_others": -0.1025906652212143,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 14,
+    "name": "power bank",
+    "photo_name": -5.261142730712891,
+    "dino": 0.09534331411123276,
+    "vs_others": 0.6722713112831116,
+    "on_item": null
+   },
+   {
+    "session": "rec2-find",
+    "frame": 14,
+    "name": "wallet",
+    "photo_name": -4.4162211418151855,
+    "dino": 0.19999542832374573,
+    "vs_others": 0.1025906652212143,
+    "on_item": null
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 1,
+    "name": "bottle",
+    "photo_name": -2.2885468006134033,
+    "dino": -0.00461837463080883,
+    "vs_others": 0.8655050992965698,
+    "on_item": false
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 1,
+    "name": "power bank",
+    "photo_name": -5.0266523361206055,
+    "dino": 0.01206311583518982,
+    "vs_others": 0.22132360935211182,
+    "on_item": null
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 2,
+    "name": "bottle",
+    "photo_name": -1.7896723747253418,
+    "dino": 0.1816665381193161,
+    "vs_others": 0.9812397956848145,
+    "on_item": true
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 2,
+    "name": "power bank",
+    "photo_name": -3.7771308422088623,
+    "dino": 0.10590000450611115,
+    "vs_others": 1.1107763051986694,
+    "on_item": false
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 3,
+    "name": "bottle",
+    "photo_name": -2.80450439453125,
+    "dino": 0.06023101508617401,
+    "vs_others": -2.9347152709960938,
+    "on_item": false
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 3,
+    "name": "power bank",
+    "photo_name": 4.2919440269470215,
+    "dino": 0.4991498589515686,
+    "vs_others": 2.9347152709960938,
+    "on_item": true
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 4,
+    "name": "bottle",
+    "photo_name": 3.4324302673339844,
+    "dino": 0.3972439765930176,
+    "vs_others": 1.3373961448669434,
+    "on_item": true
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 4,
+    "name": "power bank",
+    "photo_name": 3.281179428100586,
+    "dino": 0.03382178395986557,
+    "vs_others": 3.7216992378234863,
+    "on_item": false
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 5,
+    "name": "bottle",
+    "photo_name": 2.308295249938965,
+    "dino": 0.26290684938430786,
+    "vs_others": 0.39200282096862793,
+    "on_item": true
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 5,
+    "name": "power bank",
+    "photo_name": 3.146674633026123,
+    "dino": -0.0037445127964019775,
+    "vs_others": -0.39200282096862793,
+    "on_item": false
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 6,
+    "name": "bottle",
+    "photo_name": -5.002735614776611,
+    "dino": 0.07271921634674072,
+    "vs_others": -0.771151065826416,
+    "on_item": false
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 6,
+    "name": "power bank",
+    "photo_name": -5.86498498916626,
+    "dino": 0.05674036964774132,
+    "vs_others": 0.771151065826416,
+    "on_item": null
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 7,
+    "name": "bottle",
+    "photo_name": -1.804544448852539,
+    "dino": 0.06217857077717781,
+    "vs_others": 1.4008877277374268,
+    "on_item": null
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 7,
+    "name": "power bank",
+    "photo_name": -2.846386671066284,
+    "dino": 0.06446492671966553,
+    "vs_others": -1.4008877277374268,
+    "on_item": null
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 8,
+    "name": "bottle",
+    "photo_name": -2.8880581855773926,
+    "dino": 0.07429918646812439,
+    "vs_others": 1.4628117084503174,
+    "on_item": false
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 8,
+    "name": "power bank",
+    "photo_name": -2.2841975688934326,
+    "dino": -0.017414920032024384,
+    "vs_others": 2.546450138092041,
+    "on_item": null
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 9,
+    "name": "bottle",
+    "photo_name": -3.2864322662353516,
+    "dino": 0.12303220480680466,
+    "vs_others": -0.23757922649383545,
+    "on_item": false
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 9,
+    "name": "power bank",
+    "photo_name": -1.9744528532028198,
+    "dino": 0.07361355423927307,
+    "vs_others": 0.23757922649383545,
+    "on_item": false
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 10,
+    "name": "bottle",
+    "photo_name": -1.9400150775909424,
+    "dino": 0.057681843638420105,
+    "vs_others": -0.2608771324157715,
+    "on_item": false
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 10,
+    "name": "power bank",
+    "photo_name": 2.987813949584961,
+    "dino": 0.06487885862588882,
+    "vs_others": 3.945106029510498,
+    "on_item": false
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 11,
+    "name": "bottle",
+    "photo_name": -4.066193580627441,
+    "dino": 0.08827277272939682,
+    "vs_others": -2.286327838897705,
+    "on_item": false
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 11,
+    "name": "power bank",
+    "photo_name": 2.827481269836426,
+    "dino": 0.10594326257705688,
+    "vs_others": 3.6576147079467773,
+    "on_item": false
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 12,
+    "name": "bottle",
+    "photo_name": -2.5308029651641846,
+    "dino": -0.05780847743153572,
+    "vs_others": 1.0387170314788818,
+    "on_item": false
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 12,
+    "name": "power bank",
+    "photo_name": 3.6645355224609375,
+    "dino": 0.2228161245584488,
+    "vs_others": 4.284337997436523,
+    "on_item": false
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 13,
+    "name": "bottle",
+    "photo_name": 2.174812078475952,
+    "dino": 0.2667231559753418,
+    "vs_others": 2.657449245452881,
+    "on_item": true
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 13,
+    "name": "power bank",
+    "photo_name": 5.997531414031982,
+    "dino": 0.2888074517250061,
+    "vs_others": 5.124727725982666,
+    "on_item": false
+   }
+  ],
+  "whole": [
+   {
+    "session": "rec1-normal",
+    "frame": 1,
+    "name": "bottle",
+    "photo_name": 5.043212890625,
+    "dino": 0.3516300320625305,
+    "vs_others": null,
+    "on_item": true
+   },
+   {
+    "session": "rec1-normal",
+    "frame": 2,
+    "name": "bottle",
+    "photo_name": 2.736250162124634,
+    "dino": 0.17472857236862183,
+    "vs_others": null,
+    "on_item": true
+   },
+   {
+    "session": "rec1-normal",
+    "frame": 3,
+    "name": "bottle",
+    "photo_name": 5.366575717926025,
+    "dino": 0.3963366150856018,
+    "vs_others": null,
+    "on_item": false
+   },
+   {
+    "session": "rec1-normal",
+    "frame": 4,
+    "name": "bottle",
+    "photo_name": 2.7479639053344727,
+    "dino": 0.07077756524085999,
+    "vs_others": null,
+    "on_item": false
+   },
+   {
+    "session": "rec1-normal",
+    "frame": 5,
+    "name": "bottle",
+    "photo_name": 1.3344368934631348,
+    "dino": 0.04282667487859726,
+    "vs_others": null,
+    "on_item": false
+   },
+   {
+    "session": "rec1-normal",
+    "frame": 6,
+    "name": "bottle",
+    "photo_name": -3.7772626876831055,
+    "dino": -0.05919107794761658,
+    "vs_others": null,
+    "on_item": false
+   },
+   {
+    "session": "rec1-normal",
+    "frame": 7,
+    "name": "bottle",
+    "photo_name": -1.9826295375823975,
+    "dino": 0.16332508623600006,
+    "vs_others": null,
+    "on_item": null
+   },
+   {
+    "session": "rec1-normal",
+    "frame": 8,
+    "name": "bottle",
+    "photo_name": -1.5124558210372925,
+    "dino": 0.015481779351830482,
+    "vs_others": null,
+    "on_item": null
+   },
+   {
+    "session": "rec1-normal",
+    "frame": 9,
+    "name": "bottle",
+    "photo_name": -5.059412956237793,
+    "dino": 0.048944130539894104,
+    "vs_others": null,
+    "on_item": null
+   },
+   {
+    "session": "rec1-normal",
+    "frame": 10,
+    "name": "bottle",
+    "photo_name": -2.919024705886841,
+    "dino": 0.12574224174022675,
+    "vs_others": null,
+    "on_item": null
+   },
+   {
+    "session": "rec2-find",
+    "frame": 1,
+    "name": "bottle",
+    "photo_name": 2.4043846130371094,
+    "dino": -0.041295915842056274,
+    "vs_others": 2.4730477333068848,
+    "on_item": null
+   },
+   {
+    "session": "rec2-find",
+    "frame": 1,
+    "name": "power bank",
+    "photo_name": -2.4911394119262695,
+    "dino": 0.1446405053138733,
+    "vs_others": -0.008328795433044434,
+    "on_item": null
+   },
+   {
+    "session": "rec2-find",
+    "frame": 1,
+    "name": "wallet",
+    "photo_name": -1.5251319408416748,
+    "dino": 0.06120796874165535,
+    "vs_others": 0.2076050043106079,
+    "on_item": null
+   },
+   {
+    "session": "rec2-find",
+    "frame": 2,
+    "name": "bottle",
+    "photo_name": -3.568962335586548,
+    "dino": 0.03312024474143982,
+    "vs_others": -0.35873663425445557,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 2,
+    "name": "power bank",
+    "photo_name": -3.075725555419922,
+    "dino": 0.009761538356542587,
+    "vs_others": 0.1672755479812622,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 2,
+    "name": "wallet",
+    "photo_name": -2.7975051403045654,
+    "dino": 0.04588792473077774,
+    "vs_others": -0.1672755479812622,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 3,
+    "name": "bottle",
+    "photo_name": 1.5304697751998901,
+    "dino": 0.013452446088194847,
+    "vs_others": 2.137791156768799,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 3,
+    "name": "power bank",
+    "photo_name": 5.088428497314453,
+    "dino": 0.19808927178382874,
+    "vs_others": 5.426740646362305,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 3,
+    "name": "wallet",
+    "photo_name": -2.2517499923706055,
+    "dino": 0.052944011986255646,
+    "vs_others": -0.6092438697814941,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 4,
+    "name": "bottle",
+    "photo_name": 2.019289970397949,
+    "dino": 0.05637868493795395,
+    "vs_others": 3.284076690673828,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 4,
+    "name": "power bank",
+    "photo_name": 6.6960129737854,
+    "dino": 0.1122608482837677,
+    "vs_others": 5.4387617111206055,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 4,
+    "name": "wallet",
+    "photo_name": -1.0770361423492432,
+    "dino": 0.2978615164756775,
+    "vs_others": 0.8367280960083008,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 5,
+    "name": "bottle",
+    "photo_name": -1.4434669017791748,
+    "dino": 0.05061408877372742,
+    "vs_others": 0.6499175429344177,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 5,
+    "name": "power bank",
+    "photo_name": -3.709899425506592,
+    "dino": 0.015704549849033356,
+    "vs_others": 2.583536386489868,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 5,
+    "name": "wallet",
+    "photo_name": -2.3287694454193115,
+    "dino": 0.08134184777736664,
+    "vs_others": 0.03127044439315796,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 6,
+    "name": "bottle",
+    "photo_name": -2.326605796813965,
+    "dino": -0.004421284422278404,
+    "vs_others": 0.4731377363204956,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 6,
+    "name": "power bank",
+    "photo_name": -4.649928092956543,
+    "dino": -0.03355978801846504,
+    "vs_others": -0.4731377363204956,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 6,
+    "name": "wallet",
+    "photo_name": -4.270839214324951,
+    "dino": -0.03839607909321785,
+    "vs_others": 0.8522065281867981,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 7,
+    "name": "bottle",
+    "photo_name": -1.0691449642181396,
+    "dino": 0.04243778437376022,
+    "vs_others": -0.991424560546875,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 7,
+    "name": "power bank",
+    "photo_name": 1.345457911491394,
+    "dino": 0.000585624948143959,
+    "vs_others": 0.991424560546875,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 7,
+    "name": "wallet",
+    "photo_name": -2.553029775619507,
+    "dino": 0.09062081575393677,
+    "vs_others": -0.10926198959350586,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 8,
+    "name": "bottle",
+    "photo_name": 1.1406493186950684,
+    "dino": 0.09915558248758316,
+    "vs_others": 1.1097344160079956,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 8,
+    "name": "power bank",
+    "photo_name": 2.613689422607422,
+    "dino": 0.13718152046203613,
+    "vs_others": 1.998636245727539,
+    "on_item": true
+   },
+   {
+    "session": "rec2-find",
+    "frame": 8,
+    "name": "wallet",
+    "photo_name": 3.3136422634124756,
+    "dino": 0.23324967920780182,
+    "vs_others": -0.947437047958374,
+    "on_item": true
+   },
+   {
+    "session": "rec2-find",
+    "frame": 9,
+    "name": "bottle",
+    "photo_name": -1.2278064489364624,
+    "dino": 0.24784152209758759,
+    "vs_others": 1.6791982650756836,
+    "on_item": true
+   },
+   {
+    "session": "rec2-find",
+    "frame": 9,
+    "name": "power bank",
+    "photo_name": 2.9074795246124268,
+    "dino": 0.1335870623588562,
+    "vs_others": 2.0269012451171875,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 9,
+    "name": "wallet",
+    "photo_name": 2.632619857788086,
+    "dino": 0.45008641481399536,
+    "vs_others": -2.0269012451171875,
+    "on_item": true
+   },
+   {
+    "session": "rec2-find",
+    "frame": 10,
+    "name": "bottle",
+    "photo_name": 7.295706748962402,
+    "dino": 0.3894649147987366,
+    "vs_others": 3.126892566680908,
+    "on_item": true
+   },
+   {
+    "session": "rec2-find",
+    "frame": 10,
+    "name": "power bank",
+    "photo_name": 5.472649097442627,
+    "dino": 0.48081764578819275,
+    "vs_others": 2.9238879680633545,
+    "on_item": true
+   },
+   {
+    "session": "rec2-find",
+    "frame": 10,
+    "name": "wallet",
+    "photo_name": 5.209847450256348,
+    "dino": 0.4879198968410492,
+    "vs_others": -0.3538203239440918,
+    "on_item": true
+   },
+   {
+    "session": "rec2-find",
+    "frame": 11,
+    "name": "bottle",
+    "photo_name": -1.7227606773376465,
+    "dino": 0.23768411576747894,
+    "vs_others": -4.2393388748168945,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 11,
+    "name": "power bank",
+    "photo_name": 6.267201900482178,
+    "dino": 0.4466072916984558,
+    "vs_others": 3.422696352005005,
+    "on_item": true
+   },
+   {
+    "session": "rec2-find",
+    "frame": 11,
+    "name": "wallet",
+    "photo_name": 6.451492786407471,
+    "dino": 0.4821014404296875,
+    "vs_others": 1.171247959136963,
+    "on_item": true
+   },
+   {
+    "session": "rec2-find",
+    "frame": 12,
+    "name": "bottle",
+    "photo_name": -1.6463160514831543,
+    "dino": 0.09334400296211243,
+    "vs_others": -4.747731685638428,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 12,
+    "name": "power bank",
+    "photo_name": 7.193723201751709,
+    "dino": 0.39318379759788513,
+    "vs_others": 4.268613815307617,
+    "on_item": true
+   },
+   {
+    "session": "rec2-find",
+    "frame": 12,
+    "name": "wallet",
+    "photo_name": 5.708538055419922,
+    "dino": 0.5737186670303345,
+    "vs_others": 1.4122521877288818,
+    "on_item": true
+   },
+   {
+    "session": "rec2-find",
+    "frame": 13,
+    "name": "bottle",
+    "photo_name": 6.248237133026123,
+    "dino": 0.18188482522964478,
+    "vs_others": 2.705873966217041,
+    "on_item": true
+   },
+   {
+    "session": "rec2-find",
+    "frame": 13,
+    "name": "power bank",
+    "photo_name": 4.178766250610352,
+    "dino": -0.03870372101664543,
+    "vs_others": 2.896456718444824,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 13,
+    "name": "wallet",
+    "photo_name": 0.8739490509033203,
+    "dino": 0.013504941016435623,
+    "vs_others": -3.9031929969787598,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 14,
+    "name": "bottle",
+    "photo_name": -2.827680826187134,
+    "dino": 0.015805881470441818,
+    "vs_others": 1.564361333847046,
+    "on_item": false
+   },
+   {
+    "session": "rec2-find",
+    "frame": 14,
+    "name": "power bank",
+    "photo_name": -5.382878303527832,
+    "dino": 0.02815007045865059,
+    "vs_others": -0.011761389672756195,
+    "on_item": null
+   },
+   {
+    "session": "rec2-find",
+    "frame": 14,
+    "name": "wallet",
+    "photo_name": -2.530271053314209,
+    "dino": 0.11316578835248947,
+    "vs_others": 0.4626753628253937,
+    "on_item": null
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 1,
+    "name": "bottle",
+    "photo_name": -1.490241527557373,
+    "dino": 0.022665362805128098,
+    "vs_others": 0.49526870250701904,
+    "on_item": false
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 1,
+    "name": "power bank",
+    "photo_name": -2.946352005004883,
+    "dino": -0.04401683062314987,
+    "vs_others": -0.49526870250701904,
+    "on_item": null
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 2,
+    "name": "bottle",
+    "photo_name": 0.2673497200012207,
+    "dino": 0.24550235271453857,
+    "vs_others": 1.3369466066360474,
+    "on_item": true
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 2,
+    "name": "power bank",
+    "photo_name": 0.4158635139465332,
+    "dino": 0.1070895567536354,
+    "vs_others": 3.0203518867492676,
+    "on_item": false
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 3,
+    "name": "bottle",
+    "photo_name": -1.9803357124328613,
+    "dino": 0.22653985023498535,
+    "vs_others": -4.650302410125732,
+    "on_item": false
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 3,
+    "name": "power bank",
+    "photo_name": 6.831699848175049,
+    "dino": 0.5358647704124451,
+    "vs_others": 4.650302410125732,
+    "on_item": true
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 4,
+    "name": "bottle",
+    "photo_name": 5.202303886413574,
+    "dino": 0.5395627617835999,
+    "vs_others": 1.9838356971740723,
+    "on_item": true
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 4,
+    "name": "power bank",
+    "photo_name": 4.644207954406738,
+    "dino": 0.053848620504140854,
+    "vs_others": 4.40496826171875,
+    "on_item": false
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 5,
+    "name": "bottle",
+    "photo_name": 3.883342742919922,
+    "dino": 0.3903653025627136,
+    "vs_others": 0.303067684173584,
+    "on_item": true
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 5,
+    "name": "power bank",
+    "photo_name": 4.810657501220703,
+    "dino": 0.13486790657043457,
+    "vs_others": -0.303067684173584,
+    "on_item": false
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 6,
+    "name": "bottle",
+    "photo_name": -4.944672107696533,
+    "dino": 0.020236819982528687,
+    "vs_others": 0.2508963942527771,
+    "on_item": false
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 6,
+    "name": "power bank",
+    "photo_name": -6.396716117858887,
+    "dino": 0.010192968882620335,
+    "vs_others": -0.2508963942527771,
+    "on_item": null
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 7,
+    "name": "bottle",
+    "photo_name": -1.6375064849853516,
+    "dino": 0.020787715911865234,
+    "vs_others": 0.09391331672668457,
+    "on_item": null
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 7,
+    "name": "power bank",
+    "photo_name": -1.3723742961883545,
+    "dino": 0.06650454550981522,
+    "vs_others": -0.09391331672668457,
+    "on_item": null
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 8,
+    "name": "bottle",
+    "photo_name": -0.4135167598724365,
+    "dino": 0.14595533907413483,
+    "vs_others": 2.9740278720855713,
+    "on_item": false
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 8,
+    "name": "power bank",
+    "photo_name": -3.4086146354675293,
+    "dino": -0.007405206561088562,
+    "vs_others": 1.1194242238998413,
+    "on_item": null
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 9,
+    "name": "bottle",
+    "photo_name": -3.1970770359039307,
+    "dino": 0.05398575961589813,
+    "vs_others": -0.6764965057373047,
+    "on_item": false
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 9,
+    "name": "power bank",
+    "photo_name": -1.4461803436279297,
+    "dino": -0.01159726269543171,
+    "vs_others": 0.6764965057373047,
+    "on_item": false
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 10,
+    "name": "bottle",
+    "photo_name": -0.7897392511367798,
+    "dino": -0.07625164091587067,
+    "vs_others": 0.8052414655685425,
+    "on_item": false
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 10,
+    "name": "power bank",
+    "photo_name": 4.174403667449951,
+    "dino": 0.15667127072811127,
+    "vs_others": 4.456282615661621,
+    "on_item": false
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 11,
+    "name": "bottle",
+    "photo_name": -2.5464601516723633,
+    "dino": -0.12117831408977509,
+    "vs_others": -1.5062307119369507,
+    "on_item": false
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 11,
+    "name": "power bank",
+    "photo_name": 4.11747932434082,
+    "dino": 0.13898520171642303,
+    "vs_others": 3.788069009780884,
+    "on_item": false
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 12,
+    "name": "bottle",
+    "photo_name": 0.4619131088256836,
+    "dino": 0.09898735582828522,
+    "vs_others": 3.289440870285034,
+    "on_item": false
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 12,
+    "name": "power bank",
+    "photo_name": 5.047065258026123,
+    "dino": 0.25535285472869873,
+    "vs_others": 4.698914527893066,
+    "on_item": false
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 13,
+    "name": "bottle",
+    "photo_name": 3.6954758167266846,
+    "dino": 0.2223936915397644,
+    "vs_others": 3.3908095359802246,
+    "on_item": true
+   },
+   {
+    "session": "rec3-moved",
+    "frame": 13,
+    "name": "power bank",
+    "photo_name": 7.644011974334717,
+    "dino": 0.2968859076499939,
+    "vs_others": 5.650184631347656,
+    "on_item": false
+   }
+  ]
+ }
+}

@@ -1,0 +1,3692 @@
+{
+ "rec1-normal": {
+  "summary": {
+   "bottle": {
+    "alone": {
+     "present": 1,
+     "present_on_item": 0,
+     "box_on_item": 2,
+     "frames": 10,
+     "failed_only_vs_others": 0
+    },
+    "together": {
+     "present": 1,
+     "present_on_item": 0,
+     "box_on_item": 2,
+     "frames": 10,
+     "failed_only_vs_others": 0
+    },
+    "reversed": {
+     "present": 1,
+     "present_on_item": 0,
+     "box_on_item": 2,
+     "frames": 10,
+     "failed_only_vs_others": 0
+    },
+    "scores_same_alone_vs_together": true
+   }
+  },
+  "rows": {
+   "alone": [
+    {
+     "frame": 1,
+     "name": "bottle",
+     "present": false,
+     "photo_name": 3.441,
+     "dino": 0.24,
+     "vs_others": null,
+     "on_item": true,
+     "box": [
+      165.4,
+      269.8,
+      293.9,
+      539.9
+     ]
+    },
+    {
+     "frame": 2,
+     "name": "bottle",
+     "present": false,
+     "photo_name": 1.303,
+     "dino": 0.266,
+     "vs_others": null,
+     "on_item": true,
+     "box": [
+      143.7,
+      208.3,
+      263.6,
+      483.7
+     ]
+    },
+    {
+     "frame": 3,
+     "name": "bottle",
+     "present": true,
+     "photo_name": 3.773,
+     "dino": 0.586,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      366.6,
+      209.2,
+      384.5,
+      266.9
+     ]
+    },
+    {
+     "frame": 4,
+     "name": "bottle",
+     "present": false,
+     "photo_name": 1.295,
+     "dino": 0.288,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      294.2,
+      306.3,
+      310.5,
+      338.9
+     ]
+    },
+    {
+     "frame": 5,
+     "name": "bottle",
+     "present": false,
+     "photo_name": 0.333,
+     "dino": 0.241,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      931.6,
+      303.2,
+      954.5,
+      344.7
+     ]
+    },
+    {
+     "frame": 6,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -2.918,
+     "dino": 0.015,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      539.4,
+      464.2,
+      737.0,
+      719.3
+     ]
+    },
+    {
+     "frame": 7,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -3.142,
+     "dino": 0.314,
+     "vs_others": null,
+     "on_item": null,
+     "box": [
+      423.4,
+      267.3,
+      441.1,
+      304.8
+     ]
+    },
+    {
+     "frame": 8,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -2.216,
+     "dino": 0.175,
+     "vs_others": null,
+     "on_item": null,
+     "box": [
+      717.9,
+      332.4,
+      739.5,
+      370.4
+     ]
+    },
+    {
+     "frame": 9,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -6.276,
+     "dino": 0.272,
+     "vs_others": null,
+     "on_item": null,
+     "box": [
+      476.5,
+      505.2,
+      511.0,
+      544.9
+     ]
+    },
+    {
+     "frame": 10,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -3.846,
+     "dino": 0.339,
+     "vs_others": null,
+     "on_item": null,
+     "box": [
+      0.0,
+      577.7,
+      18.8,
+      629.6
+     ]
+    }
+   ],
+   "together": [
+    {
+     "frame": 1,
+     "name": "bottle",
+     "present": false,
+     "photo_name": 3.441,
+     "dino": 0.24,
+     "vs_others": null,
+     "on_item": true,
+     "box": [
+      165.4,
+      269.8,
+      293.9,
+      539.9
+     ]
+    },
+    {
+     "frame": 2,
+     "name": "bottle",
+     "present": false,
+     "photo_name": 1.303,
+     "dino": 0.266,
+     "vs_others": null,
+     "on_item": true,
+     "box": [
+      143.7,
+      208.3,
+      263.6,
+      483.7
+     ]
+    },
+    {
+     "frame": 3,
+     "name": "bottle",
+     "present": true,
+     "photo_name": 3.773,
+     "dino": 0.586,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      366.6,
+      209.2,
+      384.5,
+      266.9
+     ]
+    },
+    {
+     "frame": 4,
+     "name": "bottle",
+     "present": false,
+     "photo_name": 1.295,
+     "dino": 0.288,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      294.2,
+      306.3,
+      310.5,
+      338.9
+     ]
+    },
+    {
+     "frame": 5,
+     "name": "bottle",
+     "present": false,
+     "photo_name": 0.333,
+     "dino": 0.241,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      931.6,
+      303.2,
+      954.5,
+      344.7
+     ]
+    },
+    {
+     "frame": 6,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -2.918,
+     "dino": 0.015,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      539.4,
+      464.2,
+      737.0,
+      719.3
+     ]
+    },
+    {
+     "frame": 7,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -3.142,
+     "dino": 0.314,
+     "vs_others": null,
+     "on_item": null,
+     "box": [
+      423.4,
+      267.3,
+      441.1,
+      304.8
+     ]
+    },
+    {
+     "frame": 8,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -2.216,
+     "dino": 0.175,
+     "vs_others": null,
+     "on_item": null,
+     "box": [
+      717.9,
+      332.4,
+      739.5,
+      370.4
+     ]
+    },
+    {
+     "frame": 9,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -6.276,
+     "dino": 0.272,
+     "vs_others": null,
+     "on_item": null,
+     "box": [
+      476.5,
+      505.2,
+      511.0,
+      544.9
+     ]
+    },
+    {
+     "frame": 10,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -3.846,
+     "dino": 0.339,
+     "vs_others": null,
+     "on_item": null,
+     "box": [
+      0.0,
+      577.7,
+      18.8,
+      629.6
+     ]
+    }
+   ],
+   "reversed": [
+    {
+     "frame": 1,
+     "name": "bottle",
+     "present": false,
+     "photo_name": 3.441,
+     "dino": 0.24,
+     "vs_others": null,
+     "on_item": true,
+     "box": [
+      165.4,
+      269.8,
+      293.9,
+      539.9
+     ]
+    },
+    {
+     "frame": 2,
+     "name": "bottle",
+     "present": false,
+     "photo_name": 1.303,
+     "dino": 0.266,
+     "vs_others": null,
+     "on_item": true,
+     "box": [
+      143.7,
+      208.3,
+      263.6,
+      483.7
+     ]
+    },
+    {
+     "frame": 3,
+     "name": "bottle",
+     "present": true,
+     "photo_name": 3.773,
+     "dino": 0.586,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      366.6,
+      209.2,
+      384.5,
+      266.9
+     ]
+    },
+    {
+     "frame": 4,
+     "name": "bottle",
+     "present": false,
+     "photo_name": 1.295,
+     "dino": 0.288,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      294.2,
+      306.3,
+      310.5,
+      338.9
+     ]
+    },
+    {
+     "frame": 5,
+     "name": "bottle",
+     "present": false,
+     "photo_name": 0.333,
+     "dino": 0.241,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      931.6,
+      303.2,
+      954.5,
+      344.7
+     ]
+    },
+    {
+     "frame": 6,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -2.918,
+     "dino": 0.015,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      539.4,
+      464.2,
+      737.0,
+      719.3
+     ]
+    },
+    {
+     "frame": 7,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -3.142,
+     "dino": 0.314,
+     "vs_others": null,
+     "on_item": null,
+     "box": [
+      423.4,
+      267.3,
+      441.1,
+      304.8
+     ]
+    },
+    {
+     "frame": 8,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -2.216,
+     "dino": 0.175,
+     "vs_others": null,
+     "on_item": null,
+     "box": [
+      717.9,
+      332.4,
+      739.5,
+      370.4
+     ]
+    },
+    {
+     "frame": 9,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -6.276,
+     "dino": 0.272,
+     "vs_others": null,
+     "on_item": null,
+     "box": [
+      476.5,
+      505.2,
+      511.0,
+      544.9
+     ]
+    },
+    {
+     "frame": 10,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -3.846,
+     "dino": 0.339,
+     "vs_others": null,
+     "on_item": null,
+     "box": [
+      0.0,
+      577.7,
+      18.8,
+      629.6
+     ]
+    }
+   ]
+  }
+ },
+ "rec2-find": {
+  "summary": {
+   "bottle": {
+    "alone": {
+     "present": 1,
+     "present_on_item": 1,
+     "box_on_item": 3,
+     "frames": 14,
+     "failed_only_vs_others": 0
+    },
+    "together": {
+     "present": 1,
+     "present_on_item": 1,
+     "box_on_item": 3,
+     "frames": 14,
+     "failed_only_vs_others": 0
+    },
+    "reversed": {
+     "present": 1,
+     "present_on_item": 1,
+     "box_on_item": 3,
+     "frames": 14,
+     "failed_only_vs_others": 0
+    },
+    "scores_same_alone_vs_together": true
+   },
+   "power bank": {
+    "alone": {
+     "present": 2,
+     "present_on_item": 2,
+     "box_on_item": 5,
+     "frames": 14,
+     "failed_only_vs_others": 0
+    },
+    "together": {
+     "present": 2,
+     "present_on_item": 2,
+     "box_on_item": 5,
+     "frames": 14,
+     "failed_only_vs_others": 0
+    },
+    "reversed": {
+     "present": 2,
+     "present_on_item": 2,
+     "box_on_item": 5,
+     "frames": 14,
+     "failed_only_vs_others": 0
+    },
+    "scores_same_alone_vs_together": true
+   },
+   "wallet": {
+    "alone": {
+     "present": 0,
+     "present_on_item": 0,
+     "box_on_item": 3,
+     "frames": 14,
+     "failed_only_vs_others": 0
+    },
+    "together": {
+     "present": 0,
+     "present_on_item": 0,
+     "box_on_item": 3,
+     "frames": 14,
+     "failed_only_vs_others": 0
+    },
+    "reversed": {
+     "present": 0,
+     "present_on_item": 0,
+     "box_on_item": 3,
+     "frames": 14,
+     "failed_only_vs_others": 0
+    },
+    "scores_same_alone_vs_together": true
+   }
+  },
+  "rows": {
+   "alone": [
+    {
+     "frame": 1,
+     "name": "bottle",
+     "present": false,
+     "photo_name": 0.892,
+     "dino": 0.141,
+     "vs_others": null,
+     "on_item": null,
+     "box": [
+      192.3,
+      40.0,
+      220.5,
+      90.6
+     ]
+    },
+    {
+     "frame": 2,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -3.809,
+     "dino": 0.1,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      427.8,
+      115.3,
+      561.5,
+      230.3
+     ]
+    },
+    {
+     "frame": 3,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -0.029,
+     "dino": 0.211,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      201.5,
+      0.2,
+      261.6,
+      81.9
+     ]
+    },
+    {
+     "frame": 4,
+     "name": "bottle",
+     "present": false,
+     "photo_name": 0.192,
+     "dino": 0.186,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      582.7,
+      63.6,
+      639.5,
+      166.9
+     ]
+    },
+    {
+     "frame": 5,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -2.611,
+     "dino": 0.128,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      689.0,
+      0.0,
+      735.6,
+      72.1
+     ]
+    },
+    {
+     "frame": 6,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -2.583,
+     "dino": 0.035,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      690.2,
+      0.0,
+      960.0,
+      710.2
+     ]
+    },
+    {
+     "frame": 7,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -3.125,
+     "dino": -0.015,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      672.1,
+      152.3,
+      936.0,
+      464.7
+     ]
+    },
+    {
+     "frame": 8,
+     "name": "bottle",
+     "present": false,
+     "photo_name": 0.132,
+     "dino": 0.238,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      131.0,
+      69.2,
+      167.9,
+      125.3
+     ]
+    },
+    {
+     "frame": 9,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -2.671,
+     "dino": 0.352,
+     "vs_others": null,
+     "on_item": true,
+     "box": [
+      892.5,
+      249.5,
+      958.9,
+      421.6
+     ]
+    },
+    {
+     "frame": 10,
+     "name": "bottle",
+     "present": true,
+     "photo_name": 5.525,
+     "dino": 0.582,
+     "vs_others": null,
+     "on_item": true,
+     "box": [
+      528.2,
+      207.5,
+      613.8,
+      438.0
+     ]
+    },
+    {
+     "frame": 11,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -1.664,
+     "dino": 0.102,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      364.1,
+      1.2,
+      687.0,
+      358.6
+     ]
+    },
+    {
+     "frame": 12,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -2.402,
+     "dino": 0.089,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      449.6,
+      446.6,
+      554.7,
+      511.5
+     ]
+    },
+    {
+     "frame": 13,
+     "name": "bottle",
+     "present": false,
+     "photo_name": 3.969,
+     "dino": 0.363,
+     "vs_others": null,
+     "on_item": true,
+     "box": [
+      251.9,
+      221.7,
+      353.4,
+      468.0
+     ]
+    },
+    {
+     "frame": 14,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -3.991,
+     "dino": 0.055,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      38.4,
+      0.2,
+      100.5,
+      88.9
+     ]
+    },
+    {
+     "frame": 1,
+     "name": "power bank",
+     "present": false,
+     "photo_name": -3.257,
+     "dino": 0.098,
+     "vs_others": null,
+     "on_item": null,
+     "box": [
+      253.9,
+      54.5,
+      355.0,
+      141.8
+     ]
+    },
+    {
+     "frame": 2,
+     "name": "power bank",
+     "present": false,
+     "photo_name": -3.3,
+     "dino": 0.016,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      427.8,
+      115.3,
+      561.5,
+      230.3
+     ]
+    },
+    {
+     "frame": 3,
+     "name": "power bank",
+     "present": false,
+     "photo_name": 3.751,
+     "dino": 0.145,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      86.5,
+      305.8,
+      189.5,
+      408.4
+     ]
+    },
+    {
+     "frame": 4,
+     "name": "power bank",
+     "present": false,
+     "photo_name": 5.443,
+     "dino": 0.252,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      273.6,
+      519.7,
+      373.1,
+      697.7
+     ]
+    },
+    {
+     "frame": 5,
+     "name": "power bank",
+     "present": false,
+     "photo_name": -4.734,
+     "dino": 0.025,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      717.6,
+      356.2,
+      787.0,
+      418.9
+     ]
+    },
+    {
+     "frame": 6,
+     "name": "power bank",
+     "present": false,
+     "photo_name": -4.68,
+     "dino": 0.046,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      690.2,
+      0.0,
+      960.0,
+      710.2
+     ]
+    },
+    {
+     "frame": 7,
+     "name": "power bank",
+     "present": false,
+     "photo_name": -3.158,
+     "dino": 0.114,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      672.1,
+      152.3,
+      936.0,
+      464.7
+     ]
+    },
+    {
+     "frame": 8,
+     "name": "power bank",
+     "present": false,
+     "photo_name": 1.173,
+     "dino": 0.147,
+     "vs_others": null,
+     "on_item": true,
+     "box": [
+      759.3,
+      79.2,
+      825.7,
+      114.0
+     ]
+    },
+    {
+     "frame": 9,
+     "name": "power bank",
+     "present": false,
+     "photo_name": 2.131,
+     "dino": 0.062,
+     "vs_others": null,
+     "on_item": true,
+     "box": [
+      581.8,
+      190.6,
+      649.0,
+      224.1
+     ]
+    },
+    {
+     "frame": 10,
+     "name": "power bank",
+     "present": false,
+     "photo_name": 3.602,
+     "dino": 0.366,
+     "vs_others": null,
+     "on_item": true,
+     "box": [
+      17.8,
+      367.8,
+      122.7,
+      449.1
+     ]
+    },
+    {
+     "frame": 11,
+     "name": "power bank",
+     "present": true,
+     "photo_name": 3.732,
+     "dino": 0.386,
+     "vs_others": null,
+     "on_item": true,
+     "box": [
+      342.5,
+      395.5,
+      447.1,
+      469.3
+     ]
+    },
+    {
+     "frame": 12,
+     "name": "power bank",
+     "present": true,
+     "photo_name": 5.09,
+     "dino": 0.43,
+     "vs_others": null,
+     "on_item": true,
+     "box": [
+      449.6,
+      446.6,
+      554.7,
+      511.5
+     ]
+    },
+    {
+     "frame": 13,
+     "name": "power bank",
+     "present": false,
+     "photo_name": 2.276,
+     "dino": 0.034,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      193.0,
+      153.5,
+      246.5,
+      233.8
+     ]
+    },
+    {
+     "frame": 14,
+     "name": "power bank",
+     "present": false,
+     "photo_name": -5.261,
+     "dino": 0.095,
+     "vs_others": null,
+     "on_item": null,
+     "box": [
+      1.5,
+      2.0,
+      457.3,
+      720.0
+     ]
+    },
+    {
+     "frame": 1,
+     "name": "wallet",
+     "present": false,
+     "photo_name": -4.047,
+     "dino": 0.306,
+     "vs_others": null,
+     "on_item": null,
+     "box": [
+      350.2,
+      24.3,
+      494.7,
+      177.8
+     ]
+    },
+    {
+     "frame": 2,
+     "name": "wallet",
+     "present": false,
+     "photo_name": -2.959,
+     "dino": 0.251,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      427.8,
+      115.3,
+      561.5,
+      230.3
+     ]
+    },
+    {
+     "frame": 3,
+     "name": "wallet",
+     "present": false,
+     "photo_name": -2.897,
+     "dino": -0.015,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      504.1,
+      401.2,
+      878.4,
+      720.0
+     ]
+    },
+    {
+     "frame": 4,
+     "name": "wallet",
+     "present": false,
+     "photo_name": -2.461,
+     "dino": 0.273,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      243.1,
+      0.0,
+      497.2,
+      256.5
+     ]
+    },
+    {
+     "frame": 5,
+     "name": "wallet",
+     "present": false,
+     "photo_name": -5.296,
+     "dino": 0.199,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      487.8,
+      21.3,
+      687.2,
+      324.5
+     ]
+    },
+    {
+     "frame": 6,
+     "name": "wallet",
+     "present": false,
+     "photo_name": -5.007,
+     "dino": 0.137,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      107.8,
+      0.0,
+      455.9,
+      75.4
+     ]
+    },
+    {
+     "frame": 7,
+     "name": "wallet",
+     "present": false,
+     "photo_name": -3.677,
+     "dino": 0.123,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      672.1,
+      152.3,
+      936.0,
+      464.7
+     ]
+    },
+    {
+     "frame": 8,
+     "name": "wallet",
+     "present": false,
+     "photo_name": 0.999,
+     "dino": 0.164,
+     "vs_others": null,
+     "on_item": true,
+     "box": [
+      722.7,
+      123.1,
+      790.2,
+      165.6
+     ]
+    },
+    {
+     "frame": 9,
+     "name": "wallet",
+     "present": false,
+     "photo_name": -0.956,
+     "dino": 0.086,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      342.2,
+      345.3,
+      600.8,
+      592.1
+     ]
+    },
+    {
+     "frame": 10,
+     "name": "wallet",
+     "present": false,
+     "photo_name": -0.207,
+     "dino": 0.209,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      278.2,
+      22.7,
+      507.7,
+      267.9
+     ]
+    },
+    {
+     "frame": 11,
+     "name": "wallet",
+     "present": false,
+     "photo_name": 3.846,
+     "dino": 0.237,
+     "vs_others": null,
+     "on_item": true,
+     "box": [
+      407.5,
+      522.1,
+      559.4,
+      670.3
+     ]
+    },
+    {
+     "frame": 12,
+     "name": "wallet",
+     "present": false,
+     "photo_name": 3.248,
+     "dino": 0.374,
+     "vs_others": null,
+     "on_item": true,
+     "box": [
+      468.6,
+      613.6,
+      639.0,
+      719.8
+     ]
+    },
+    {
+     "frame": 13,
+     "name": "wallet",
+     "present": false,
+     "photo_name": -0.542,
+     "dino": 0.209,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      0.0,
+      159.6,
+      178.3,
+      319.0
+     ]
+    },
+    {
+     "frame": 14,
+     "name": "wallet",
+     "present": false,
+     "photo_name": -4.416,
+     "dino": 0.2,
+     "vs_others": null,
+     "on_item": null,
+     "box": [
+      38.4,
+      0.2,
+      100.5,
+      88.9
+     ]
+    }
+   ],
+   "together": [
+    {
+     "frame": 1,
+     "name": "bottle",
+     "present": false,
+     "photo_name": 0.892,
+     "dino": 0.141,
+     "vs_others": 2.133,
+     "on_item": null,
+     "box": [
+      192.3,
+      40.0,
+      220.5,
+      90.6
+     ]
+    },
+    {
+     "frame": 1,
+     "name": "power bank",
+     "present": false,
+     "photo_name": -3.257,
+     "dino": 0.098,
+     "vs_others": -0.406,
+     "on_item": null,
+     "box": [
+      253.9,
+      54.5,
+      355.0,
+      141.8
+     ]
+    },
+    {
+     "frame": 1,
+     "name": "wallet",
+     "present": false,
+     "photo_name": -4.047,
+     "dino": 0.306,
+     "vs_others": 0.916,
+     "on_item": null,
+     "box": [
+      350.2,
+      24.3,
+      494.7,
+      177.8
+     ]
+    },
+    {
+     "frame": 2,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -3.809,
+     "dino": 0.1,
+     "vs_others": -0.375,
+     "on_item": false,
+     "box": [
+      427.8,
+      115.3,
+      561.5,
+      230.3
+     ]
+    },
+    {
+     "frame": 2,
+     "name": "power bank",
+     "present": false,
+     "photo_name": -3.3,
+     "dino": 0.016,
+     "vs_others": 0.105,
+     "on_item": false,
+     "box": [
+      427.8,
+      115.3,
+      561.5,
+      230.3
+     ]
+    },
+    {
+     "frame": 2,
+     "name": "wallet",
+     "present": false,
+     "photo_name": -2.959,
+     "dino": 0.251,
+     "vs_others": -0.105,
+     "on_item": false,
+     "box": [
+      427.8,
+      115.3,
+      561.5,
+      230.3
+     ]
+    },
+    {
+     "frame": 3,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -0.029,
+     "dino": 0.211,
+     "vs_others": 0.72,
+     "on_item": false,
+     "box": [
+      201.5,
+      0.2,
+      261.6,
+      81.9
+     ]
+    },
+    {
+     "frame": 3,
+     "name": "power bank",
+     "present": false,
+     "photo_name": 3.751,
+     "dino": 0.145,
+     "vs_others": 4.948,
+     "on_item": false,
+     "box": [
+      86.5,
+      305.8,
+      189.5,
+      408.4
+     ]
+    },
+    {
+     "frame": 3,
+     "name": "wallet",
+     "present": false,
+     "photo_name": -2.897,
+     "dino": -0.015,
+     "vs_others": -1.632,
+     "on_item": false,
+     "box": [
+      504.1,
+      401.2,
+      878.4,
+      720.0
+     ]
+    },
+    {
+     "frame": 4,
+     "name": "bottle",
+     "present": false,
+     "photo_name": 0.192,
+     "dino": 0.186,
+     "vs_others": 1.249,
+     "on_item": false,
+     "box": [
+      582.7,
+      63.6,
+      639.5,
+      166.9
+     ]
+    },
+    {
+     "frame": 4,
+     "name": "power bank",
+     "present": false,
+     "photo_name": 5.443,
+     "dino": 0.252,
+     "vs_others": 5.39,
+     "on_item": false,
+     "box": [
+      273.6,
+      519.7,
+      373.1,
+      697.7
+     ]
+    },
+    {
+     "frame": 4,
+     "name": "wallet",
+     "present": false,
+     "photo_name": -2.461,
+     "dino": 0.273,
+     "vs_others": -0.127,
+     "on_item": false,
+     "box": [
+      243.1,
+      0.0,
+      497.2,
+      256.5
+     ]
+    },
+    {
+     "frame": 5,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -2.611,
+     "dino": 0.128,
+     "vs_others": 0.374,
+     "on_item": false,
+     "box": [
+      689.0,
+      0.0,
+      735.6,
+      72.1
+     ]
+    },
+    {
+     "frame": 5,
+     "name": "power bank",
+     "present": false,
+     "photo_name": -4.734,
+     "dino": 0.025,
+     "vs_others": 3.373,
+     "on_item": false,
+     "box": [
+      717.6,
+      356.2,
+      787.0,
+      418.9
+     ]
+    },
+    {
+     "frame": 5,
+     "name": "wallet",
+     "present": false,
+     "photo_name": -5.296,
+     "dino": 0.199,
+     "vs_others": -0.675,
+     "on_item": false,
+     "box": [
+      487.8,
+      21.3,
+      687.2,
+      324.5
+     ]
+    },
+    {
+     "frame": 6,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -2.583,
+     "dino": 0.035,
+     "vs_others": 0.247,
+     "on_item": false,
+     "box": [
+      690.2,
+      0.0,
+      960.0,
+      710.2
+     ]
+    },
+    {
+     "frame": 6,
+     "name": "power bank",
+     "present": false,
+     "photo_name": -4.68,
+     "dino": 0.046,
+     "vs_others": -0.247,
+     "on_item": false,
+     "box": [
+      690.2,
+      0.0,
+      960.0,
+      710.2
+     ]
+    },
+    {
+     "frame": 6,
+     "name": "wallet",
+     "present": false,
+     "photo_name": -5.007,
+     "dino": 0.137,
+     "vs_others": 2.37,
+     "on_item": false,
+     "box": [
+      107.8,
+      0.0,
+      455.9,
+      75.4
+     ]
+    },
+    {
+     "frame": 7,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -3.125,
+     "dino": -0.015,
+     "vs_others": 0.178,
+     "on_item": false,
+     "box": [
+      672.1,
+      152.3,
+      936.0,
+      464.7
+     ]
+    },
+    {
+     "frame": 7,
+     "name": "power bank",
+     "present": false,
+     "photo_name": -3.158,
+     "dino": 0.114,
+     "vs_others": -0.178,
+     "on_item": false,
+     "box": [
+      672.1,
+      152.3,
+      936.0,
+      464.7
+     ]
+    },
+    {
+     "frame": 7,
+     "name": "wallet",
+     "present": false,
+     "photo_name": -3.677,
+     "dino": 0.123,
+     "vs_others": -0.38,
+     "on_item": false,
+     "box": [
+      672.1,
+      152.3,
+      936.0,
+      464.7
+     ]
+    },
+    {
+     "frame": 8,
+     "name": "bottle",
+     "present": false,
+     "photo_name": 0.132,
+     "dino": 0.238,
+     "vs_others": 0.542,
+     "on_item": false,
+     "box": [
+      131.0,
+      69.2,
+      167.9,
+      125.3
+     ]
+    },
+    {
+     "frame": 8,
+     "name": "power bank",
+     "present": false,
+     "photo_name": 1.173,
+     "dino": 0.147,
+     "vs_others": 2.696,
+     "on_item": true,
+     "box": [
+      759.3,
+      79.2,
+      825.7,
+      114.0
+     ]
+    },
+    {
+     "frame": 8,
+     "name": "wallet",
+     "present": false,
+     "photo_name": 0.999,
+     "dino": 0.164,
+     "vs_others": -1.549,
+     "on_item": true,
+     "box": [
+      722.7,
+      123.1,
+      790.2,
+      165.6
+     ]
+    },
+    {
+     "frame": 9,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -2.671,
+     "dino": 0.352,
+     "vs_others": 0.864,
+     "on_item": true,
+     "box": [
+      892.5,
+      249.5,
+      958.9,
+      421.6
+     ]
+    },
+    {
+     "frame": 9,
+     "name": "power bank",
+     "present": false,
+     "photo_name": 2.131,
+     "dino": 0.062,
+     "vs_others": 3.643,
+     "on_item": true,
+     "box": [
+      581.8,
+      190.6,
+      649.0,
+      224.1
+     ]
+    },
+    {
+     "frame": 9,
+     "name": "wallet",
+     "present": false,
+     "photo_name": -0.956,
+     "dino": 0.086,
+     "vs_others": 0.005,
+     "on_item": false,
+     "box": [
+      342.2,
+      345.3,
+      600.8,
+      592.1
+     ]
+    },
+    {
+     "frame": 10,
+     "name": "bottle",
+     "present": true,
+     "photo_name": 5.525,
+     "dino": 0.582,
+     "vs_others": 2.728,
+     "on_item": true,
+     "box": [
+      528.2,
+      207.5,
+      613.8,
+      438.0
+     ]
+    },
+    {
+     "frame": 10,
+     "name": "power bank",
+     "present": false,
+     "photo_name": 3.602,
+     "dino": 0.366,
+     "vs_others": 2.372,
+     "on_item": true,
+     "box": [
+      17.8,
+      367.8,
+      122.7,
+      449.1
+     ]
+    },
+    {
+     "frame": 10,
+     "name": "wallet",
+     "present": false,
+     "photo_name": -0.207,
+     "dino": 0.209,
+     "vs_others": 0.786,
+     "on_item": false,
+     "box": [
+      278.2,
+      22.7,
+      507.7,
+      267.9
+     ]
+    },
+    {
+     "frame": 11,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -1.664,
+     "dino": 0.102,
+     "vs_others": 0.214,
+     "on_item": false,
+     "box": [
+      364.1,
+      1.2,
+      687.0,
+      358.6
+     ]
+    },
+    {
+     "frame": 11,
+     "name": "power bank",
+     "present": true,
+     "photo_name": 3.732,
+     "dino": 0.386,
+     "vs_others": 2.612,
+     "on_item": true,
+     "box": [
+      342.5,
+      395.5,
+      447.1,
+      469.3
+     ]
+    },
+    {
+     "frame": 11,
+     "name": "wallet",
+     "present": false,
+     "photo_name": 3.846,
+     "dino": 0.237,
+     "vs_others": 0.746,
+     "on_item": true,
+     "box": [
+      407.5,
+      522.1,
+      559.4,
+      670.3
+     ]
+    },
+    {
+     "frame": 12,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -2.402,
+     "dino": 0.089,
+     "vs_others": -3.399,
+     "on_item": false,
+     "box": [
+      449.6,
+      446.6,
+      554.7,
+      511.5
+     ]
+    },
+    {
+     "frame": 12,
+     "name": "power bank",
+     "present": true,
+     "photo_name": 5.09,
+     "dino": 0.43,
+     "vs_others": 3.399,
+     "on_item": true,
+     "box": [
+      449.6,
+      446.6,
+      554.7,
+      511.5
+     ]
+    },
+    {
+     "frame": 12,
+     "name": "wallet",
+     "present": false,
+     "photo_name": 3.248,
+     "dino": 0.374,
+     "vs_others": 0.342,
+     "on_item": true,
+     "box": [
+      468.6,
+      613.6,
+      639.0,
+      719.8
+     ]
+    },
+    {
+     "frame": 13,
+     "name": "bottle",
+     "present": false,
+     "photo_name": 3.969,
+     "dino": 0.363,
+     "vs_others": 2.131,
+     "on_item": true,
+     "box": [
+      251.9,
+      221.7,
+      353.4,
+      468.0
+     ]
+    },
+    {
+     "frame": 13,
+     "name": "power bank",
+     "present": false,
+     "photo_name": 2.276,
+     "dino": 0.034,
+     "vs_others": 2.565,
+     "on_item": false,
+     "box": [
+      193.0,
+      153.5,
+      246.5,
+      233.8
+     ]
+    },
+    {
+     "frame": 13,
+     "name": "wallet",
+     "present": false,
+     "photo_name": -0.542,
+     "dino": 0.209,
+     "vs_others": 0.071,
+     "on_item": false,
+     "box": [
+      0.0,
+      159.6,
+      178.3,
+      319.0
+     ]
+    },
+    {
+     "frame": 14,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -3.991,
+     "dino": 0.055,
+     "vs_others": -0.103,
+     "on_item": false,
+     "box": [
+      38.4,
+      0.2,
+      100.5,
+      88.9
+     ]
+    },
+    {
+     "frame": 14,
+     "name": "power bank",
+     "present": false,
+     "photo_name": -5.261,
+     "dino": 0.095,
+     "vs_others": 0.672,
+     "on_item": null,
+     "box": [
+      1.5,
+      2.0,
+      457.3,
+      720.0
+     ]
+    },
+    {
+     "frame": 14,
+     "name": "wallet",
+     "present": false,
+     "photo_name": -4.416,
+     "dino": 0.2,
+     "vs_others": 0.103,
+     "on_item": null,
+     "box": [
+      38.4,
+      0.2,
+      100.5,
+      88.9
+     ]
+    }
+   ],
+   "reversed": [
+    {
+     "frame": 1,
+     "name": "wallet",
+     "present": false,
+     "photo_name": -4.047,
+     "dino": 0.306,
+     "vs_others": 0.916,
+     "on_item": null,
+     "box": [
+      350.2,
+      24.3,
+      494.7,
+      177.8
+     ]
+    },
+    {
+     "frame": 1,
+     "name": "power bank",
+     "present": false,
+     "photo_name": -3.257,
+     "dino": 0.098,
+     "vs_others": -0.406,
+     "on_item": null,
+     "box": [
+      253.9,
+      54.5,
+      355.0,
+      141.8
+     ]
+    },
+    {
+     "frame": 1,
+     "name": "bottle",
+     "present": false,
+     "photo_name": 0.892,
+     "dino": 0.141,
+     "vs_others": 2.133,
+     "on_item": null,
+     "box": [
+      192.3,
+      40.0,
+      220.5,
+      90.6
+     ]
+    },
+    {
+     "frame": 2,
+     "name": "wallet",
+     "present": false,
+     "photo_name": -2.959,
+     "dino": 0.251,
+     "vs_others": -0.105,
+     "on_item": false,
+     "box": [
+      427.8,
+      115.3,
+      561.5,
+      230.3
+     ]
+    },
+    {
+     "frame": 2,
+     "name": "power bank",
+     "present": false,
+     "photo_name": -3.3,
+     "dino": 0.016,
+     "vs_others": 0.105,
+     "on_item": false,
+     "box": [
+      427.8,
+      115.3,
+      561.5,
+      230.3
+     ]
+    },
+    {
+     "frame": 2,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -3.809,
+     "dino": 0.1,
+     "vs_others": -0.375,
+     "on_item": false,
+     "box": [
+      427.8,
+      115.3,
+      561.5,
+      230.3
+     ]
+    },
+    {
+     "frame": 3,
+     "name": "wallet",
+     "present": false,
+     "photo_name": -2.897,
+     "dino": -0.015,
+     "vs_others": -1.632,
+     "on_item": false,
+     "box": [
+      504.1,
+      401.2,
+      878.4,
+      720.0
+     ]
+    },
+    {
+     "frame": 3,
+     "name": "power bank",
+     "present": false,
+     "photo_name": 3.751,
+     "dino": 0.145,
+     "vs_others": 4.948,
+     "on_item": false,
+     "box": [
+      86.5,
+      305.8,
+      189.5,
+      408.4
+     ]
+    },
+    {
+     "frame": 3,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -0.029,
+     "dino": 0.211,
+     "vs_others": 0.72,
+     "on_item": false,
+     "box": [
+      201.5,
+      0.2,
+      261.6,
+      81.9
+     ]
+    },
+    {
+     "frame": 4,
+     "name": "wallet",
+     "present": false,
+     "photo_name": -2.461,
+     "dino": 0.273,
+     "vs_others": -0.127,
+     "on_item": false,
+     "box": [
+      243.1,
+      0.0,
+      497.2,
+      256.5
+     ]
+    },
+    {
+     "frame": 4,
+     "name": "power bank",
+     "present": false,
+     "photo_name": 5.443,
+     "dino": 0.252,
+     "vs_others": 5.39,
+     "on_item": false,
+     "box": [
+      273.6,
+      519.7,
+      373.1,
+      697.7
+     ]
+    },
+    {
+     "frame": 4,
+     "name": "bottle",
+     "present": false,
+     "photo_name": 0.192,
+     "dino": 0.186,
+     "vs_others": 1.249,
+     "on_item": false,
+     "box": [
+      582.7,
+      63.6,
+      639.5,
+      166.9
+     ]
+    },
+    {
+     "frame": 5,
+     "name": "wallet",
+     "present": false,
+     "photo_name": -5.296,
+     "dino": 0.199,
+     "vs_others": -0.675,
+     "on_item": false,
+     "box": [
+      487.8,
+      21.3,
+      687.2,
+      324.5
+     ]
+    },
+    {
+     "frame": 5,
+     "name": "power bank",
+     "present": false,
+     "photo_name": -4.734,
+     "dino": 0.025,
+     "vs_others": 3.373,
+     "on_item": false,
+     "box": [
+      717.6,
+      356.2,
+      787.0,
+      418.9
+     ]
+    },
+    {
+     "frame": 5,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -2.611,
+     "dino": 0.128,
+     "vs_others": 0.374,
+     "on_item": false,
+     "box": [
+      689.0,
+      0.0,
+      735.6,
+      72.1
+     ]
+    },
+    {
+     "frame": 6,
+     "name": "wallet",
+     "present": false,
+     "photo_name": -5.007,
+     "dino": 0.137,
+     "vs_others": 2.37,
+     "on_item": false,
+     "box": [
+      107.8,
+      0.0,
+      455.9,
+      75.4
+     ]
+    },
+    {
+     "frame": 6,
+     "name": "power bank",
+     "present": false,
+     "photo_name": -4.68,
+     "dino": 0.046,
+     "vs_others": -0.247,
+     "on_item": false,
+     "box": [
+      690.2,
+      0.0,
+      960.0,
+      710.2
+     ]
+    },
+    {
+     "frame": 6,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -2.583,
+     "dino": 0.035,
+     "vs_others": 0.247,
+     "on_item": false,
+     "box": [
+      690.2,
+      0.0,
+      960.0,
+      710.2
+     ]
+    },
+    {
+     "frame": 7,
+     "name": "wallet",
+     "present": false,
+     "photo_name": -3.677,
+     "dino": 0.123,
+     "vs_others": -0.38,
+     "on_item": false,
+     "box": [
+      672.1,
+      152.3,
+      936.0,
+      464.7
+     ]
+    },
+    {
+     "frame": 7,
+     "name": "power bank",
+     "present": false,
+     "photo_name": -3.158,
+     "dino": 0.114,
+     "vs_others": -0.178,
+     "on_item": false,
+     "box": [
+      672.1,
+      152.3,
+      936.0,
+      464.7
+     ]
+    },
+    {
+     "frame": 7,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -3.125,
+     "dino": -0.015,
+     "vs_others": 0.178,
+     "on_item": false,
+     "box": [
+      672.1,
+      152.3,
+      936.0,
+      464.7
+     ]
+    },
+    {
+     "frame": 8,
+     "name": "wallet",
+     "present": false,
+     "photo_name": 0.999,
+     "dino": 0.164,
+     "vs_others": -1.549,
+     "on_item": true,
+     "box": [
+      722.7,
+      123.1,
+      790.2,
+      165.6
+     ]
+    },
+    {
+     "frame": 8,
+     "name": "power bank",
+     "present": false,
+     "photo_name": 1.173,
+     "dino": 0.147,
+     "vs_others": 2.696,
+     "on_item": true,
+     "box": [
+      759.3,
+      79.2,
+      825.7,
+      114.0
+     ]
+    },
+    {
+     "frame": 8,
+     "name": "bottle",
+     "present": false,
+     "photo_name": 0.132,
+     "dino": 0.238,
+     "vs_others": 0.542,
+     "on_item": false,
+     "box": [
+      131.0,
+      69.2,
+      167.9,
+      125.3
+     ]
+    },
+    {
+     "frame": 9,
+     "name": "wallet",
+     "present": false,
+     "photo_name": -0.956,
+     "dino": 0.086,
+     "vs_others": 0.005,
+     "on_item": false,
+     "box": [
+      342.2,
+      345.3,
+      600.8,
+      592.1
+     ]
+    },
+    {
+     "frame": 9,
+     "name": "power bank",
+     "present": false,
+     "photo_name": 2.131,
+     "dino": 0.062,
+     "vs_others": 3.643,
+     "on_item": true,
+     "box": [
+      581.8,
+      190.6,
+      649.0,
+      224.1
+     ]
+    },
+    {
+     "frame": 9,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -2.671,
+     "dino": 0.352,
+     "vs_others": 0.864,
+     "on_item": true,
+     "box": [
+      892.5,
+      249.5,
+      958.9,
+      421.6
+     ]
+    },
+    {
+     "frame": 10,
+     "name": "wallet",
+     "present": false,
+     "photo_name": -0.207,
+     "dino": 0.209,
+     "vs_others": 0.786,
+     "on_item": false,
+     "box": [
+      278.2,
+      22.7,
+      507.7,
+      267.9
+     ]
+    },
+    {
+     "frame": 10,
+     "name": "power bank",
+     "present": false,
+     "photo_name": 3.602,
+     "dino": 0.366,
+     "vs_others": 2.372,
+     "on_item": true,
+     "box": [
+      17.8,
+      367.8,
+      122.7,
+      449.1
+     ]
+    },
+    {
+     "frame": 10,
+     "name": "bottle",
+     "present": true,
+     "photo_name": 5.525,
+     "dino": 0.582,
+     "vs_others": 2.728,
+     "on_item": true,
+     "box": [
+      528.2,
+      207.5,
+      613.8,
+      438.0
+     ]
+    },
+    {
+     "frame": 11,
+     "name": "wallet",
+     "present": false,
+     "photo_name": 3.846,
+     "dino": 0.237,
+     "vs_others": 0.746,
+     "on_item": true,
+     "box": [
+      407.5,
+      522.1,
+      559.4,
+      670.3
+     ]
+    },
+    {
+     "frame": 11,
+     "name": "power bank",
+     "present": true,
+     "photo_name": 3.732,
+     "dino": 0.386,
+     "vs_others": 2.612,
+     "on_item": true,
+     "box": [
+      342.5,
+      395.5,
+      447.1,
+      469.3
+     ]
+    },
+    {
+     "frame": 11,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -1.664,
+     "dino": 0.102,
+     "vs_others": 0.214,
+     "on_item": false,
+     "box": [
+      364.1,
+      1.2,
+      687.0,
+      358.6
+     ]
+    },
+    {
+     "frame": 12,
+     "name": "wallet",
+     "present": false,
+     "photo_name": 3.248,
+     "dino": 0.374,
+     "vs_others": 0.342,
+     "on_item": true,
+     "box": [
+      468.6,
+      613.6,
+      639.0,
+      719.8
+     ]
+    },
+    {
+     "frame": 12,
+     "name": "power bank",
+     "present": true,
+     "photo_name": 5.09,
+     "dino": 0.43,
+     "vs_others": 3.399,
+     "on_item": true,
+     "box": [
+      449.6,
+      446.6,
+      554.7,
+      511.5
+     ]
+    },
+    {
+     "frame": 12,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -2.402,
+     "dino": 0.089,
+     "vs_others": -3.399,
+     "on_item": false,
+     "box": [
+      449.6,
+      446.6,
+      554.7,
+      511.5
+     ]
+    },
+    {
+     "frame": 13,
+     "name": "wallet",
+     "present": false,
+     "photo_name": -0.542,
+     "dino": 0.209,
+     "vs_others": 0.071,
+     "on_item": false,
+     "box": [
+      0.0,
+      159.6,
+      178.3,
+      319.0
+     ]
+    },
+    {
+     "frame": 13,
+     "name": "power bank",
+     "present": false,
+     "photo_name": 2.276,
+     "dino": 0.034,
+     "vs_others": 2.565,
+     "on_item": false,
+     "box": [
+      193.0,
+      153.5,
+      246.5,
+      233.8
+     ]
+    },
+    {
+     "frame": 13,
+     "name": "bottle",
+     "present": false,
+     "photo_name": 3.969,
+     "dino": 0.363,
+     "vs_others": 2.131,
+     "on_item": true,
+     "box": [
+      251.9,
+      221.7,
+      353.4,
+      468.0
+     ]
+    },
+    {
+     "frame": 14,
+     "name": "wallet",
+     "present": false,
+     "photo_name": -4.416,
+     "dino": 0.2,
+     "vs_others": 0.103,
+     "on_item": null,
+     "box": [
+      38.4,
+      0.2,
+      100.5,
+      88.9
+     ]
+    },
+    {
+     "frame": 14,
+     "name": "power bank",
+     "present": false,
+     "photo_name": -5.261,
+     "dino": 0.095,
+     "vs_others": 0.672,
+     "on_item": null,
+     "box": [
+      1.5,
+      2.0,
+      457.3,
+      720.0
+     ]
+    },
+    {
+     "frame": 14,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -3.991,
+     "dino": 0.055,
+     "vs_others": -0.103,
+     "on_item": false,
+     "box": [
+      38.4,
+      0.2,
+      100.5,
+      88.9
+     ]
+    }
+   ]
+  }
+ },
+ "rec3-moved": {
+  "summary": {
+   "bottle": {
+    "alone": {
+     "present": 1,
+     "present_on_item": 1,
+     "box_on_item": 4,
+     "frames": 13,
+     "failed_only_vs_others": 0
+    },
+    "together": {
+     "present": 1,
+     "present_on_item": 1,
+     "box_on_item": 4,
+     "frames": 13,
+     "failed_only_vs_others": 0
+    },
+    "reversed": {
+     "present": 1,
+     "present_on_item": 1,
+     "box_on_item": 4,
+     "frames": 13,
+     "failed_only_vs_others": 0
+    },
+    "scores_same_alone_vs_together": true
+   },
+   "power bank": {
+    "alone": {
+     "present": 1,
+     "present_on_item": 1,
+     "box_on_item": 1,
+     "frames": 13,
+     "failed_only_vs_others": 0
+    },
+    "together": {
+     "present": 1,
+     "present_on_item": 1,
+     "box_on_item": 1,
+     "frames": 13,
+     "failed_only_vs_others": 0
+    },
+    "reversed": {
+     "present": 1,
+     "present_on_item": 1,
+     "box_on_item": 1,
+     "frames": 13,
+     "failed_only_vs_others": 0
+    },
+    "scores_same_alone_vs_together": true
+   }
+  },
+  "rows": {
+   "alone": [
+    {
+     "frame": 1,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -2.289,
+     "dino": -0.005,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      132.1,
+      57.6,
+      228.2,
+      164.8
+     ]
+    },
+    {
+     "frame": 2,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -1.79,
+     "dino": 0.182,
+     "vs_others": null,
+     "on_item": true,
+     "box": [
+      3.8,
+      317.7,
+      202.7,
+      540.1
+     ]
+    },
+    {
+     "frame": 3,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -2.805,
+     "dino": 0.06,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      384.3,
+      355.0,
+      481.7,
+      417.2
+     ]
+    },
+    {
+     "frame": 4,
+     "name": "bottle",
+     "present": true,
+     "photo_name": 3.432,
+     "dino": 0.397,
+     "vs_others": null,
+     "on_item": true,
+     "box": [
+      416.7,
+      435.1,
+      567.5,
+      681.7
+     ]
+    },
+    {
+     "frame": 5,
+     "name": "bottle",
+     "present": false,
+     "photo_name": 2.308,
+     "dino": 0.263,
+     "vs_others": null,
+     "on_item": true,
+     "box": [
+      581.1,
+      238.5,
+      790.9,
+      479.1
+     ]
+    },
+    {
+     "frame": 6,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -5.003,
+     "dino": 0.073,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      0.0,
+      3.6,
+      495.2,
+      720.0
+     ]
+    },
+    {
+     "frame": 7,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -1.805,
+     "dino": 0.062,
+     "vs_others": null,
+     "on_item": null,
+     "box": [
+      1.3,
+      1.9,
+      138.1,
+      154.1
+     ]
+    },
+    {
+     "frame": 8,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -2.888,
+     "dino": 0.074,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      583.6,
+      162.6,
+      676.4,
+      322.5
+     ]
+    },
+    {
+     "frame": 9,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -3.286,
+     "dino": 0.123,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      469.2,
+      140.3,
+      603.8,
+      242.2
+     ]
+    },
+    {
+     "frame": 10,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -1.94,
+     "dino": 0.058,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      127.4,
+      0.0,
+      190.4,
+      59.4
+     ]
+    },
+    {
+     "frame": 11,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -4.066,
+     "dino": 0.088,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      433.2,
+      475.9,
+      904.8,
+      718.7
+     ]
+    },
+    {
+     "frame": 12,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -2.531,
+     "dino": -0.058,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      46.3,
+      2.0,
+      338.4,
+      321.7
+     ]
+    },
+    {
+     "frame": 13,
+     "name": "bottle",
+     "present": false,
+     "photo_name": 2.175,
+     "dino": 0.267,
+     "vs_others": null,
+     "on_item": true,
+     "box": [
+      0.6,
+      1.5,
+      113.9,
+      161.4
+     ]
+    },
+    {
+     "frame": 1,
+     "name": "power bank",
+     "present": false,
+     "photo_name": -5.027,
+     "dino": 0.012,
+     "vs_others": null,
+     "on_item": null,
+     "box": [
+      0.0,
+      2.3,
+      398.7,
+      720.0
+     ]
+    },
+    {
+     "frame": 2,
+     "name": "power bank",
+     "present": false,
+     "photo_name": -3.777,
+     "dino": 0.106,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      0.0,
+      83.7,
+      496.0,
+      720.0
+     ]
+    },
+    {
+     "frame": 3,
+     "name": "power bank",
+     "present": true,
+     "photo_name": 4.292,
+     "dino": 0.499,
+     "vs_others": null,
+     "on_item": true,
+     "box": [
+      384.3,
+      355.0,
+      481.7,
+      417.2
+     ]
+    },
+    {
+     "frame": 4,
+     "name": "power bank",
+     "present": false,
+     "photo_name": 3.281,
+     "dino": 0.034,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      631.3,
+      150.3,
+      741.9,
+      226.8
+     ]
+    },
+    {
+     "frame": 5,
+     "name": "power bank",
+     "present": false,
+     "photo_name": 3.147,
+     "dino": -0.004,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      581.1,
+      238.5,
+      790.9,
+      479.1
+     ]
+    },
+    {
+     "frame": 6,
+     "name": "power bank",
+     "present": false,
+     "photo_name": -5.865,
+     "dino": 0.057,
+     "vs_others": null,
+     "on_item": null,
+     "box": [
+      0.0,
+      3.6,
+      495.2,
+      720.0
+     ]
+    },
+    {
+     "frame": 7,
+     "name": "power bank",
+     "present": false,
+     "photo_name": -2.846,
+     "dino": 0.064,
+     "vs_others": null,
+     "on_item": null,
+     "box": [
+      1.3,
+      1.9,
+      138.1,
+      154.1
+     ]
+    },
+    {
+     "frame": 8,
+     "name": "power bank",
+     "present": false,
+     "photo_name": -2.284,
+     "dino": -0.017,
+     "vs_others": null,
+     "on_item": null,
+     "box": [
+      276.7,
+      3.9,
+      309.1,
+      16.4
+     ]
+    },
+    {
+     "frame": 9,
+     "name": "power bank",
+     "present": false,
+     "photo_name": -1.974,
+     "dino": 0.074,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      469.2,
+      140.3,
+      603.8,
+      242.2
+     ]
+    },
+    {
+     "frame": 10,
+     "name": "power bank",
+     "present": false,
+     "photo_name": 2.988,
+     "dino": 0.065,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      23.3,
+      301.8,
+      127.2,
+      404.8
+     ]
+    },
+    {
+     "frame": 11,
+     "name": "power bank",
+     "present": false,
+     "photo_name": 2.827,
+     "dino": 0.106,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      220.3,
+      485.3,
+      326.7,
+      604.5
+     ]
+    },
+    {
+     "frame": 12,
+     "name": "power bank",
+     "present": false,
+     "photo_name": 3.665,
+     "dino": 0.223,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      87.6,
+      627.1,
+      191.8,
+      719.5
+     ]
+    },
+    {
+     "frame": 13,
+     "name": "power bank",
+     "present": false,
+     "photo_name": 5.998,
+     "dino": 0.289,
+     "vs_others": null,
+     "on_item": false,
+     "box": [
+      228.9,
+      395.2,
+      340.0,
+      550.9
+     ]
+    }
+   ],
+   "together": [
+    {
+     "frame": 1,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -2.289,
+     "dino": -0.005,
+     "vs_others": 0.866,
+     "on_item": false,
+     "box": [
+      132.1,
+      57.6,
+      228.2,
+      164.8
+     ]
+    },
+    {
+     "frame": 1,
+     "name": "power bank",
+     "present": false,
+     "photo_name": -5.027,
+     "dino": 0.012,
+     "vs_others": 0.221,
+     "on_item": null,
+     "box": [
+      0.0,
+      2.3,
+      398.7,
+      720.0
+     ]
+    },
+    {
+     "frame": 2,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -1.79,
+     "dino": 0.182,
+     "vs_others": 0.981,
+     "on_item": true,
+     "box": [
+      3.8,
+      317.7,
+      202.7,
+      540.1
+     ]
+    },
+    {
+     "frame": 2,
+     "name": "power bank",
+     "present": false,
+     "photo_name": -3.777,
+     "dino": 0.106,
+     "vs_others": 1.111,
+     "on_item": false,
+     "box": [
+      0.0,
+      83.7,
+      496.0,
+      720.0
+     ]
+    },
+    {
+     "frame": 3,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -2.805,
+     "dino": 0.06,
+     "vs_others": -2.935,
+     "on_item": false,
+     "box": [
+      384.3,
+      355.0,
+      481.7,
+      417.2
+     ]
+    },
+    {
+     "frame": 3,
+     "name": "power bank",
+     "present": true,
+     "photo_name": 4.292,
+     "dino": 0.499,
+     "vs_others": 2.935,
+     "on_item": true,
+     "box": [
+      384.3,
+      355.0,
+      481.7,
+      417.2
+     ]
+    },
+    {
+     "frame": 4,
+     "name": "bottle",
+     "present": true,
+     "photo_name": 3.432,
+     "dino": 0.397,
+     "vs_others": 1.337,
+     "on_item": true,
+     "box": [
+      416.7,
+      435.1,
+      567.5,
+      681.7
+     ]
+    },
+    {
+     "frame": 4,
+     "name": "power bank",
+     "present": false,
+     "photo_name": 3.281,
+     "dino": 0.034,
+     "vs_others": 3.722,
+     "on_item": false,
+     "box": [
+      631.3,
+      150.3,
+      741.9,
+      226.8
+     ]
+    },
+    {
+     "frame": 5,
+     "name": "bottle",
+     "present": false,
+     "photo_name": 2.308,
+     "dino": 0.263,
+     "vs_others": 0.392,
+     "on_item": true,
+     "box": [
+      581.1,
+      238.5,
+      790.9,
+      479.1
+     ]
+    },
+    {
+     "frame": 5,
+     "name": "power bank",
+     "present": false,
+     "photo_name": 3.147,
+     "dino": -0.004,
+     "vs_others": -0.392,
+     "on_item": false,
+     "box": [
+      581.1,
+      238.5,
+      790.9,
+      479.1
+     ]
+    },
+    {
+     "frame": 6,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -5.003,
+     "dino": 0.073,
+     "vs_others": -0.771,
+     "on_item": false,
+     "box": [
+      0.0,
+      3.6,
+      495.2,
+      720.0
+     ]
+    },
+    {
+     "frame": 6,
+     "name": "power bank",
+     "present": false,
+     "photo_name": -5.865,
+     "dino": 0.057,
+     "vs_others": 0.771,
+     "on_item": null,
+     "box": [
+      0.0,
+      3.6,
+      495.2,
+      720.0
+     ]
+    },
+    {
+     "frame": 7,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -1.805,
+     "dino": 0.062,
+     "vs_others": 1.401,
+     "on_item": null,
+     "box": [
+      1.3,
+      1.9,
+      138.1,
+      154.1
+     ]
+    },
+    {
+     "frame": 7,
+     "name": "power bank",
+     "present": false,
+     "photo_name": -2.846,
+     "dino": 0.064,
+     "vs_others": -1.401,
+     "on_item": null,
+     "box": [
+      1.3,
+      1.9,
+      138.1,
+      154.1
+     ]
+    },
+    {
+     "frame": 8,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -2.888,
+     "dino": 0.074,
+     "vs_others": 1.463,
+     "on_item": false,
+     "box": [
+      583.6,
+      162.6,
+      676.4,
+      322.5
+     ]
+    },
+    {
+     "frame": 8,
+     "name": "power bank",
+     "present": false,
+     "photo_name": -2.284,
+     "dino": -0.017,
+     "vs_others": 2.546,
+     "on_item": null,
+     "box": [
+      276.7,
+      3.9,
+      309.1,
+      16.4
+     ]
+    },
+    {
+     "frame": 9,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -3.286,
+     "dino": 0.123,
+     "vs_others": -0.238,
+     "on_item": false,
+     "box": [
+      469.2,
+      140.3,
+      603.8,
+      242.2
+     ]
+    },
+    {
+     "frame": 9,
+     "name": "power bank",
+     "present": false,
+     "photo_name": -1.974,
+     "dino": 0.074,
+     "vs_others": 0.238,
+     "on_item": false,
+     "box": [
+      469.2,
+      140.3,
+      603.8,
+      242.2
+     ]
+    },
+    {
+     "frame": 10,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -1.94,
+     "dino": 0.058,
+     "vs_others": -0.261,
+     "on_item": false,
+     "box": [
+      127.4,
+      0.0,
+      190.4,
+      59.4
+     ]
+    },
+    {
+     "frame": 10,
+     "name": "power bank",
+     "present": false,
+     "photo_name": 2.988,
+     "dino": 0.065,
+     "vs_others": 3.945,
+     "on_item": false,
+     "box": [
+      23.3,
+      301.8,
+      127.2,
+      404.8
+     ]
+    },
+    {
+     "frame": 11,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -4.066,
+     "dino": 0.088,
+     "vs_others": -2.286,
+     "on_item": false,
+     "box": [
+      433.2,
+      475.9,
+      904.8,
+      718.7
+     ]
+    },
+    {
+     "frame": 11,
+     "name": "power bank",
+     "present": false,
+     "photo_name": 2.827,
+     "dino": 0.106,
+     "vs_others": 3.658,
+     "on_item": false,
+     "box": [
+      220.3,
+      485.3,
+      326.7,
+      604.5
+     ]
+    },
+    {
+     "frame": 12,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -2.531,
+     "dino": -0.058,
+     "vs_others": 1.039,
+     "on_item": false,
+     "box": [
+      46.3,
+      2.0,
+      338.4,
+      321.7
+     ]
+    },
+    {
+     "frame": 12,
+     "name": "power bank",
+     "present": false,
+     "photo_name": 3.665,
+     "dino": 0.223,
+     "vs_others": 4.284,
+     "on_item": false,
+     "box": [
+      87.6,
+      627.1,
+      191.8,
+      719.5
+     ]
+    },
+    {
+     "frame": 13,
+     "name": "bottle",
+     "present": false,
+     "photo_name": 2.175,
+     "dino": 0.267,
+     "vs_others": 2.657,
+     "on_item": true,
+     "box": [
+      0.6,
+      1.5,
+      113.9,
+      161.4
+     ]
+    },
+    {
+     "frame": 13,
+     "name": "power bank",
+     "present": false,
+     "photo_name": 5.998,
+     "dino": 0.289,
+     "vs_others": 5.125,
+     "on_item": false,
+     "box": [
+      228.9,
+      395.2,
+      340.0,
+      550.9
+     ]
+    }
+   ],
+   "reversed": [
+    {
+     "frame": 1,
+     "name": "power bank",
+     "present": false,
+     "photo_name": -5.027,
+     "dino": 0.012,
+     "vs_others": 0.221,
+     "on_item": null,
+     "box": [
+      0.0,
+      2.3,
+      398.7,
+      720.0
+     ]
+    },
+    {
+     "frame": 1,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -2.289,
+     "dino": -0.005,
+     "vs_others": 0.866,
+     "on_item": false,
+     "box": [
+      132.1,
+      57.6,
+      228.2,
+      164.8
+     ]
+    },
+    {
+     "frame": 2,
+     "name": "power bank",
+     "present": false,
+     "photo_name": -3.777,
+     "dino": 0.106,
+     "vs_others": 1.111,
+     "on_item": false,
+     "box": [
+      0.0,
+      83.7,
+      496.0,
+      720.0
+     ]
+    },
+    {
+     "frame": 2,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -1.79,
+     "dino": 0.182,
+     "vs_others": 0.981,
+     "on_item": true,
+     "box": [
+      3.8,
+      317.7,
+      202.7,
+      540.1
+     ]
+    },
+    {
+     "frame": 3,
+     "name": "power bank",
+     "present": true,
+     "photo_name": 4.292,
+     "dino": 0.499,
+     "vs_others": 2.935,
+     "on_item": true,
+     "box": [
+      384.3,
+      355.0,
+      481.7,
+      417.2
+     ]
+    },
+    {
+     "frame": 3,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -2.805,
+     "dino": 0.06,
+     "vs_others": -2.935,
+     "on_item": false,
+     "box": [
+      384.3,
+      355.0,
+      481.7,
+      417.2
+     ]
+    },
+    {
+     "frame": 4,
+     "name": "power bank",
+     "present": false,
+     "photo_name": 3.281,
+     "dino": 0.034,
+     "vs_others": 3.722,
+     "on_item": false,
+     "box": [
+      631.3,
+      150.3,
+      741.9,
+      226.8
+     ]
+    },
+    {
+     "frame": 4,
+     "name": "bottle",
+     "present": true,
+     "photo_name": 3.432,
+     "dino": 0.397,
+     "vs_others": 1.337,
+     "on_item": true,
+     "box": [
+      416.7,
+      435.1,
+      567.5,
+      681.7
+     ]
+    },
+    {
+     "frame": 5,
+     "name": "power bank",
+     "present": false,
+     "photo_name": 3.147,
+     "dino": -0.004,
+     "vs_others": -0.392,
+     "on_item": false,
+     "box": [
+      581.1,
+      238.5,
+      790.9,
+      479.1
+     ]
+    },
+    {
+     "frame": 5,
+     "name": "bottle",
+     "present": false,
+     "photo_name": 2.308,
+     "dino": 0.263,
+     "vs_others": 0.392,
+     "on_item": true,
+     "box": [
+      581.1,
+      238.5,
+      790.9,
+      479.1
+     ]
+    },
+    {
+     "frame": 6,
+     "name": "power bank",
+     "present": false,
+     "photo_name": -5.865,
+     "dino": 0.057,
+     "vs_others": 0.771,
+     "on_item": null,
+     "box": [
+      0.0,
+      3.6,
+      495.2,
+      720.0
+     ]
+    },
+    {
+     "frame": 6,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -5.003,
+     "dino": 0.073,
+     "vs_others": -0.771,
+     "on_item": false,
+     "box": [
+      0.0,
+      3.6,
+      495.2,
+      720.0
+     ]
+    },
+    {
+     "frame": 7,
+     "name": "power bank",
+     "present": false,
+     "photo_name": -2.846,
+     "dino": 0.064,
+     "vs_others": -1.401,
+     "on_item": null,
+     "box": [
+      1.3,
+      1.9,
+      138.1,
+      154.1
+     ]
+    },
+    {
+     "frame": 7,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -1.805,
+     "dino": 0.062,
+     "vs_others": 1.401,
+     "on_item": null,
+     "box": [
+      1.3,
+      1.9,
+      138.1,
+      154.1
+     ]
+    },
+    {
+     "frame": 8,
+     "name": "power bank",
+     "present": false,
+     "photo_name": -2.284,
+     "dino": -0.017,
+     "vs_others": 2.546,
+     "on_item": null,
+     "box": [
+      276.7,
+      3.9,
+      309.1,
+      16.4
+     ]
+    },
+    {
+     "frame": 8,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -2.888,
+     "dino": 0.074,
+     "vs_others": 1.463,
+     "on_item": false,
+     "box": [
+      583.6,
+      162.6,
+      676.4,
+      322.5
+     ]
+    },
+    {
+     "frame": 9,
+     "name": "power bank",
+     "present": false,
+     "photo_name": -1.974,
+     "dino": 0.074,
+     "vs_others": 0.238,
+     "on_item": false,
+     "box": [
+      469.2,
+      140.3,
+      603.8,
+      242.2
+     ]
+    },
+    {
+     "frame": 9,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -3.286,
+     "dino": 0.123,
+     "vs_others": -0.238,
+     "on_item": false,
+     "box": [
+      469.2,
+      140.3,
+      603.8,
+      242.2
+     ]
+    },
+    {
+     "frame": 10,
+     "name": "power bank",
+     "present": false,
+     "photo_name": 2.988,
+     "dino": 0.065,
+     "vs_others": 3.945,
+     "on_item": false,
+     "box": [
+      23.3,
+      301.8,
+      127.2,
+      404.8
+     ]
+    },
+    {
+     "frame": 10,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -1.94,
+     "dino": 0.058,
+     "vs_others": -0.261,
+     "on_item": false,
+     "box": [
+      127.4,
+      0.0,
+      190.4,
+      59.4
+     ]
+    },
+    {
+     "frame": 11,
+     "name": "power bank",
+     "present": false,
+     "photo_name": 2.827,
+     "dino": 0.106,
+     "vs_others": 3.658,
+     "on_item": false,
+     "box": [
+      220.3,
+      485.3,
+      326.7,
+      604.5
+     ]
+    },
+    {
+     "frame": 11,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -4.066,
+     "dino": 0.088,
+     "vs_others": -2.286,
+     "on_item": false,
+     "box": [
+      433.2,
+      475.9,
+      904.8,
+      718.7
+     ]
+    },
+    {
+     "frame": 12,
+     "name": "power bank",
+     "present": false,
+     "photo_name": 3.665,
+     "dino": 0.223,
+     "vs_others": 4.284,
+     "on_item": false,
+     "box": [
+      87.6,
+      627.1,
+      191.8,
+      719.5
+     ]
+    },
+    {
+     "frame": 12,
+     "name": "bottle",
+     "present": false,
+     "photo_name": -2.531,
+     "dino": -0.058,
+     "vs_others": 1.039,
+     "on_item": false,
+     "box": [
+      46.3,
+      2.0,
+      338.4,
+      321.7
+     ]
+    },
+    {
+     "frame": 13,
+     "name": "power bank",
+     "present": false,
+     "photo_name": 5.998,
+     "dino": 0.289,
+     "vs_others": 5.125,
+     "on_item": false,
+     "box": [
+      228.9,
+      395.2,
+      340.0,
+      550.9
+     ]
+    },
+    {
+     "frame": 13,
+     "name": "bottle",
+     "present": false,
+     "photo_name": 2.175,
+     "dino": 0.267,
+     "vs_others": 2.657,
+     "on_item": true,
+     "box": [
+      0.6,
+      1.5,
+      113.9,
+      161.4
+     ]
+    }
+   ]
+  }
+ }
+}

@@ -583,6 +583,10 @@ Marco is a wearable for blind and low-vision people. An iPhone in a chest vest (
   - indoors, Apple RoomPlan on the phone (Utkarsh; needs a device test).
 
 ## In progress / next
+0. **Several registered items (POC 28, 2026-10-18; `poc/pocs/poc28_multi_item/NOTES.md`):** every frame already checks every item, and order or count changes nothing (identical scores alone or together). Items are missed because the DINOv2 crop check (`TH_DINO` 0.38, calibrated on ORBIT's handheld photos) rejects correct boxes from the vest: it was the blocker in 13 of 19 such frames, and the wallet was never accepted.
+   - **Proposed:** `TH_DINO` 0.30. On the venue clips that's 5 → 8 hits with no extra false alarms.
+   - **Also proposed:** make restarts re-register like the first registration. Today the restart path queries with the whole photo, the first registration with the crop.
+   - **Waiting on the user's go-ahead.**
 1. **Reconcile the routes** (`docs/INTERFACES.md` §10) with Sandeep:
    - **Photon: done.** `photon/` adopted §5 unchanged; no server change was needed.
    - **Dashboard:** `frontend/` expects `GET /dashboard/snapshot`, `WS /events` and `POST /dashboard/commands` (`frontend/docs/fastapi-handoff.md`). Likely a server adapter, plus a phone message for dashboard Find/Stop.
