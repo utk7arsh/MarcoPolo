@@ -46,6 +46,8 @@ def _failed_gates(d):
         return "missed"
     names = (("photo_name", "photo+name score"), ("dino", "DINOv2 crop similarity"), ("vs_others", "margin over the other items"))
     out = [f"{label} {d[g]:.2f} < {TH[g]:.2f}" for g, label in names if d.get(g) is not None and d[g] < TH[g]]
+    if d.get("look"):
+        out.append(f"looks different from its photo ({d['look']})")
     return ", ".join(out) or "missed"
 
 

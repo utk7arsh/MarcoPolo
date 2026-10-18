@@ -39,6 +39,58 @@ def vs_others(scores, q, names):
     return float(scores[q] - np.max(np.asarray(scores)[others])) if others else None
 
 
+# Colour check: a detection must not look grossly different from the registration crop. OWLv2's photo+name score and
+# DINOv2's similarity both happily match a clear plastic mug to a black bottle (live, 2026-10-18); its lightness and
+# colourfulness give it away. The bounds are wide because lighting changes a lot: on the venue clips the right item
+# was up to 28.5 lightness and 19 colourfulness away, and no right item was lost (POC 28, appearance_eval.py).
+TH_LIGHT = float(os.environ.get("TH_LIGHT", "40"))       # CIELAB L*, 0 black ... 100 white
+TH_CHROMA = float(os.environ.get("TH_CHROMA", "30"))     # CIELAB chroma: 0 grey ... ~100 vivid
+# Off by default, both measured worse: elongation (seen from the chest a standing bottle looks squat, so the real
+# bottle failed it) and trying the top 3 boxes per item (3 false alarms on the clips instead of 1).
+TH_SHAPE = float(os.environ.get("TH_SHAPE", "inf"))      # elongation ratio (long side / short side), either way
+TOP_K = int(os.environ.get("MARCO_TOP_K", "1"))          # boxes tried per item, best photo score first
+
+
+def _srgb_to_lab(rgb):
+    a = np.where(rgb <= 0.04045, rgb / 12.92, ((rgb + 0.055) / 1.055) ** 2.4)
+    xyz = a @ np.array([[0.4124, 0.3576, 0.1805], [0.2126, 0.7152, 0.0722], [0.0193, 0.1192, 0.9505]]).T
+    xyz = xyz / np.array([0.95047, 1.0, 1.08883])
+    f = np.where(xyz > (6 / 29) ** 3, np.cbrt(xyz), xyz / (3 * (6 / 29) ** 2) + 4 / 29)
+    return np.stack([116 * f[..., 1] - 16, 500 * (f[..., 0] - f[..., 1]), 200 * (f[..., 1] - f[..., 2])], -1)
+
+
+def appearance(im):
+    """Lightness and colourfulness (median CIELAB L* and chroma) of a crop's middle 60 %, and its elongation."""
+    w, h = im.size
+    x0, y0 = int(w * 0.2), int(h * 0.2)
+    mid = im.crop((x0, y0, max(int(w * 0.8), x0 + 1), max(int(h * 0.8), y0 + 1))).convert("RGB").resize((24, 24))
+    lab = _srgb_to_lab(np.asarray(mid, float) / 255)
+    return dict(L=float(np.median(lab[..., 0])), C=float(np.median(np.hypot(lab[..., 1], lab[..., 2]))),
+                elong=max(w, h) / max(min(w, h), 1))
+
+
+def appearance_check(ref, cand):
+    """'' when the candidate could be the registered item; otherwise what's grossly different about it."""
+    if not ref:
+        return ""
+    bad = []
+    if abs(cand["L"] - ref["L"]) > TH_LIGHT:
+        bad.append(f"lightness {cand['L']:.0f} vs {ref['L']:.0f}")
+    if abs(cand["C"] - ref["C"]) > TH_CHROMA:
+        bad.append(f"colourfulness {cand['C']:.0f} vs {ref['C']:.0f}")
+    if TH_SHAPE != float("inf") and max(cand["elong"] / ref["elong"], ref["elong"] / cand["elong"]) > TH_SHAPE:
+        bad.append(f"shape {cand['elong']:.1f}:1 vs {ref['elong']:.1f}:1")
+    return ", ".join(bad)
+
+
+def _iou(a, b):
+    ix = max(0.0, min(a[2], b[2]) - max(a[0], b[0]))
+    iy = max(0.0, min(a[3], b[3]) - max(a[1], b[1]))
+    inter = ix * iy
+    union = (a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - inter
+    return inter / union if union > 0 else 0.0
+
+
 def registration_crop(im, box):
     """The exact pixels used as a setup template (also persisted for reload); synthetic detectors have no box."""
     return im.crop(tuple(int(v) for v in box)) if box is not None else im
@@ -142,13 +194,16 @@ class OwlDetector:
             cf, cfe = self._pass(crop)
             q_img = self.owl.embed_image_query(cfe, cf)[0]
             turns = [crop] + [crop.rotate(90 * i, expand=True) for i in range(1, max(DINO_TURNS, 1))]
-            self.items[item_id] = dict(name=name, q_img=q_img, q_txt=q_txt, dino=self._dino(turns))
+            self.items[item_id] = dict(name=name, q_img=q_img, q_txt=q_txt, dino=self._dino(turns), look=appearance(crop))
         return dict(quality="ok", reason="", box=box)
 
     def forget(self, item_id):
         self.items.pop(item_id, None)
 
     def detect(self, im, **_):
+        """For each registered item, its best box in the frame and whether it's there. Up to TOP_K distinct boxes are
+        tried per item, best photo score first, and the first that passes every check wins: the best-scoring box is
+        often a look-alike (another bottle) while the item itself is the second or third."""
         if not self.items:
             return []
         ids = list(self.items)
@@ -160,24 +215,36 @@ class OwlDetector:
             L = self.owl.class_predictor(image_feats=feats, query_embeds=Q)[0][0].float().cpu().numpy()
             Lt = self.owl.class_predictor(image_feats=feats, query_embeds=Tq)[0][0].float().cpu().numpy()
             boxes = self.owl.box_predictor(feats, fmap)[0].float().cpu().numpy()
-            best = L.argmax(0)
-            crops, out = [], []
-            for q, iid in enumerate(ids):
-                b = best[q]
-                box = self._to_px(boxes[b].tolist(), im)
-                crops.append(im.crop(tuple(int(v) for v in box)))
-                out.append(dict(item_id=iid, name=names[q], box=[round(v, 1) for v in box],
-                                photo_name=float(L[b, q] + Lt[b, q]), vs_others=vs_others(L[b], q, names)))
+            cands, crops = [], []                          # per item: [(patch, box px, index into crops)]
+            for q in range(len(ids)):
+                picked = []
+                for b in np.argsort(-L[:, q])[:60]:
+                    box = self._to_px(boxes[b].tolist(), im)
+                    if all(_iou(box, pb) <= 0.5 for _, pb, _ in picked):
+                        picked.append((int(b), box, len(crops)))
+                        crops.append(im.crop(tuple(int(v) for v in box)))
+                        if len(picked) >= max(TOP_K, 1):
+                            break
+                cands.append(picked)
             E = self._dino(crops)
             refs = [self.items[i]["dino"] for i in ids]          # (turns, D), or (D,) for one turn
-            dino = self.torch.stack([(r.reshape(-1, E.shape[-1]) @ E[q]).max() for q, r in enumerate(refs)])
-            dino = dino.cpu().tolist()                     # every crop check in one trip back from the GPU
+            sims = self.torch.stack([(refs[q].reshape(-1, E.shape[-1]) @ E[ci]).max()
+                                     for q, picked in enumerate(cands) for _, _, ci in picked])
+            sims = sims.cpu().tolist()                     # every crop check in one trip back from the GPU
+        out, k = [], 0
         for q, iid in enumerate(ids):
-            d = out[q]
-            d["dino"] = float(dino[q])                     # the best of the registration's turns
-            d["present"] = bool(d["photo_name"] >= TH["photo_name"] and d["dino"] >= TH["dino"]
-                                and (d["vs_others"] is None or d["vs_others"] >= TH["vs_others"]))
-            d["score"] = round(1 / (1 + np.exp(-(d["photo_name"] - TH["photo_name"]))), 3)
+            tried = []
+            for rank, (b, box, ci) in enumerate(cands[q]):
+                d = dict(item_id=iid, name=names[q], box=[round(v, 1) for v in box], photo_name=float(L[b, q] + Lt[b, q]),
+                         vs_others=vs_others(L[b], q, names), dino=float(sims[k]), rank=rank,
+                         look=appearance_check(self.items[iid].get("look"), appearance(crops[ci])))
+                k += 1
+                d["present"] = bool(d["photo_name"] >= TH["photo_name"] and d["dino"] >= TH["dino"] and not d["look"]
+                                    and (d["vs_others"] is None or d["vs_others"] >= TH["vs_others"]))
+                d["score"] = round(1 / (1 + np.exp(-(d["photo_name"] - TH["photo_name"]))), 3)
+                tried.append(d)
+            ok = [d for d in tried if d["present"]]
+            out.append(max(ok, key=lambda d: d["dino"]) if ok else tried[0])
         return out
 
 

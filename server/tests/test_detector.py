@@ -3,7 +3,8 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from marco.perception.detector import TH, OwlDetector, vs_others
+from marco.perception import detector as D
+from marco.perception.detector import TH, OwlDetector, appearance, appearance_check, vs_others
 
 torch = pytest.importorskip("torch")
 
@@ -55,7 +56,8 @@ def unit(*v):
     return (v / np.linalg.norm(v)).tolist()
 
 
-def test_detect_finds_an_item_registered_twice():
+def test_detect_finds_an_item_registered_twice(monkeypatch):
+    monkeypatch.setattr(D, "TOP_K", 1)                        # one box per item: the stand-in gives one crop each
     e0, e1 = unit(1, 0, 0, 0), unit(0, 1, 0, 0)
     det = stand_in_detector({"coke-a": ("Diet coke", [5, 0, 0, 0], e0), "coke-b": ("Diet Coke", [5, 0, 0, 0], e0),
                              "water": ("Sparkling water", [0, 5, 0, 0], unit(0.6, 0.8, 0, 0))},
@@ -69,7 +71,8 @@ def test_detect_finds_an_item_registered_twice():
     assert all(d["dino"] >= TH["dino"] for d in out.values())
 
 
-def test_detect_still_vetoes_look_alikes_with_different_names():
+def test_detect_still_vetoes_look_alikes_with_different_names(monkeypatch):
+    monkeypatch.setattr(D, "TOP_K", 1)
     e0 = unit(1, 0, 0, 0)
     det = stand_in_detector({"salt": ("salt", [5, 0, 0, 0], e0), "sugar": ("sugar", [5, 0, 0, 0], e0)},
                             [torch.tensor(e0), torch.tensor(e0)])
@@ -136,3 +139,39 @@ def test_fast_pixels_turn_off_when_the_processor_disagrees(processor):
 
     det.proc = GreyPadding()
     assert det._check_fast_pixels() is False
+
+
+
+def test_appearance_tells_a_black_bottle_from_a_clear_mug(monkeypatch):
+    monkeypatch.setattr(D, "TH_SHAPE", 2.5)                                # off by default; on here to test it
+    bottle = appearance(Image.new("RGB", (30, 100), (20, 20, 24)))         # dark, tall
+    assert appearance_check(bottle, appearance(Image.new("RGB", (32, 96), (35, 33, 38)))) == ""   # it, in other light
+    mug = appearance_check(bottle, appearance(Image.new("RGB", (70, 66), (200, 205, 210))))       # light, squat
+    assert "lightness" in mug and "shape" in mug
+    assert "colourfulness" in appearance_check(bottle, appearance(Image.new("RGB", (30, 100), (230, 40, 30))))
+    assert appearance_check(None, bottle) == ""                             # an old registration without a look
+
+
+def test_the_item_is_found_behind_a_better_scoring_look_alike(monkeypatch):
+    """Patch 0 (left) is a light look-alike OWLv2 scores higher; patch 1 (right) is the dark item. Trying more than
+    the best box finds it; DINOv2 rates both the same, as it did live with a black bottle and a clear mug."""
+    e0 = unit(1, 0, 0, 0)
+    det = stand_in_detector({"bottle": ("bottle", [5, 3, 0, 0], e0)}, [])
+    det._dino = lambda crops: torch.stack([torch.tensor(e0)] * len(crops))
+    det.items["bottle"]["look"] = appearance(Image.new("RGB", (20, 20), (15, 15, 18)))
+    scene = Image.new("RGB", (100, 80), (230, 230, 230))
+    scene.paste((10, 10, 12), (50, 0, 100, 80))                             # the right half is dark
+    monkeypatch.setattr(D, "TOP_K", 1)
+    one = det.detect(scene)[0]
+    assert not one["present"] and "lightness" in one["look"]                # only the look-alike was tried
+    monkeypatch.setattr(D, "TOP_K", 3)
+    best = det.detect(scene)[0]
+    assert best["present"] and best["rank"] == 1 and best["box"][0] > 50   # the second box: the item
+
+
+
+def test_by_default_only_colour_is_checked():
+    bottle = appearance(Image.new("RGB", (30, 100), (20, 20, 24)))
+    assert appearance_check(bottle, appearance(Image.new("RGB", (70, 66), (30, 30, 34)))) == ""   # squat from above: fine
+    assert "lightness" in appearance_check(bottle, appearance(Image.new("RGB", (30, 100), (200, 205, 210))))
+    assert D.TOP_K == 1

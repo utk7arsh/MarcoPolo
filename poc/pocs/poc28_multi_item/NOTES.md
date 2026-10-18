@@ -55,3 +55,17 @@
 - **Cause:** a reference made from the whole photo describes the photo's background, not the item. Fix: re-crop phone photos on reload (brain._reload), the same as the first registration. This also fits "earlier we could tag things": before a restart, references were crops.
 - **Look-alike cans:** Diet coke and Sparkling water fall on the same box. OWLv2's image query prefers Diet coke, while DINOv2 prefers Sparkling water (0.49 against 0.30), so the margin check hands it to Diet coke. Crop queries should separate them better; re-check after redeploy.
 - **"coffee" is still registered twice** (identical scores). It's harmless since Utkarsh's twin fix, but one could be removed.
+
+## Live false positives, 2026-10-18 (a clear plastic coffee mug detected as the registered black bottle)
+- **Why it got through:**
+  - The photo + name score adds "a photo of {name}", and a generic name ("bottle", "coffee") matches every bottle and cup. Live scores were 1–9 against a threshold of −2.4, so it barely filters.
+  - DINOv2 similarity can't tell a black bottle from a clear mug at these crop sizes; live, wrong objects reached 0.3–0.4. Lowering `TH_DINO` to 0.30 for recall let more of them through.
+  - Nothing looked at colour or size.
+- **Added (`appearance_eval.py`):** a colour check. The detection crop's lightness and colourfulness (CIELAB L*, chroma, median of the middle 60 %) must be within 40 / 30 of the registration crop's.
+  - On the venue clips it gives the same result as before (8 hits, 1 false alarm), with margin: the right item was at most 28.5 lightness and 19 colourfulness away.
+  - A light or colourful object taken for a dark item fails it.
+- **Tried and dropped:**
+  - **Elongation check:** seen from the chest, a standing bottle looks squat, so the real bottle failed it.
+  - **Top 3 boxes per item:** 9 hits but 3 false alarms, against 8 and 1.
+- **Still unsolved:** a true look-alike, such as another black bottle (the clips' one false alarm: DINOv2 0.59, same colour). Descriptive names help ("black Stanley bottle"); so would a better photo.
+- **Advice for the demo:** name items descriptively, photograph each item alone, fill the frame, and use a background that contrasts with it.
